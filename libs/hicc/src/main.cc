@@ -1,6 +1,6 @@
-#include <iostream>
-
-#include "../include/core11.hh"
+//
+// Created by Hedzr Yeh on 2021/3/1.
+//
 
 #include "hicc/hicc.hh"
 
@@ -14,7 +14,7 @@ int main() {
     std::string s1("a string", 2, 3);
     std::cout << "Hello, World!" << s1 << std::endl;
 
-    hicc_debug("ok");
+    hicc_debug("yes");
     
     return 0;
 }

@@ -64,12 +64,12 @@ macro(add_install_chapter target)
             ${CMAKE_INSTALL_LIBDIR}/cmake/${target})
 
     # install(FILES
-    #         ${CMAKE_BINARY_DIR}/generated/cmdr-version.hh
+    #         ${CMAKE_BINARY_DIR}/generated/hicc-version.hh
     #         DESTINATION
     #         ${CMAKE_INSTALL_INCLUDEDIR}/${target})
     # 
     # install(FILES
-    #         ${CMAKE_CURRENT_SOURCE_DIR}/include/cmdr-cxx.hh
+    #         ${CMAKE_CURRENT_SOURCE_DIR}/include/hicc-cxx.hh
     #         DESTINATION
     #         ${CMAKE_INSTALL_INCLUDEDIR})
 
@@ -115,7 +115,7 @@ macro(add_cpack_chapter target)
   #set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "")
   #  set(CPACK_PACKAGE_CONTACT "Hedzr Yeh <hedzrz@gmail.com>")
   #  set(CPACK_PACKAGE_VENDOR "Hedzr Studio")
-  #  set(CPACK_PACKAGE_HOMEPAGE "https://github.com/hedzr/cmdr-cxx")
+  #  set(CPACK_PACKAGE_HOMEPAGE "https://github.com/hedzr/hicc-cxx")
 
   get_target_property(target_type ${target} TYPE)
 

@@ -1,6 +1,6 @@
 project(test
         VERSION ${VERSION}
-        DESCRIPTION "tests - test apps for cmdr cxx11 library"
+        DESCRIPTION "tests - test apps for hicc cxx11 library"
         LANGUAGES C CXX)
 
 
@@ -50,6 +50,7 @@ function(define_test_program name)
     target_link_libraries(${PROJECT_NAME}-${name}
             PRIVATE
             Catch2::Catch2
+            libs::hicc
             # cmdr11::cmdr11
             # fmt::fmt-header-only
             )
@@ -88,8 +89,11 @@ function(define_test_program name)
 endfunction()
 
 
-define_test_program(sso-1 sso_test_1.cc)
-define_test_program(sso-2 sso_test_2.cc)
+define_test_program(sso-1 sso-1.cc)
+define_test_program(sso-2 sso-2.cc)
+
+define_test_program(priority-queue priority-queue.cc)
+
 #define_test_program(any-1 any_1.cc)
 #define_test_program(visit-any
 #                    visit_any.cc
@@ -130,7 +134,7 @@ define_test_program(sso-2 sso_test_2.cc)
 #include(loaders/yaml_loader)
 #add_yaml_loader_to(test-app2-c1)
 #target_compile_definitions(test-app2-c1 PRIVATE
-#                           CMDR_ENABLE_VERBOSE_LOG=1)
+#                           HICC_ENABLE_VERBOSE_LOG=1)
 
 #if (BUILD_TESTING)
 #    add_unit_test(${PROJECT_NAME} tests ${PROJECT_NAME}_tests)

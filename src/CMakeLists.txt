@@ -1,9 +1,9 @@
 
 
 #cmake_minimum_required(VERSION 3.17)
-project(hicc-cli
+project(hicc-ref
         VERSION ${VERSION}
-        DESCRIPTION "hicc-cxx cli project here"
+        DESCRIPTION "hicc-cxx reference project here"
         LANGUAGES CXX)
 
 debug_print_hbar()
@@ -20,6 +20,13 @@ add_executable(${PROJECT_NAME} main.cc)
 target_include_directories(${PROJECT_NAME} PRIVATE
         $<BUILD_INTERFACE:${CMAKE_GENERATED_DIR}>
         ${CMAKE_SOURCE_DIR}/include
+        )
+target_link_libraries(${PROJECT_NAME}
+        PRIVATE
+        # Catch2::Catch2
+        libs::hicc
+        # cmdr11::cmdr11
+        # fmt::fmt-header-only
         )
 
 
@@ -50,7 +57,7 @@ if (ENABLE_CMDR_CLI_TEST)
     project(cmdr-cli
             VERSION ${VERSION}
             DESCRIPTION "cmdr test cli project here"
-            HOMEPAGE_URL "https://github.com/hedzr/study-cxx"
+            HOMEPAGE_URL "https://github.com/hedzr/cmdr-cxx"
             LANGUAGES CXX)
 
     add_executable(${PROJECT_NAME} cmdr_main.cc)
@@ -69,16 +76,15 @@ endif ()
 
 # ##########################################################
 
-include(install-pack-helpers)
-
-add_install_chapter(${PROJECT_NAME})
-
-set(CPACK_PACKAGE_CONTACT "Hedzr Yeh <hedzrz@gmail.com>")
-set(CPACK_PACKAGE_VENDOR "Hedzr Studio")
-add_cpack_chapter(${PROJECT_NAME})
-
-message(STATUS "CPACK_SOURCE_PACKAGE_FILE_NAME = ${CPACK_SOURCE_PACKAGE_FILE_NAME}")
-message(STATUS "CPACK_PACKAGE_FILE_NAME = ${CPACK_PACKAGE_FILE_NAME}")
-message(STATUS "CPACK_TARGET_FILE_NAME = ${CPACK_TARGET_FILE_NAME}, ${PROJECT_NAME}, ${PROJECT_VERSION}, ${CMAKE_HOST_SYSTEM_NAME}")
+#include(install-pack-helpers)
+#add_install_chapter(${PROJECT_NAME})
+#
+#set(CPACK_PACKAGE_CONTACT "Hedzr Yeh <hedzrz@gmail.com>")
+#set(CPACK_PACKAGE_VENDOR "Hedzr Studio")
+#add_cpack_chapter(${PROJECT_NAME})
+#
+#message(STATUS "CPACK_SOURCE_PACKAGE_FILE_NAME = ${CPACK_SOURCE_PACKAGE_FILE_NAME}")
+#message(STATUS "CPACK_PACKAGE_FILE_NAME = ${CPACK_PACKAGE_FILE_NAME}")
+#message(STATUS "CPACK_TARGET_FILE_NAME = ${CPACK_TARGET_FILE_NAME}, ${PROJECT_NAME}, ${PROJECT_VERSION}, ${CMAKE_HOST_SYSTEM_NAME}")
 
 #

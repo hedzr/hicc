@@ -9,7 +9,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
         )
 #target_link_libraries(${PROJECT_NAME}
 #        PRIVATE
-#        libs::cmdr11)
+#        cmdr11::cmdr11)
 #
 #target_link_libraries(${PROJECT_NAME}
 #        PRIVATE
