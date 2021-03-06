@@ -283,10 +283,10 @@ jobs:
             name: "Windows Latest MSVC", artifact: "Windows-MSVC.7z",
             os: windows-latest
           }
-#          - {
-#            name: "Windows Latest MinGW", artifact: "Windows-MinGW.7z",
-#            os: ubuntu-latest
-#          }
+          #          - {
+          #            name: "Windows Latest MinGW", artifact: "Windows-MinGW.7z",
+          #            os: ubuntu-latest
+          #          }
           - {
             name: "Ubuntu Latest GCC", artifact: "Linux.7z",
             os: ubuntu-latest
@@ -309,17 +309,22 @@ jobs:
         with:
           name: upload_url
           path: ./
-      - id: set_upload_url
-        run: |
-          upload_url=`cat ./upload_url`
-          echo ::set-output name=upload_url::$upload_url
+      - uses: pCYSl5EDgo/cat@master
+        id: set_upload_url
+        with:
+          path: ./upload_url
+      # - name: set_upload_url
+      #   if: matrix.os != 'windows-latest'
+      #   run: |
+      #     upload_url=`cat ./upload_url`
+      #     echo ::set-output name=upload_url::$upload_url
       - name: Upload to Release
         id: upload_to_release
         uses: actions/upload-release-asset@v1.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.set_upload_url.outputs.upload_url }}
+          upload_url: ${{ steps.set_upload_url.outputs.text }}
           asset_path: ./${{ matrix.config.artifact }}
           asset_name: ${{ matrix.config.artifact }}
           asset_content_type: application/x-gtar
