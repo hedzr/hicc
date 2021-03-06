@@ -14,6 +14,11 @@
 #include <iostream>
 #include <sstream>
 
+#include <memory>
+
+#include <cassert>
+
+
 namespace hicc::queue {
 
     template<class T, class PT = int>

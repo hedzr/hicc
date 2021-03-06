@@ -145,11 +145,16 @@ namespace hicc::log {
 #define hicc_debug(...) hicc::log::holder(__FILE__, __LINE__, __PRETTY_FUNCTION__)(__VA_ARGS__)
 #endif
 #else
+#if defined(__GNUG__)
+#define hicc_debug(...) \
+    (void) 0
+#else
 #define hicc_debug(...)                                                                       \
     _Pragma("GCC diagnostic push")                                                            \
             _Pragma("GCC diagnostic ignored \"-Wunused-value\"") do { (void) (__VA_ARGS__); } \
     while (0)                                                                                 \
     _Pragma("GCC diagnostic pop")
+#endif
 #endif
 
 #if defined(HICC_ENABLE_VERBOSE_LOG)

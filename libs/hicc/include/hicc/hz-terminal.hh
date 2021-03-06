@@ -15,9 +15,10 @@
 #endif
 
 #include <cstdlib>
+#include <cstring>
 #include <iosfwd>
 #include <sstream>
-// #include <stdlib.h>
+#include <string.h>
 
 
 namespace hicc::terminal {

@@ -442,10 +442,10 @@ namespace hicc::btree {
             return nullptr;
         }
 
-        const_node_ref walk(visitor const &visitor) const { return _root->walk(visitor); }
-        node_ref walk(visitor const &visitor) { return _root->walk(visitor); }
-        const_node_ref walk_nlr(visitor const &visitor) const { return _root->walk_nlr(visitor); }
-        node_ref walk_nlr(visitor const &visitor) { return _root->walk_nlr(visitor); }
+        const_node_ref walk(visitor const &visitor_) const { return _root->walk(visitor_); }
+        node_ref walk(visitor const &visitor_) { return _root->walk(visitor_); }
+        const_node_ref walk_nlr(visitor const &visitor_) const { return _root->walk_nlr(visitor_); }
+        node_ref walk_nlr(visitor const &visitor_) { return _root->walk_nlr(visitor_); }
 
         bool is_null(T const &data) const { return data == _null_elem(); }
         bool is_null(node const &data) const { return data == _null_node(); }
