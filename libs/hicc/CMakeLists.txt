@@ -203,9 +203,11 @@ install(FILES
         ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME})
 
 install(FILES
-        ${CMAKE_CURRENT_SOURCE_DIR}/../include/hicc-cxx.hh
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/hicc-cxx.hh
         DESTINATION
         ${CMAKE_INSTALL_INCLUDEDIR})
+
+message("")
 
 #install(FILES
 #        ${CMAKE_CURRENT_LIST_DIR}/cmake/${PROJECT_NAME}Config.cmake
