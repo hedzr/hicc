@@ -6,12 +6,12 @@
 #define HICC_CXX_HZ_PRIORITY_QUEUE_HH
 
 #include <functional>
-#include <string>
 #include <list>
+#include <string>
 #include <vector>
 
-#include <iostream>
 #include <iomanip>
+#include <iostream>
 #include <sstream>
 
 namespace hicc::queue {
@@ -19,11 +19,28 @@ namespace hicc::queue {
     template<class T, class PT = int>
     using comparer = std::function<PT(T const &lhs, T const &rhs)>;
 
+
+    //
+
+
     template<class T,
-            class PT = int,
-            class Comp = comparer<T, PT>,
-            class Container = std::list<T>,
-            bool ReverseComp = false>
+             class PT = int,
+             class Comp = comparer<T, PT>,
+             template<typename, typename...> class Container = std::vector,
+             // class Container = std::list<T>,
+             bool ReverseComp = false>
+    class priority_queue_todo {
+    };
+
+
+    //
+
+
+    template<class T,
+             class PT = int,
+             class Comp = comparer<T, PT>,
+             class Container = std::list<T>,
+             bool ReverseComp = false>
     class priority_queue {
     public:
         struct element;
@@ -41,11 +58,11 @@ namespace hicc::queue {
 
             _It() = default;
             _It(element *el, std::size_t pos)
-                    : _el(el)
-                    , _pos(pos) {}
+                : _el(el)
+                , _pos(pos) {}
             _It(const _It &o)
-                    : _el(o._el)
-                    , _pos(o._pos) {}
+                : _el(o._el)
+                , _pos(o._pos) {}
             _It &operator=(const _It &o) {
                 _el = o._el;
                 _pos = o._pos;
@@ -60,11 +77,11 @@ namespace hicc::queue {
             element() = default;
             ~element() = default;
             element(Container &&l, int m)
-                    : _list(l)
-                    , _min_value(m) {}
+                : _list(l)
+                , _min_value(m) {}
             element(value_type l, int m)
-                    : _list{}
-                    , _min_value(m) {
+                : _list{}
+                , _min_value(m) {
                 _list.push_back(std::move(l));
             }
             // pre-order traversal
@@ -213,7 +230,7 @@ namespace hicc::queue {
 
             my_iterator() = default;
             my_iterator(element *ptr, std::size_t pos = (std::size_t) -1)
-                    : _it{ptr, pos} {}
+                : _it{ptr, pos} {}
 
             reference operator*() const {
                 _It &it = const_cast<_It &>(_it);
@@ -253,8 +270,8 @@ namespace hicc::queue {
 
     public:
         priority_queue()
-                : _root{std::make_shared<element>()}
-                , _comparer{} {}
+            : _root{std::make_shared<element>()}
+            , _comparer{} {}
         virtual ~priority_queue() {}
 
         my_iterator begin() { return my_iterator{_root.get(), 0}; }
@@ -324,10 +341,10 @@ namespace hicc::queue {
     };
 
     template<class T,
-            class PT,
-            class Comp,
-            class Container,
-            bool ReverseComp>
+             class PT,
+             class Comp,
+             class Container,
+             bool ReverseComp>
     inline typename priority_queue<T, PT, Comp, Container, ReverseComp>::value_type *
     priority_queue<T, PT, Comp, Container, ReverseComp>::_It::get() const {
         auto &z = const_cast<element *>(_el)->_list;
@@ -339,10 +356,10 @@ namespace hicc::queue {
     }
 
     template<class T,
-            class PT,
-            class Comp,
-            class Container,
-            bool ReverseComp>
+             class PT,
+             class Comp,
+             class Container,
+             bool ReverseComp>
     inline typename priority_queue<T, PT, Comp, Container, ReverseComp>::value_type priority_queue<T, PT, Comp, Container, ReverseComp>::element::_null{};
 
 } // namespace hicc::queue

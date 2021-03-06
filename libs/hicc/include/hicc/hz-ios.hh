@@ -13,8 +13,8 @@ namespace hicc::io {
     class [[maybe_unused]] ios_flags_saver {
     public:
         [[maybe_unused]] explicit ios_flags_saver(std::ostream &os)
-                : ios(os)
-                , f(os.flags()) {}
+            : ios(os)
+            , f(os.flags()) {}
         ~ios_flags_saver() { ios.flags(f); }
 
         ios_flags_saver(const ios_flags_saver &rhs) = delete;
@@ -28,7 +28,7 @@ namespace hicc::io {
     class ios_state_saver {
     public:
         explicit ios_state_saver(std::ostream &os)
-                : ios(os) {
+            : ios(os) {
             oldState.copyfmt(os);
         }
         ~ios_state_saver() { ios.copyfmt(oldState); }

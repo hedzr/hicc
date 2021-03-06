@@ -83,7 +83,7 @@ namespace hicc::string {
         }
         size_t a = 0, b = s.find(delimiter);
         for (; b != std::string::npos;
-               a = b + delimiter.length(), b = s.find(delimiter, a)) {
+             a = b + delimiter.length(), b = s.find(delimiter, a)) {
             *out++ = std::move(s.substr(a, b - a));
         }
         *out++ = std::move(s.substr(a, s.length() - a));
@@ -193,7 +193,7 @@ namespace hicc::string {
                                    const std::string &reg_find,
                                    const std::string &replaced_by,
                                    std::regex_constants::match_flag_type flags =
-                                   std::regex_constants::match_any) {
+                                           std::regex_constants::match_any) {
         std::string r = std::regex_replace(s, std::regex(reg_find), replaced_by, flags);
         return r;
     }
@@ -693,8 +693,8 @@ namespace hicc::text {
     class jaro_winkler_distance final : public distance_base {
     public:
         explicit jaro_winkler_distance(distance threshold = 0.7, bool case_sensitive = true)
-                : _threshold(threshold)
-                , _case_sensitive(case_sensitive) {}
+            : _threshold(threshold)
+            , _case_sensitive(case_sensitive) {}
         ~jaro_winkler_distance() = default;
 
         [[nodiscard]] distance get_distance() const override { return _distance; }

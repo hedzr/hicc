@@ -15,6 +15,8 @@
 #endif
 
 #include <cstdlib>
+#include <iosfwd>
+#include <sstream>
 // #include <stdlib.h>
 
 
@@ -54,7 +56,7 @@ namespace hicc::terminal {
                                    "vt100", "xterm", "xterm-256colors", "xterm-color"};
             return std::any_of(std::begin(Terms), std::end(Terms),
                                [&](const char *term) {
-                                 return std::strstr(str, term) != nullptr;
+                                   return std::strstr(str, term) != nullptr;
                                });
 #endif
         }
@@ -122,10 +124,10 @@ namespace hicc::terminal::colors {
         // protected:
     public:
         explicit colorize(bool true_color_enabled = true)
-                : _fg{}
-                , _bg{}
-                , _st{}
-                , _true_color_enabled(true_color_enabled) {
+            : _fg{}
+            , _bg{}
+            , _st{}
+            , _true_color_enabled(true_color_enabled) {
             _init();
             if (_colors <= 256) _true_color_enabled = false;
             if (_true_color_enabled) _fg = _bg = -1;

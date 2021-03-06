@@ -20,11 +20,11 @@
 #define _UNUSED_DEFINED
 #ifdef __clang__
 
-        //#ifndef UNUSED
-        //#define UNUSED(...) [__VA_ARGS__](){}
-        //#endif
-        template<typename... Args>
-        inline void UNUSED([[maybe_unused]] Args &&...args) {
+//#ifndef UNUSED
+//#define UNUSED(...) [__VA_ARGS__](){}
+//#endif
+template<typename... Args>
+inline void UNUSED([[maybe_unused]] Args &&...args) {
     (void) (sizeof...(args));
 }
 

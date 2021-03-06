@@ -5,11 +5,15 @@
 #ifndef HICC_CXX_HZ_DBG_HH
 #define HICC_CXX_HZ_DBG_HH
 
+#include <cassert>
+#include <iomanip>
+#include <iostream>
 #include <sstream>
 #include <stdexcept>
 #include <stdio.h>
 #include <stdlib.h>
 #include <typeinfo>
+
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
 #ifndef OS_WIN
@@ -32,6 +36,44 @@
 #ifdef __GNUG__
 #include <signal.h>
 #include <unistd.h>
+#endif
+
+
+#ifdef __clang__
+#define __FUNCTION_NAME__ __PRETTY_FUNCTION__
+#elif defined(__GNUC__)
+#define __FUNCTION_NAME__ __PRETTY_FUNCTION__
+#elif defined(_MSC_VER)
+#define __FUNCTION_NAME__ __FUNCSIG__
+#endif
+
+
+// for C++ assert:
+//    assert(print_if_false(a==b, "want a equal to b"));
+//
+inline bool print_if_false(const bool assertion, const char *msg) {
+    if (!assertion) {
+        std::cout << msg << std::endl;
+    }
+    return assertion;
+}
+inline bool print_if_false(const bool assertion, const std::string &msg) { return print_if_false(assertion, msg.c_str()); }
+
+
+// assertm(a == b, "want a equal to b");
+#ifdef _DEBUG
+#define assertm(expr, msg) \
+    __M_Assert(#expr, expr, __FILE__, __LINE__, __FUNCTION_NAME__, msg)
+inline void __M_Assert(const char *expr_str, bool expr, const char *file, int line, const char *func, const char *msg) {
+    if (!expr) {
+        std::cerr << "Assert failed:\t" << msg << "\n"
+                  << "Expected:\t" << expr_str << "\n"
+                  << "Source:\t\t" << func << " at " << file << ':' << line << "\n";
+        std::abort();
+    }
+}
+#else
+#define assertm(expr, msg) (void) 9
 #endif
 
 
@@ -84,14 +126,6 @@ namespace hicc::debug {
         name.remove_suffix(suffix.size());
         return name;
     }
-#endif
-
-#ifdef __clang__
-#define __FUNCTION_NAME__ __PRETTY_FUNCTION__;
-#elif defined(__GNUC__)
-#define __FUNCTION_NAME__ __PRETTY_FUNCTION__
-#elif defined(_MSC_VER)
-#define __FUNCTION_NAME__ __FUNCSIG__
 #endif
 
     // to detect the type of a lambda function, following:
@@ -397,7 +431,11 @@ namespace hicc::exception {
 
 } // namespace hicc::exception
 
+
 //
+//
+//
+
 
 namespace hicc::debug {
     // unwrap nested exceptions, printing each nested exception to std::cerr.

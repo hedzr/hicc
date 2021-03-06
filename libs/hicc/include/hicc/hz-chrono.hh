@@ -6,10 +6,12 @@
 #define HICC_CXX_HZ_CHRONO_HH
 
 #include <chrono>
+#include <functional>
 #include <iomanip>
 #include <iostream>
 #include <string>
 #include <tuple>
+
 
 namespace hicc::chrono {
 
@@ -45,29 +47,60 @@ namespace hicc::chrono {
         std::tuple<Durations...> retval;
         using discard = int[];
         (void) discard{0, (void((
-                                        (std::get<Durations>(retval) = std::chrono::duration_cast<Durations>(d)),
-                                                (d -= std::chrono::duration_cast<DurationIn>(std::get<Durations>(retval))))),
-                0)...};
+                                   (std::get<Durations>(retval) = std::chrono::duration_cast<Durations>(d)),
+                                   (d -= std::chrono::duration_cast<DurationIn>(std::get<Durations>(retval))))),
+                           0)...};
         return retval;
     }
 
+    /**
+     * @brief a high resolution time span calculator
+     * 
+     * @details Usage:
+     * 
+     *   Just make it as a stack variable, for example:
+     * 
+     *    void yours(){
+     *          hicc::chrono::high_res_duration hrd;
+     *          
+     *          //...
+     *          
+     *          // at the exiting this function, hrd will print a timing log line.
+     *    }
+     * 
+     * If you post a callback at constructor, the default printer could be 
+     * overwritten by a false return in your callback function. Here is a
+     * sample:
+     * 
+     *     hicc::chrono::high_res_duration hrd([](auto duration) -> bool {
+     *       std::cout << "It took " << duration << '\n';
+     *       return false;
+     *     });
+     */
     class high_res_duration {
     public:
-        high_res_duration()
-                : _then(std::chrono::high_resolution_clock::now()) {}
+        high_res_duration(std::function<bool(std::chrono::high_resolution_clock::duration duration)> const &fn = nullptr)
+            : _then(std::chrono::high_resolution_clock::now())
+            , _cb(fn) {}
         ~high_res_duration() {
             _now = std::chrono::high_resolution_clock::now();
             auto duration = _now - _then;
 
             // auto [ss, ms, us] = break_down_durations<std::chrono::seconds, std::chrono::milliseconds, std::chrono::microseconds>(duration);
 
-            auto clean_duration = break_down_durations<std::chrono::seconds, std::chrono::milliseconds, std::chrono::microseconds>(duration);
-            //    auto timeInMicroSec = std::chrono::duration_cast<std::chrono::microseconds>(duration); // base in Microsec.
-            std::cout << std::get<0>(clean_duration).count() << "::" << std::get<1>(clean_duration).count() << "::" << std::get<2>(clean_duration).count() << "\n";
+            bool ok{};
+            if (_cb)
+                ok = _cb(duration);
+            if (ok) {
+                auto clean_duration = break_down_durations<std::chrono::seconds, std::chrono::milliseconds, std::chrono::microseconds>(duration);
+                //    auto timeInMicroSec = std::chrono::duration_cast<std::chrono::microseconds>(duration); // base in Microsec.
+                std::cout << "It took " << std::get<0>(clean_duration).count() << "::" << std::get<1>(clean_duration).count() << "::" << std::get<2>(clean_duration).count() << "\n";
+            }
         }
 
     private:
         std::chrono::time_point<std::chrono::high_resolution_clock, std::chrono::nanoseconds> _then, _now;
+        std::function<bool(std::chrono::high_resolution_clock::duration)> _cb;
     };
 
 
@@ -186,7 +219,7 @@ namespace hicc::chrono {
 
 
     template<class Duration,
-            std::enable_if_t<is_duration<Duration>::value, bool> = true>
+             std::enable_if_t<is_duration<Duration>::value, bool> = true>
     static bool parse_duration(std::istream &is, Duration &d) {
         (void) (is);
         (void) (d);
@@ -197,7 +230,7 @@ namespace hicc::chrono {
 } // namespace hicc::chrono
 
 template<typename T,
-        std::enable_if_t<hicc::chrono::is_duration<T>::value, bool> = true>
+         std::enable_if_t<hicc::chrono::is_duration<T>::value, bool> = true>
 inline std::ostream &operator<<(std::ostream &os, T const &v) {
     hicc::chrono::format_duration(os, v);
     return os;

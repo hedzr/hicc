@@ -212,7 +212,7 @@ namespace hicc::checks {
     class is_streamable {
         template<typename SS, typename TT>
         static auto test(int)
-        -> decltype(std::declval<SS &>() << std::declval<TT>(), std::true_type());
+                -> decltype(std::declval<SS &>() << std::declval<TT>(), std::true_type());
 
         template<typename, typename>
         static auto test(...) -> std::false_type;
@@ -222,7 +222,7 @@ namespace hicc::checks {
     };
 
 
-} // namespace hicc
+} // namespace hicc::checks
 
 
 #if 0

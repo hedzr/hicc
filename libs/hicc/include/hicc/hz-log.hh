@@ -62,7 +62,7 @@ namespace hicc::log {
                             "\n",
                             fg_light_gray,
                             time_buf,
-                        // _c.dim().s("[debug]").as_string().c_str(),
+                            // _c.dim().s("[debug]").as_string().c_str(),
                             "[debug]",
                             fg_reset_all,
                             buf.data(),
@@ -121,9 +121,9 @@ namespace hicc::log {
 
     public:
         holder(const char *file, int line, const char *func)
-                : _file(file)
-                , _line(line)
-                , _func(func) {}
+            : _file(file)
+            , _line(line)
+            , _func(func) {}
 
         void operator()(char const *fmt, ...) {
             va_list va;
