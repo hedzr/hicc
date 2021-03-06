@@ -145,7 +145,7 @@ namespace hicc::log {
 #define hicc_debug(...) hicc::log::holder(__FILE__, __LINE__, __PRETTY_FUNCTION__)(__VA_ARGS__)
 #endif
 #else
-#if defined(__GNUG__)
+#if defined(__GNUG__) || defined(__MSC_VER)
 #define hicc_debug(...) \
     (void) 0
 #else
