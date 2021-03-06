@@ -75,6 +75,7 @@ set(detail_header_files
 set(header_files
         ${CMAKE_CURRENT_SOURCE_DIR}/include/hicc-cxx.hh
         ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hicc.hh
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hz-btree.hh
         ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hz-chrono.hh
         ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hz-dbg.hh
         ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hz-defs.hh
@@ -82,6 +83,7 @@ set(header_files
         ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hz-ios.hh
         ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hz-log.hh
         ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hz-path.hh
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hz-priority-queue.hh
         ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hz-string.hh
         ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hz-terminal.hh
         ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hz-util.hh

@@ -23,6 +23,7 @@
 #include "hz-dbg.hh"
 #include "hz-log.hh"
 
+#include "hz-btree.hh"
 #include "hz-priority-queue.hh"
 
 #include "hz-util.hh"
