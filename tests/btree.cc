@@ -124,7 +124,7 @@ void test_btree_rand() {
     hicc::chrono::high_res_duration hrd;
 
     hicc::btree::btree<int, 3> bt;
-    std::srand(std::time(nullptr)); // use current time as seed for random generator
+    std::srand((unsigned int) std::time(nullptr)); // use current time as seed for random generator
     for (int ix = 0; ix < 2000 * 1000; ix++) {
         int random_variable = std::rand();
         bt.insert(random_variable);
