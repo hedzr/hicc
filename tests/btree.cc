@@ -16,26 +16,27 @@
 template<class T, int Order = 5>
 void dbg_dump(std::ostream &os, hicc::btree::btree<T, Order> const &bt) {
     os << "DUMP...";
-    bt.walk_nlr([&os](
-                        typename hicc::btree::btree<T, Order>::const_elem_ref el,
-                        typename hicc::btree::btree<T, Order>::const_node_ref node,
-                        int level, bool node_changed,
-                        int parent_ptr_index, bool parent_ptr_changed,
-                        int ptr_index) -> bool {
+    bt.walk_level_traverse([&os](
+                                   typename hicc::btree::btree<T, Order>::const_elem_ref el,
+                                   typename hicc::btree::btree<T, Order>::const_node_ref node,
+                                   int level, bool node_changed,
+                                   int parent_ptr_index, bool parent_ptr_changed,
+                                   int ptr_index) -> bool {
         if (node_changed) {
             if (ptr_index == 0)
                 os << '\n'
-                   << ' ' << ' '; // << 'L' << level << '.' << ptr_index;
+                   << ' ' << ' '; //  << 'L' << level << '.' << ptr_index;
             else if (parent_ptr_changed)
                 os << ' ' << '|' << ' ';
             else
                 os << ' ';
             // if (node._parent == nullptr) os << '*'; // root here
-            os << node.to_string();
+            os //<< ptr_index << '.'
+                    << node.to_string();
         }
         os.flush();
-        UNUSED(el, level, parent_ptr_index, parent_ptr_changed, ptr_index);
-        return true;
+        UNUSED(el, node, level, node_changed, parent_ptr_index, parent_ptr_changed, ptr_index);
+        return true; // false to terminate the walking
     });
     os << '\n';
 }
@@ -65,7 +66,7 @@ void test_btree() {
     dbg_dump(std::cout, bt);
     bt.insert(16); // split
     dbg_dump(std::cout, bt);
-    bt.insert(14, 15); // split
+    bt.insert(14, 15);
     dbg_dump(std::cout, bt);
     bt.insert(1); // split
     dbg_dump(std::cout, bt);
@@ -112,9 +113,14 @@ void test_btree_2() {
     bt.insert(50, 128, 168, 140, 145, 270);
     dbg_dump<int, 3>(std::cout, bt);
     bt.insert(250);
+    dbg_dump<int, 3>(std::cout, bt);
     bt.insert(120, 105, 117, 264);
     dbg_dump<int, 3>(std::cout, bt);
-    bt.insert(269, 320, 439, 300, 290, 226, 155, 100, 48);
+    bt.insert(269, 320, 439, 300);
+    dbg_dump<int, 3>(std::cout, bt);
+    bt.insert(290, 226, 155, 100);
+    dbg_dump<int, 3>(std::cout, bt);
+    bt.insert(48);
     dbg_dump<int, 3>(std::cout, bt);
     bt.insert(79);
     dbg_dump<int, 3>(std::cout, bt);
@@ -134,8 +140,8 @@ void test_btree_rand() {
 }
 
 int main() {
-    assertm(1 == 0, "bad");
+    // assertm(1 == 0, "bad");
     test_btree();
+    // test_btree_1();
     test_btree_2();
-    test_btree_1();
 }
