@@ -867,7 +867,7 @@ namespace hicc::btree {
                     index = ptr_index;
                     return false;
                 }
-                UNUSED(el, node, level, node_changed, parent_ptr_index, parent_ptr_changed, ptr_index);
+                UNUSED(saved, el, node, level, node_changed, parent_ptr_index, parent_ptr_changed, ptr_index);
                 return true; // false to terminate the walking
             });
             if (res)
@@ -895,7 +895,7 @@ namespace hicc::btree {
         static bool is_null(T const &data) { return data == _null_elem(); }
         static bool is_null(node const &data) { return data == _null_node(); }
 
-#ifdef _DEBUG
+#if defined(_DEBUG) || 1
 
         void dbg_dump(std::ostream &os, const char *headline = nullptr) const {
             if (headline) os << headline;
