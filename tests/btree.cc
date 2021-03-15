@@ -38,7 +38,7 @@ void dbg_dump(std::ostream &os, hicc::btree::btree<T, Degree> const &bt) {
                     << node.to_string();
         }
         os.flush();
-        UNUSED(el, node, level, node_changed, parent_ptr_index, parent_ptr_changed, ptr_index);
+        UNUSED(el, level, parent_ptr_index);
         return true; // false to terminate the walking
     });
     os << '\n';
@@ -118,10 +118,58 @@ void test_btree() {
     //     std::cout << pq.pop() << '\n';
 }
 
-void test_btree_1() {
+void test_btree_1_emplace() {
     std::string str(5, 's');
     hicc::btree::btree<std::string> bts;
     bts.emplace(5, 's');
+}
+
+void test_btree_1() {
+    using hicc::terminal::colors::colorize;
+    colorize c;
+    std::cout << c.bold().s("test_btree_1") << '\n';
+    hicc::chrono::high_res_duration hrd([](auto duration) -> bool {
+        std::cout << "It took " << duration << '\n';
+        return false;
+    });
+
+    hicc::btree::btree<int> bt;
+    bt.insert(39, 22, 97, 41);
+    bt.dbg_dump(std::cout);
+    bt.insert(53);
+    bt.dbg_dump(std::cout);
+    bt.insert(13, 21, 40);
+    bt.dbg_dump(std::cout);
+    bt.insert(30, 27, 33);
+    bt.dbg_dump(std::cout);
+    bt.insert(36, 35, 34);
+    bt.dbg_dump(std::cout);
+    bt.insert(24, 29);
+    bt.dbg_dump(std::cout);
+    bt.insert(26);
+    bt.dbg_dump(std::cout);
+    bt.insert(17, 28, 23);
+    bt.dbg_dump(std::cout);
+    bt.insert(31, 32);
+    bt.dbg_dump(std::cout);
+
+    std::cout << '\n';
+    using btree = hicc::btree::btree<int>;
+    int count = 0;
+    bt.walk([&count](btree::elem_ref el, btree::node_ref node_ref, int level, bool node_changed,
+               int ptr_parent_index, bool parent_ptr_changed, int ptr_index) -> bool {
+        static int last_one = 0;
+        assertm(last_one <= el, "expecting a ascend sequences");
+        last_one = el;
+        std::cout << el << ',';
+        count++;
+        UNUSED(level, node_changed, ptr_parent_index);
+        UNUSED(parent_ptr_changed, ptr_index);
+        UNUSED(el, node_ref);
+        return true;
+    });
+    std::cout << '\n';
+    std::cout << "total: " << count << " elements" << '\n';
 }
 
 void test_btree_2() {
@@ -174,10 +222,10 @@ void test_btree_b() {
     // [7789,20579]/11
     //              [1622]/9 [12733]/0 [25126]/0
     //              [153,1449]/17 [5564,8669]/0 | [9056,11643]/0 [18723]/0 | [17262,23071]/0 [31350,31575]/0
-    auto numbers = {9004,13782,3060,11383,15034,15737, -1};
+    auto numbers = {9004, 13782, 3060, 11383, 15034, 15737, -1};
     // [15315]/0
     //         [14925]/9 [29854,31496]/0
-    
+
     for (auto n : numbers) {
         if (n > 0) {
             if (ix == 5) {
@@ -238,11 +286,11 @@ void test_btree_rand() {
 }
 
 int main() {
-    // // assertm(1 == 0, "bad");
+    // assertm(1 == 0, "bad");
     // test_btree();
-    // // test_btree_1();
+    test_btree_1();
     // test_btree_2();
 
-    test_btree_b();
-    test_btree_rand();
+    // test_btree_b();
+    // test_btree_rand();
 }
