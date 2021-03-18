@@ -203,8 +203,8 @@ namespace hicc::btree {
                 node const *res{};
                 int index{};
                 walk([data, &res, &index](
-                             typename hicc::btree::btree<T, Degree>::const_elem_ref el,
-                             typename hicc::btree::btree<T, Degree>::const_node_ref node_this,
+                             const_elem_ref el,
+                             const_node_ref node_this,
                              int level, bool /*node_changed*/,
                              int /*parent_ptr_index*/, bool /*parent_ptr_changed*/,
                              int ptr_index) -> bool {
@@ -230,8 +230,8 @@ namespace hicc::btree {
                 node const *res{};
                 int saved{index};
                 walk([&res, &index, saved](
-                             typename hicc::btree::btree<T, Degree>::const_elem_ref el,
-                             typename hicc::btree::btree<T, Degree>::const_node_ref node_this,
+                             const_elem_ref el,
+                             const_node_ref node_this,
                              int level, bool /*node_changed*/,
                              int /*parent_ptr_index*/, bool /*parent_ptr_changed*/,
                              int ptr_index) -> bool {
@@ -299,6 +299,12 @@ namespace hicc::btree {
                     bt._after_inserted(bt, a);
                 if (bt._after_changed)
                     bt._after_changed(bt);
+                if (auto_dot_png) {
+                    static int seq = 0;
+                    std::array<char, 200> name;
+                    std::sprintf(name.data(), "auto.%04d.insert.dot", seq++);
+                    bt.dot_it(name.data());
+                }
                 // ++_size;
                 // if (saved != root) ++_size;
             }
@@ -438,6 +444,12 @@ namespace hicc::btree {
                             bt._after_removed(bt, a);
                         if (bt._after_changed)
                             bt._after_changed(bt);
+                        if (auto_dot_png) {
+                            static int seq = 0;
+                            std::array<char, 200> name;
+                            std::sprintf(name.data(), "auto.%04d.remove.dot", seq++);
+                            bt.dot_it(name.data());
+                        }
                         return true;
                     }
                 }
@@ -454,6 +466,12 @@ namespace hicc::btree {
                         bt._after_removed(bt, raised);
                     if (bt._after_changed)
                         bt._after_changed(bt);
+                    if (auto_dot_png) {
+                        static int seq = 0;
+                        std::array<char, 200> name;
+                        std::sprintf(name.data(), "auto.%04d.remove.dot", seq++);
+                        bt.dot_it(name.data());
+                    }
                     delete raised;
                     // if (saved != root) --_size;
                     return true;
@@ -1429,8 +1447,8 @@ namespace hicc::btree {
             assertm((std::size_t) count == _size,
                     "expecting _size is equal to the btree size (countof) exactly");
 
-            walk([this](typename hicc::btree::btree<T, Degree>::const_elem_ref el,
-                        typename hicc::btree::btree<T, Degree>::const_node_ref node_this,
+            walk([this](const_elem_ref el,
+                        const_node_ref node_this,
                         int level, bool node_changed,
                         int parent_ptr_index, bool parent_ptr_changed,
                         int ptr_index) -> bool {

@@ -19,9 +19,9 @@
 
 
 template<class T, int Degree = 5>
-void dbg_dump(std::ostream &os, hicc::btree::btree<T, Degree> const &bt) {
+void dbg_dump(std::ostream &os, hicc::btree::btree<T, Degree, std::less<T>, true> const &bt) {
     os << "DUMP...";
-    bt.walk_level_traverse([&os](typename hicc::btree::btree<T, Degree>::traversal_context const &ctx) -> bool {
+    bt.walk_level_traverse([&os](typename hicc::btree::btree<T, Degree, std::less<T>, true>::traversal_context const &ctx) -> bool {
         if (ctx.node_changed) {
             if (ctx.index == 0)
                 os << '\n'
@@ -45,7 +45,8 @@ void test_btree() {
         return false;
     });
 
-    hicc::btree::btree<int> bt;
+    using btree = hicc::btree::btree<int, 5, std::less<int>, true>;
+    btree bt;
     bt.insert(9, 11, 2, 7);
     dbg_dump(std::cout, bt);
     bt.insert(3); // split
@@ -119,7 +120,7 @@ void test_btree_1_emplace() {
     bts.emplace(5, 's');
 }
 
-hicc::btree::btree<int> test_btree_1() {
+hicc::btree::btree<int, 5, std::less<int>, true> test_btree_1() {
     using hicc::terminal::colors::colorize;
     colorize c;
     std::cout << c.bold().s("test_btree_1") << '\n';
@@ -128,7 +129,8 @@ hicc::btree::btree<int> test_btree_1() {
         return false;
     });
 
-    hicc::btree::btree<int> bt;
+    using btree = hicc::btree::btree<int, 5, std::less<int>, true>;
+    btree bt;
     bt.insert(39, 22, 97, 41);
     bt.dbg_dump();
     bt.insert(53);
@@ -149,7 +151,6 @@ hicc::btree::btree<int> test_btree_1() {
     bt.dbg_dump();
 
     std::cout << '\n';
-    using btree = hicc::btree::btree<int>;
     int count = 0;
     bt.walk([&count](btree::const_elem_ref el, btree::const_node_ref node_ref, int level, bool node_changed,
                      int ptr_parent_index, bool parent_ptr_changed, int ptr_index) -> bool {
@@ -171,7 +172,7 @@ hicc::btree::btree<int> test_btree_1() {
     return bt;
 }
 
-void test_btree_1_remove(hicc::btree::btree<int> &bt) {
+void test_btree_1_remove(hicc::btree::btree<int, 5, std::less<int>, true> &bt) {
     if (auto [idx, ref] = bt.next_payload(bt.find(21)); ref) {
         assert(ref[idx] == 22);
     } else {
@@ -248,7 +249,8 @@ void test_btree_2() {
         return false;
     });
 
-    hicc::btree::btree<int, 3> bt;
+    using btree = hicc::btree::btree<int, 3, std::less<int>, true>;
+    btree bt;
     // bt.insert(50, 128, 168, 140, 145, 270, 250, 120, 105, 117, 264, 269, 320, 439, 300, 290, 226, 155, 100, 48, 79);
     bt.insert(50, 128, 168, 140, 145, 270);
     dbg_dump<int, 3>(std::cout, bt);
@@ -275,14 +277,15 @@ void test_btree_2() {
 
     bt.remove(79);
     dbg_dump<int, 3>(std::cout, bt);
-    bt.dot_it("bb2.2.dot");
+    // bt.dot_it("bb2.2.dot");
 }
 
 void test_btree_b() {
     hicc::chrono::high_res_duration hrd;
 
     int ix{};
-    hicc::btree::btree<int, 3> bt;
+    using btree = hicc::btree::btree<int, 3, std::less<int>, true>;
+    btree bt;
     // auto numbers = {12488, 2222, 26112, -1, -1, 13291, 23251, 32042, 19569};
     // auto numbers = {1607, 4038, 1100, 2937, 3657, 10151};
     // auto numbers = {15345, 5992, 21742, 3387, 9020, 18896, 27523, 28967, -1};
@@ -384,8 +387,9 @@ void test_btree_rand() {
 
     std::srand((unsigned int) std::time(nullptr)); // use current time as seed for random generator
 
+    using btree = hicc::btree::btree<int, 3, std::less<int>, true>;
     std::vector<int> series;
-    hicc::btree::btree<int, 3> bt;
+    btree bt;
     for (int ix = 0; ix < 2000 * 1000; ix++) {
         // int choice = std::rand();
         int choice = uniform_dist(e1);
