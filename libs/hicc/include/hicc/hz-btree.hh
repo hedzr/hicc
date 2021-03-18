@@ -48,6 +48,7 @@ namespace hicc::btree {
 
     public:
         struct node;
+        struct traversal_context;
 
         using node_ptr = node *;
         using node_ref = node &;
@@ -67,25 +68,15 @@ namespace hicc::btree {
         using elem_ref = elem_type &;
         using const_elem_ref = elem_type const &;
 
-        using visitor = std::function<bool(const_elem_ref, const_node_ref, int level, bool node_changed,
-                                           int ptr_parent_index, bool parent_ptr_changed, int ptr_index)>;
-        struct traversal_context {
-            const_node_ref curr;
-            const_elem_ref el;
-            int level;
-            int index;
-            int loop_base;
-            int parent_ptr_index;
-            int abs_index;
-            bool level_changed;
-            bool node_changed;
-            bool parent_ptr_index_changed;
-        };
+        // using visitor = std::function<bool(const_elem_ref, const_node_ref, int level, bool node_changed,
+        //                                    int ptr_parent_index, bool parent_ptr_changed, int ptr_index)>;
+
         using visitor_l = std::function<bool(traversal_context const &)>;
 
         static const int P_LEN = Degree - 1;
         static const int MID = P_LEN / 2;
 
+    public:
         struct node {
             // Container<T> _payload{};
             // Container<node_ptr> _pointers{};
@@ -167,9 +158,15 @@ namespace hicc::btree {
             void remove_by_position(btree &bt, node const &res, int index) { _remove_one_entry(bt, res, index); }
 
             // const_node_ref walk(visitor const &visitor) const { return LNR(visitor, 9); }
-            const_node_ref walk(visitor const &visitor) const { return LNR(visitor, 0, 0); }
+            const_node_ref walk(visitor_l const &visitor) const {
+                int x{0};
+                return LNR(visitor, x, 0, 0, 0);
+            }
 
-            const_node_ref walk_nlr(visitor const &visitor) const { return NLR(visitor, 0, 0); }
+            const_node_ref walk_nlr(visitor_l const &visitor) const {
+                int x{0};
+                return NLR(visitor, x, 0, 0, 0);
+            }
 
             const_node_ref walk_level_traverse(visitor_l const &visitor) const { return Level(visitor); }
 
@@ -200,8 +197,17 @@ namespace hicc::btree {
             }
 
             position find(elem_type const &data) const {
-                node const *res{};
                 int index{};
+#if 1
+                while (index < Degree - 1 && _payloads[index] && comparer()(*(_payloads[index]), data))
+                    index++;
+                if (index < Degree - 1 && _payloads[index] && !comparer()(data, *(_payloads[index])))
+                    return {true, *this, index};
+                if (_pointers[index] == nullptr) // is leaf?
+                    return {false, _null_node(), -1};
+                return _pointers[index]->find(data);
+#else
+                node const *res{};
                 walk([data, &res, &index](
                              const_elem_ref el,
                              const_node_ref node_this,
@@ -224,26 +230,22 @@ namespace hicc::btree {
                 if (res)
                     return {true, *res, index};
                 return {false, _null_node(), -1};
+#endif
             }
 
             position find_by_index(int index) const {
                 node const *res{};
                 int saved{index};
-                walk([&res, &index, saved](
-                             const_elem_ref el,
-                             const_node_ref node_this,
-                             int level, bool /*node_changed*/,
-                             int /*parent_ptr_index*/, bool /*parent_ptr_changed*/,
-                             int ptr_index) -> bool {
-                    if (index-- == 0) {
-                        hicc_debug("find_by_index(%d) -> node(%s) index(%d)", saved, node_this.to_string().c_str(),
-                                   ptr_index);
-                        res = &node_this;
-                        index = ptr_index;
+                walk([&res, &index, saved](traversal_context const &ctx) -> bool {
+                    if (index == ctx.abs_index) {
+                        hicc_verbose_debug("find_by_index(%d) -> node(%s) index(%d)",
+                                           saved, ctx.curr.to_string().c_str(), ctx.index);
+                        res = &ctx.curr;
+                        index = ctx.index;
                         return false;
                     }
                     // UNUSED(saved, el, node_this, level, node_changed, parent_ptr_index, parent_ptr_changed, ptr_index);
-                    UNUSED(saved, el, level);
+                    // UNUSED(saved, el, level);
                     return true; // false to terminate the walking
                 });
                 if (res)
@@ -252,14 +254,9 @@ namespace hicc::btree {
             }
 
             const_node_ref find(std::function<bool(const_elem_ptr, const_node_ptr, int /*level*/, bool /*node_changed*/,
-                                                   int /*ptr_index*/)> const &matcher) const {
-                walk([matcher](
-                             const_elem_ref el,
-                             const_node_ref node_this,
-                             int level, bool node_changed,
-                             int /*parent_ptr_index*/, bool /*parent_ptr_changed*/,
-                             int ptr_index) -> bool {
-                    return matcher(el, node_this, level, node_changed, ptr_index);
+                                                   int /*index*/, int /*abs_index*/)> const &matcher) const {
+                walk([matcher](traversal_context const &ctx) -> bool {
+                    return matcher(ctx.el, ctx.curr, ctx.level, ctx.node_changed, ctx.index, ctx.abs_index);
                     //return true; // false to terminate the walking
                 });
                 return (*this);
@@ -291,8 +288,11 @@ namespace hicc::btree {
 
         private:
             void _insert_one_entry(btree &bt, elem_ptr a) {
-                hicc_debug("insert '%s' to %s", elem_to_string(a).c_str(), to_string().c_str());
-                // auto *saved = root;
+                std::ostringstream orig, elem;
+                orig << to_string();
+                elem << elem_to_string(a);
+                hicc_debug("insert '%s' to %s", elem.str().c_str(), orig.str().c_str());
+
                 _insert_node(bt._root, a, nullptr, nullptr);
                 bt._size++;
                 if (bt._after_inserted)
@@ -300,13 +300,12 @@ namespace hicc::btree {
                 if (bt._after_changed)
                     bt._after_changed(bt);
                 if (auto_dot_png) {
-                    static int seq = 0;
                     std::array<char, 200> name;
-                    std::sprintf(name.data(), "auto.%04d.insert.dot", seq++);
-                    bt.dot_it(name.data());
+                    std::sprintf(name.data(), "auto.%s%04lu._insert.dot", bt._seq_prefix.c_str(), bt.dot_seq_inc());
+                    std::ostringstream ttl;
+                    ttl << "insert '" << elem.str() << "' into " << orig.str();
+                    bt.dot(name.data(), ttl.str().c_str());
                 }
-                // ++_size;
-                // if (saved != root) ++_size;
             }
 
             void _insert_node(node_ptr &root, elem_ptr el,
@@ -428,7 +427,10 @@ namespace hicc::btree {
             }
 
             bool _remove_one_entry(btree &bt, const_elem_ptr a) {
-                hicc_debug("remove '%s' from %s", elem_to_string(a).c_str(), to_string().c_str());
+                std::ostringstream orig, elem;
+                orig << to_string();
+                elem << elem_to_string(a);
+                hicc_debug("remove '%s' from %s", elem.str().c_str(), orig.str().c_str());
                 auto [ok, res, index] = find(*a);
                 if (ok) {
                     if (auto raised = _remove_one(bt, bt._root, const_cast<node_ptr>(&res), index); raised) {
@@ -445,10 +447,11 @@ namespace hicc::btree {
                         if (bt._after_changed)
                             bt._after_changed(bt);
                         if (auto_dot_png) {
-                            static int seq = 0;
                             std::array<char, 200> name;
-                            std::sprintf(name.data(), "auto.%04d.remove.dot", seq++);
-                            bt.dot_it(name.data());
+                            std::sprintf(name.data(), "auto.%s%04lu._remove.dot", bt._seq_prefix.c_str(), bt.dot_seq_inc());
+                            std::ostringstream ttl;
+                            ttl << "remove '" << elem.str() << "' from " << orig.str();
+                            bt.dot(name.data(), ttl.str().c_str());
                         }
                         return true;
                     }
@@ -457,8 +460,11 @@ namespace hicc::btree {
             }
 
             bool _remove_one_entry(btree &bt, const_node_ref res, int index) {
-                hicc_debug("remove from %s by position: node(%s), index=%d", to_string().c_str(),
-                           res.to_string().c_str(), index);
+                std::ostringstream orig, elem;
+                orig << to_string();
+                elem << elem_to_string(res.get_el(index));
+                hicc_debug("remove '%s' from %s by position: node(%s), index=%d",
+                           elem.str().c_str(), to_string().c_str(), res.to_string().c_str(), index);
                 // auto *saved = root;
                 if (auto raised = _remove_one(bt, bt._root, const_cast<node *>(&res), index); raised) {
                     --bt._size;
@@ -467,10 +473,11 @@ namespace hicc::btree {
                     if (bt._after_changed)
                         bt._after_changed(bt);
                     if (auto_dot_png) {
-                        static int seq = 0;
                         std::array<char, 200> name;
-                        std::sprintf(name.data(), "auto.%04d.remove.dot", seq++);
-                        bt.dot_it(name.data());
+                        std::sprintf(name.data(), "auto.%s%04lu._remove.dot", bt._seq_prefix.c_str(), bt.dot_seq_inc());
+                        std::ostringstream ttl;
+                        ttl << "remove '" << elem.str() << "' from " << orig.str();
+                        bt.dot(name.data(), ttl.str().c_str());
                     }
                     delete raised;
                     // if (saved != root) --_size;
@@ -838,49 +845,109 @@ namespace hicc::btree {
                 return false;
             }
 
+            int level() const {
+                int l{};
+                auto *p = this;
+                while (p->_parent)
+                    p = p->_parent, l++;
+                return l;
+            }
+
         private:
             // in-order traversal
-            const_node_ref LNR(visitor const &visitor, int level, int ptr_index) const {
+            //
+            // never used in context:
+            //   loop_base_tmp, level_changed,
+            //   parent_ptr_index, parent_ptr_index_changed
+            const_node_ref LNR(visitor_l const &visitor, int &abs_index, int level, int parent_ptr_index, int loop_base = 0) const {
+                bool parent_ptr_changed{loop_base == 0};
                 bool node_changed{true};
+                int count{0};
                 for (int i = 0, pi = 0; i < P_LEN; i++, pi++) {
                     auto *n = _pointers[i];
-                    if (n)
-                        if (auto &z = n->LNR(visitor, level + 1, ptr_index); is_null(z))
-                            return (*this);
+                    if (n) {
+                        if (auto &z = n->LNR(visitor, abs_index, level + 1, pi, count); is_null(z))
+                            return z;
+                        count += n->payload_count() + 1;
+                    }
 
                     auto *t = _payloads[pi];
                     if (t) {
-                        if (visitor)
-                            if (!visitor(*t, const_cast<node_ref>(*this), level, node_changed, ptr_index, false, i))
-                                return _null_node();
-                    }
-
-                    node_changed = false;
+                        if (!visitor(traversal_context{
+                                    *this,
+                                    t,
+                                    level,              // level(),
+                                    i,                  // index
+                                    loop_base,          // loop_base_tmp,
+                                    parent_ptr_index,   // parent_ptr_index
+                                    abs_index,          // abs_index or count
+                                    false,              // level_changed
+                                    node_changed,       // node_changed
+                                    parent_ptr_changed, // parent_ptr_index_changed
+                            }))
+                            return _null_node();
+                        abs_index++;
+                        node_changed = false;
+                        parent_ptr_changed = false;
+                    } else
+                        break;
                 }
 
                 auto *n = _pointers[Degree - 1];
-                if (n) n->LNR(visitor, level + 1, ptr_index);
+                if (n) {
+                    if (auto &z = n->LNR(visitor, abs_index, level + 1, Degree - 1, count); is_null(z))
+                        return z;
+                    count += n->payload_count() + 1;
+                }
                 return (*this);
             }
 
             // pre-order traversal
-            const_node_ref NLR(visitor const &visitor, int level, int parent_ptr_index, int loop_base = 0) const {
+            //
+            // never used in context:
+            //   loop_base_tmp, level_changed,
+            //   parent_ptr_index, parent_ptr_index_changed
+            const_node_ref NLR(visitor_l const &visitor, int &abs_index, int level, int parent_ptr_index, int loop_base = 0) const {
                 bool parent_ptr_changed{loop_base == 0};
                 if (level == 0) {
-                    if (!_visit_payloads(this, level, parent_ptr_index, parent_ptr_changed,
-                                         parent_ptr_index + loop_base, visitor))
-                        return (*this);
+                    traversal_context ctx{
+                            *this,
+                            &get_el(0),
+                            level,                        // level(),
+                            parent_ptr_index + loop_base, // index
+                            loop_base,                    // loop_base_tmp,
+                            parent_ptr_index,             // parent_ptr_index
+                            abs_index,                    // abs_index or count
+                            false,                        // level_changed
+                            false,                        // node_changed
+                            parent_ptr_changed,           // parent_ptr_index_changed
+                    };
+                    if (!_visit_payloads(*this, ctx, visitor))
+                        return _null_node();
                     parent_ptr_changed = false;
+                    abs_index=ctx.abs_index;
                 }
 
                 for (int pi = 0; pi < Degree; pi++) {
                     auto *n = _pointers[pi];
                     if (n) {
                         assert(n->_parent == this);
-                        if (!_visit_payloads(n, level + 1, parent_ptr_index, parent_ptr_changed,
-                                             pi + loop_base, visitor))
-                            return (*this);
+                        traversal_context ctx{
+                                *n,
+                                &n->get_el(0),
+                                level + 1,          // level(),
+                                pi + loop_base,     // index
+                                loop_base,          // loop_base_tmp,
+                                parent_ptr_index,   // parent_ptr_index
+                                abs_index,          // abs_index or count
+                                false,              // level_changed
+                                false,              // node_changed
+                                parent_ptr_changed, // parent_ptr_index_changed
+                        };
+                        if (!_visit_payloads(*n, ctx, visitor))
+                            return _null_node();
                         parent_ptr_changed = false;
+                        abs_index=ctx.abs_index;
                     } else
                         break;
                 }
@@ -889,9 +956,9 @@ namespace hicc::btree {
                 for (int pi = 0; pi < Degree; pi++) {
                     auto *n = _pointers[pi];
                     if (n) {
-                        if (auto &z = n->NLR(visitor, level + 1, pi, count); is_null(z)) {
+                        if (auto &z = n->NLR(visitor, abs_index, level + 1, pi, count); is_null(z)) {
                             count += n->payload_count() + 1;
-                            return (*this);
+                            return z;
                         }
                         count += n->payload_count() + 1;
                     }
@@ -904,7 +971,7 @@ namespace hicc::btree {
                 std::list<traversal_context> queue;
                 // std::list<std::tuple<node_ptr, int /*index*/, int /*loop_base*/, int /*parent_ptr_index*/>> queue;
                 auto abs_index{0}, level{0}, last_level{-1}, last_parent_ptr_index{-1};
-                queue.push_back({*this, get_el(), level, 0, 0, 0, 0, true, true, true});
+                queue.push_back({*this, &get_el(), level, 0, 0, 0, 0, true, true, true});
 
                 while (!queue.empty()) {
                     // auto [curr, index, loop_base, parent_ptr_index] = queue.front();
@@ -928,7 +995,7 @@ namespace hicc::btree {
                             if (auto *p = pos.curr._pointers[i]; p) {
                                 queue.push_back({
                                         *p,
-                                        p->get_el(i),
+                                        &p->get_el(i),
                                         pos.level + 1,
                                         i,
                                         loop_base_tmp,
@@ -948,30 +1015,40 @@ namespace hicc::btree {
             }
 
             // depth order traverse
-            const_node_ref Depth(visitor const &visitor) const {
-                std::list<std::tuple<node_ptr, int /*index*/, int /*loop_base*/, int /*parent_ptr_index*/>> queue;
+            const_node_ref Depth(visitor_l const &visitor) const {
+                std::list<traversal_context> queue;
                 queue.push_back({this, 0, 0, 0});
                 auto level{0};
 
                 while (!queue.empty()) {
-                    auto [curr, index, loop_base, parent_ptr_index] = queue.back();
+                    auto ctx = queue.back();
                     queue.pop_back();
 
-                    if (curr) {
-                        if (!_visit_payloads(curr, level, parent_ptr_index, index == 0,
-                                             parent_ptr_index + index + loop_base, visitor))
+                    if (ctx.curr) {
+                        if (!_visit_payloads(ctx, visitor))
                             return (*this);
 
-                        auto loop_base_tmp = loop_base;
+                        auto loop_base_tmp = ctx.loop_base;
                         for (auto i = 0; i < Degree; i++) {
-                            if (auto p = curr->_pointers[i]; p) {
-                                queue.push_back({p, i, loop_base_tmp, index});
+                            if (auto p = ctx.curr->_pointers[i]; p) {
+                                queue.push_back({
+                                        *p,
+                                        p->get_el(i),
+                                        level,                                    // level(),
+                                        i,                                        // index
+                                        loop_base_tmp,                            // loop_base_tmp,
+                                        ctx.parent_ptr_index + i + loop_base_tmp, // parent_ptr_index
+                                        0,                                        // abs_index or count
+                                        false,                                    // level_changed
+                                        false,                                    // node_changed
+                                        false,                                    // parent_ptr_index_changed
+                                });
                                 loop_base_tmp += p->payload_count();
                             }
                         }
                     }
 
-                    if (index == 0) level++;
+                    if (ctx.index == 0) level++;
                 }
                 return (*this);
             }
@@ -983,28 +1060,11 @@ namespace hicc::btree {
                     auto *t = ref._payloads[pi];
                     if (t) {
                         ctx.node_changed = node_changed;
+                        ctx.el = t;
                         if (!visitor(ctx))
                             return false;
                         node_changed = false;
                         ctx.abs_index++;
-                    } else
-                        break;
-                }
-                return true;
-            }
-
-            static bool
-            _visit_payloads(const_node_ptr ptr, int level, int parent_ptr_index, bool parent_ptr_changed, int ptr_index,
-                            visitor const &visitor) {
-                bool node_changed{true};
-                for (int pi = 0; pi < Degree - 1; pi++) {
-                    auto *t = ptr->_payloads[pi];
-                    if (t) {
-                        if (visitor)
-                            if (!visitor(*t, *ptr, level, node_changed,
-                                         parent_ptr_index, parent_ptr_changed, ptr_index))
-                                return false;
-                        node_changed = false;
                     } else
                         break;
                 }
@@ -1048,6 +1108,12 @@ namespace hicc::btree {
             static std::string elem_to_string(elem_type const *a) {
                 std::ostringstream os;
                 os << (*a);
+                return os.str();
+            }
+
+            static std::string elem_to_string(elem_type const &a) {
+                std::ostringstream os;
+                os << a;
                 return os.str();
             }
 
@@ -1241,12 +1307,9 @@ namespace hicc::btree {
 
             int total_from_calculating() const {
                 int count = 0;
-                walk([&count](btree::const_elem_ref el, btree::const_node_ref node_this, int level, bool node_changed,
-                              int ptr_parent_index, bool parent_ptr_changed, int ptr_index) -> bool {
+                walk([&count](traversal_context const &ctx) -> bool {
                     count++;
-                    UNUSED(level, node_changed, ptr_parent_index);
-                    UNUSED(parent_ptr_changed, ptr_index);
-                    UNUSED(el, node_this);
+                    UNUSED(ctx);
                     return true;
                 });
                 return count;
@@ -1260,7 +1323,7 @@ namespace hicc::btree {
 
                 int count = total_from_calculating();
 
-                walk_level_traverse([bt, count, &os](traversal_context const &ctx) -> bool {
+                walk_level_traverse([&bt, count, &os](traversal_context const &ctx) -> bool {
                     if (ctx.node_changed) {
                         if (ctx.index == 0 && ctx.level_changed)
                             os << '\n'
@@ -1272,7 +1335,7 @@ namespace hicc::btree {
                         os << ctx.curr.to_string();
                         if (ctx.level == 0) {
                             os << '/' << bt._size;
-                            os << "/dync:" << count;
+                            os << "/dyn:" << count;
                             assertm(ctx.curr._parent == nullptr, "root's parent must be nullptr");
                         }
                         // os << '{' << std::boolalpha << ctx.parent_ptr_index << ',' << (ctx.parent_ptr_index_changed?'T':'_') << ',' << ctx.loop_base << '}';
@@ -1285,6 +1348,20 @@ namespace hicc::btree {
                 });
                 os << '\n';
             }
+        };
+
+    public:
+        struct traversal_context {
+            const_node_ref curr;
+            const_elem_ptr el;
+            int level;
+            int index;
+            int loop_base;
+            int parent_ptr_index;
+            int abs_index;
+            bool level_changed;
+            bool node_changed;
+            bool parent_ptr_index_changed;
         };
 
     public:
@@ -1400,28 +1477,24 @@ namespace hicc::btree {
         size_type size() const { return _size; }
         size_type capacity() const { return _size; }
 
-        const_node_ref walk(visitor const &v) const { return _root->walk(v); }
-        node_ref walk(visitor const &v) { return const_cast<node_ref>(_root->walk(v)); }
+        const_node_ref walk(visitor_l const &v) const { return _root->walk(v); }
+        node_ref walk(visitor_l const &v) { return const_cast<node_ref>(_root->walk(v)); }
 
-        const_node_ref walk_nlr(visitor const &v) const { return _root->walk_nlr(v); }
-        node_ref walk_nlr(visitor const &v) { return const_cast<node_ref>(_root->walk_nlr(v)); }
+        const_node_ref walk_nlr(visitor_l const &v) const { return _root->walk_nlr(v); }
+        node_ref walk_nlr(visitor_l const &v) { return const_cast<node_ref>(_root->walk_nlr(v)); }
 
         const_node_ref walk_level_traverse(visitor_l const &v) const { return _root->walk_level_traverse(v); }
         node_ref walk_level_traverse(visitor_l const &v) { return const_cast<node_ref>(_root->walk_level_traverse(v)); }
 
-        const_node_ref walk_depth_traverse(visitor const &v) const { return _root->walk_depth_traverse(v); }
-        node_ref walk_depth_traverse(visitor const &v) { return const_cast<node_ref>(_root->walk_depth_traverse(v)); }
+        const_node_ref walk_depth_traverse(visitor_l const &v) const { return _root->walk_depth_traverse(v); }
+        node_ref walk_depth_traverse(visitor_l const &v) { return const_cast<node_ref>(_root->walk_depth_traverse(v)); }
 
         std::vector<elem_type> to_vector() const {
             std::vector<elem_type> vec;
             vec.reserve(size());
             typename decltype(vec)::iterator it{vec.begin()};
-            walk([&vec, &it](btree::const_elem_ref el, btree::const_node_ref node_this, int level, bool node_changed,
-                             int ptr_parent_index, bool parent_ptr_changed, int ptr_index) -> bool {
-                vec.insert(it++, el);
-                UNUSED(level, node_changed, ptr_parent_index);
-                UNUSED(parent_ptr_changed, ptr_index);
-                UNUSED(el, node_this);
+            walk([&vec, &it](traversal_context const &ctx) -> bool {
+                vec.insert(it++, *ctx.el);
                 return true;
             });
             return vec;
@@ -1447,20 +1520,16 @@ namespace hicc::btree {
             assertm((std::size_t) count == _size,
                     "expecting _size is equal to the btree size (countof) exactly");
 
-            walk([this](const_elem_ref el,
-                        const_node_ref node_this,
-                        int level, bool node_changed,
-                        int parent_ptr_index, bool parent_ptr_changed,
-                        int ptr_index) -> bool {
+            walk([this](traversal_context const &ctx) -> bool {
                 int i;
                 for (i = 0; i < Degree; i++) {
-                    auto const *vp = node_this._pointers[i];
+                    auto const *vp = ctx.curr._pointers[i];
                     if (vp) {
-                        if (vp->_parent != &node_this) {
+                        if (vp->_parent != &ctx.curr) {
                             std::ostringstream os, os1;
                             if (vp->_parent) os1 << '(' << vp->_parent->to_string() << ')';
                             os << "node " << vp->to_string() << " has parent " << vp->_parent << os1.str()
-                               << ". but not equal to " << &node_this << " (" << node_this.to_string() << ").\n";
+                               << ". but not equal to " << &ctx.curr << " (" << ctx.curr.to_string() << ").\n";
                             dbg_dump(os);
                             assertm(false, os.str());
                         }
@@ -1468,11 +1537,11 @@ namespace hicc::btree {
                 }
 
                 for (i = 0; i < Degree; i++) {
-                    if (auto const *vp = node_this._pointers[i]; !vp)
+                    if (auto const *vp = ctx.curr._pointers[i]; !vp)
                         break;
                 }
                 for (; i < Degree + 1; i++) {
-                    auto const *vp = node_this._pointers[i];
+                    auto const *vp = ctx.curr._pointers[i];
                     std::ostringstream os;
                     if (vp) {
                         dbg_dump();
@@ -1482,11 +1551,11 @@ namespace hicc::btree {
                 }
 
                 for (i = 0; i < Degree; i++) {
-                    if (auto const *vp = node_this._payloads[i]; !vp)
+                    if (auto const *vp = ctx.curr._payloads[i]; !vp)
                         break;
                 }
                 for (; i < Degree + 1; i++) {
-                    auto const *vp = node_this._payloads[i];
+                    auto const *vp = ctx.curr._payloads[i];
                     std::ostringstream os;
                     if (vp) {
                         dbg_dump();
@@ -1496,8 +1565,8 @@ namespace hicc::btree {
                 }
 
                 for (i = 0; i < Degree; i++) {
-                    auto *data = node_this._payloads[i];
-                    auto const *cp = node_this._pointers[i];
+                    auto *data = ctx.curr._payloads[i];
+                    auto const *cp = ctx.curr._pointers[i];
                     if (data) {
                         if (cp) {
                             for (int k = 0; k < Degree; ++k) {
@@ -1514,9 +1583,9 @@ namespace hicc::btree {
                                 }
                             }
                         }
-                    } else if (cp && i > 0 && node_this._payloads[i - 1] == nullptr) {
+                    } else if (cp && i > 0 && ctx.curr._payloads[i - 1] == nullptr) {
                         std::ostringstream os;
-                        os << "for node " << node_this.to_string() << ", payloads[" << i << "] and #" << (i - 1)
+                        os << "for node " << ctx.curr.to_string() << ", payloads[" << i << "] and #" << (i - 1)
                            << " are both null but pointers[" << i << "] is pointing to somewhere (" << cp->to_string()
                            << ").";
                         assertm(false, os.str());
@@ -1525,8 +1594,8 @@ namespace hicc::btree {
                         break;
                 }
 
-                auto *data = node_this._payloads[i - 1];
-                auto *cp = node_this._pointers[i];
+                auto *data = ctx.curr._payloads[i - 1];
+                auto *cp = ctx.curr._pointers[i];
                 if (cp && data) {
                     for (int k = 0; k < Degree; ++k) {
                         auto *vp = cp->_payloads[k];
@@ -1576,18 +1645,18 @@ namespace hicc::btree {
                     }
                 } */
 
-                UNUSED(el, node_changed, level, parent_ptr_index, parent_ptr_changed, ptr_index);
+                // UNUSED(el, node_changed, level, parent_ptr_index, parent_ptr_changed, ptr_index);
                 return true;
             });
         }
 
         /**
-         * @brief dot_it generate a graphviz .dot file and transform it as a PNG too.
+         * @brief dot generate a graphviz .dot file and transform it as a PNG too.
          * @param filename such as 'aa.dot'
          * @param verbose assume 'dot -v ...'
          * @details graphviz must be installed at first, 'dot' should be PATH-searchable.
          */
-        void dot_it(const char *filename, bool verbose = false) {
+        void dot(const char *filename, const char *title, bool verbose = false) {
             UNUSED(filename);
             std::unique_ptr<std::ofstream, std::function<void(std::ofstream *)>>
                     ofs(new std::ofstream(filename),
@@ -1603,9 +1672,12 @@ namespace hicc::btree {
                         });
 
             btree::size_type total = size();
-            walk_level_traverse([total, &ofs](btree::traversal_context const &ctx) -> bool {
+            walk_level_traverse([total, title, &ofs](btree::traversal_context const &ctx) -> bool {
                 if (ctx.abs_index == 0) {
                     *ofs << "graph {" << '\n';
+                    if (title && *title)
+                        *ofs << "labelloc=\"t\";\n"
+                             << "label=\"" << title << "\";" << '\n';
                 }
                 if (ctx.node_changed) {
                     auto from = std::quoted(ctx.curr.to_string());
@@ -1637,6 +1709,22 @@ namespace hicc::btree {
         }
 #endif
 
+        size_type dot_seq_inc() { return _seq_no++; }
+        btree &dot_seq(size_type seq_no) {
+            _seq_no = seq_no;
+            return *this;
+        }
+        btree &dot_prefix(const char *s) {
+            if (s && *s) {
+                _seq_prefix = s;
+                if (_seq_prefix[_seq_prefix.length() - 1] != '.')
+                    _seq_prefix += '.';
+            } else {
+                _seq_prefix.clear();
+            }
+            return *this;
+        }
+
     protected:
         static T &_null_elem() {
             static T _d;
@@ -1663,6 +1751,9 @@ namespace hicc::btree {
         std::function<void(btree &, const_elem_ptr a)> _after_inserted;
         std::function<void(btree &, const_elem_ptr a)> _after_removed;
         std::function<void(btree &)> _after_changed;
+
+        size_type _seq_no{};
+        std::string _seq_prefix{};
     };
 
     template<class T, int Degree, class Comp, bool B>

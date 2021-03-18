@@ -47,6 +47,7 @@ void test_btree() {
 
     using btree = hicc::btree::btree<int, 5, std::less<int>, true>;
     btree bt;
+    bt.dot_prefix("tree");
     bt.insert(9, 11, 2, 7);
     dbg_dump(std::cout, bt);
     bt.insert(3); // split
@@ -131,6 +132,7 @@ hicc::btree::btree<int, 5, std::less<int>, true> test_btree_1() {
 
     using btree = hicc::btree::btree<int, 5, std::less<int>, true>;
     btree bt;
+    bt.dot_prefix("tr01");
     bt.insert(39, 22, 97, 41);
     bt.dbg_dump();
     bt.insert(53);
@@ -152,18 +154,14 @@ hicc::btree::btree<int, 5, std::less<int>, true> test_btree_1() {
 
     std::cout << '\n';
     int count = 0;
-    bt.walk([&count](btree::const_elem_ref el, btree::const_node_ref node_ref, int level, bool node_changed,
-                     int ptr_parent_index, bool parent_ptr_changed, int ptr_index) -> bool {
+    bt.walk([&count](btree::traversal_context const &ctx) -> bool {
 #ifdef _DEBUG
         static int last_one = 0;
-        assertm(last_one <= el, "expecting a ascend sequences");
-        last_one = el;
+        assertm(last_one <= *ctx.el, "expecting a ascend sequences");
+        last_one = *ctx.el;
 #endif
-        std::cout << el << ',';
+        std::cout << ctx.el << ',';
         count++;
-        UNUSED(level, node_changed, ptr_parent_index);
-        UNUSED(parent_ptr_changed, ptr_index);
-        UNUSED(el, node_ref);
         return true;
     });
     std::cout << '\n';
@@ -249,35 +247,79 @@ void test_btree_2() {
         return false;
     });
 
-    using btree = hicc::btree::btree<int, 3, std::less<int>, true>;
+    using btree = hicc::btree::btree<int, 3, std::less<int>, false>;
     btree bt;
+    bt.dot_prefix("tr02");
     // bt.insert(50, 128, 168, 140, 145, 270, 250, 120, 105, 117, 264, 269, 320, 439, 300, 290, 226, 155, 100, 48, 79);
     bt.insert(50, 128, 168, 140, 145, 270);
-    dbg_dump<int, 3>(std::cout, bt);
+    bt.dbg_dump();
     bt.insert(250);
-    dbg_dump<int, 3>(std::cout, bt);
+    bt.dbg_dump();
 
-    bt.remove(250);
-    dbg_dump<int, 3>(std::cout, bt);
+    // bt.remove(250);
+    // dbg_dump<int, 3>(std::cout, bt);
+    // bt.insert(250);
+    // dbg_dump<int, 3>(std::cout, bt);
 
-    bt.insert(250);
-    dbg_dump<int, 3>(std::cout, bt);
     bt.insert(120, 105, 117, 264);
-    dbg_dump<int, 3>(std::cout, bt);
+    bt.dbg_dump();
     bt.insert(269, 320, 439, 300);
-    dbg_dump<int, 3>(std::cout, bt);
+    bt.dbg_dump();
     bt.insert(290, 226, 155, 100);
-    dbg_dump<int, 3>(std::cout, bt);
+    bt.dbg_dump();
     bt.insert(48);
-    dbg_dump<int, 3>(std::cout, bt);
+    bt.dbg_dump();
     bt.insert(79);
-    dbg_dump<int, 3>(std::cout, bt);
-    
-    bt.dot_it("bb2.1.dot");
+    bt.dbg_dump();
 
-    bt.remove(79);
-    dbg_dump<int, 3>(std::cout, bt);
-    // bt.dot_it("bb2.2.dot");
+    // bt.dot("bb2.1.dot");
+
+    // bt.remove(79);
+    // bt.dbg_dump();
+    // //bt.remove(250);
+    // //bt.dbg_dump();
+    // // bt.dot("bb2.2.dot");
+
+    auto l = [&bt](int k) {
+        if (auto [ok, ref, idx] = bt.find(k); ok) {
+            std::cout << "searching '" << k << "' found: " << ref.to_string() << ", idx = " << idx << '\n';
+        } else {
+            std::cerr << "searching '" << k << "': not found\n";
+        }
+    };
+    l(270);
+    l(226);
+    l(100);
+
+    for (auto &v : bt.to_vector()) {
+        std::cout << v << ',';
+    }
+    std::cout << '\n';
+
+    bt.walk([](btree::traversal_context const &ctx) -> bool {
+        std::cout << std::boolalpha << *ctx.el << "/L" << ctx.level << "/IDX:" << ctx.abs_index << '/' << ctx.index
+                  << "/PI:" << ctx.parent_ptr_index << "/" << ctx.parent_ptr_index_changed << "/" << ctx.loop_base << '\n';
+        return true;
+    });
+    std::cout << '\n';
+    std::cout << "NLR:" << '\n';
+    bt.walk_nlr([](btree::traversal_context const &ctx) -> bool {
+        std::cout << std::boolalpha << *ctx.el << "/L" << ctx.level << "/IDX:" << ctx.abs_index << '/' << ctx.index
+                  << "/PI:" << ctx.parent_ptr_index << "/" << ctx.parent_ptr_index_changed << "/" << ctx.loop_base << '\n';
+        return true;
+    });
+
+    auto l2 = [&bt](int index) {
+        if (auto [ok, ref, idx] = bt.find_by_index(index); ok) {
+            std::cout << "searching index '" << index << "' found: " << ref.to_string() << ", idx = " << idx << '\n';
+        } else {
+            std::cerr << "searching index '" << index << "': not found\n";
+        }
+    };
+    l2(0);
+    l2(1);
+    l2(2);
+    l2(3);
 }
 
 void test_btree_b() {
@@ -286,6 +328,7 @@ void test_btree_b() {
     int ix{};
     using btree = hicc::btree::btree<int, 3, std::less<int>, true>;
     btree bt;
+    bt.dot_prefix("tr.b");
     // auto numbers = {12488, 2222, 26112, -1, -1, 13291, 23251, 32042, 19569};
     // auto numbers = {1607, 4038, 1100, 2937, 3657, 10151};
     // auto numbers = {15345, 5992, 21742, 3387, 9020, 18896, 27523, 28967, -1};
@@ -390,6 +433,7 @@ void test_btree_rand() {
     using btree = hicc::btree::btree<int, 3, std::less<int>, true>;
     std::vector<int> series;
     btree bt;
+    bt.dot_prefix("rand");
     for (int ix = 0; ix < 2000 * 1000; ix++) {
         // int choice = std::rand();
         int choice = uniform_dist(e1);
@@ -436,6 +480,8 @@ private:
 
 int main() {
 #if 1
+
+#if 0
     // assertm(1 == 0, "bad");
     test_btree();
 
@@ -491,8 +537,9 @@ int main() {
         });
     }
 #endif
-    bt.dot_it("aa.dot");
+    // bt.dot("aa.dot");
     test_btree_1_remove(bt);
+#endif
 
     test_btree_2();
 
