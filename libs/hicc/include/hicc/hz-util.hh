@@ -263,23 +263,138 @@ namespace hicc::util {
 
 } // namespace hicc::util
 
+#include <cstdio>
+#include <cstring>
+#include <istream>
+#include <memory>
+#include <stdexcept>
+#include <streambuf>
+#include <string>
+
+namespace hicc::process {
+
+    namespace detail {
+        class execbuf : public std::streambuf {
+        protected:
+            std::string output;
+            int_type underflow() override {
+                if (gptr() < egptr()) return traits_type::to_int_type(*gptr());
+                return traits_type::eof();
+                // return std::streambuf::underflow();
+            }
+            // int_type underflow(int_type character) {
+            //     if (gptr() < egptr()) return traits_type::to_int_type(*gptr());
+            //     return traits_type::eof();
+            // }
+
+        public:
+            execbuf(const char *command) {
+                std::array<char, 128> buffer;
+                // std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(command, "r"), pclose);
+                std::unique_ptr<FILE, std::function<void(FILE*)>> pipe(popen(command, "r"), [this](FILE *f) {
+                    _rc = pclose(f);
+                    if (_rc == EXIT_SUCCESS) {        // == 0
+                    } else if (_rc == EXIT_FAILURE) { // EXIT_FAILURE is not used by all programs, maybe needs some adaptation.
+                    }
+                });
+                if (!pipe) {
+                    throw std::runtime_error("popen() failed!");
+                }
+                while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
+                    this->output += buffer.data();
+                }
+                setg((char *) this->output.data(), (char *) this->output.data(), (char *) (this->output.data() + this->output.size()));
+
+                // auto rc = pclose(pipe);
+            }
+
+            int _rc;
+        };
+    } // namespace detail
+
+    /**
+     * @brief execute a shell command and capture the stdout.
+     * @details For example:
+     * 
+     *             hicc::process::exec dot("dot aa.dot -T png -o aa.png -v");
+     *             std::cout << dot.rdbuf();
+     *             
+     */
+    class exec : public std::istream {
+    protected:
+        detail::execbuf buffer;
+
+    public:
+        exec(char const *command)
+            : std::istream(nullptr)
+            , buffer(command) {
+            this->rdbuf(&buffer);
+        }
+
+        int retcode() const { return buffer._rc; }
+    };
+
+} // namespace hicc::process
 
 namespace hicc::util {
 
+    /**
+     * @brief defer&lt;T&gt; provides a RAII wrapper for your lambda function.
+     * @tparam T is a class which has a member function: <code>void close();</code>
+     * @details For example:
+     * 
+     *     std::ofstream ofs("aa.dot");
+     *     hicc::util::defer ofs_closer(ofs);
+     *     hicc::util::defer ofs_closer(ofs, [](){ return; });
+     *     hicc::util::defer<bool> a_closer([](){
+     *         // ... your closer here
+     *     });
+     *     
+     * \br The alternate approach via std::unique_ptr:
+     * 
+     *     auto ofs = std::make_unique<std::ofstream>("aa.dot", std::ofstream::out);
+     *     *ofs.get() << "1";
+     *     
+     */
+    template<class T, class _D = std::default_delete<T>>
     class defer final {
     public:
-        defer(std::function<void()> const &fn)
+        defer(T &c, _D const &fn = nullptr)
+            : _c(c)
+            , _fn(fn) {}
+        defer(_D const &fn, T &c = T{})
+            : _c(c)
+            , _fn(fn) {}
+        ~defer() {
+            _c.close();
+            if (_fn) { _fn(); }
+        }
+
+    private:
+        T &_c;
+        _D _fn;
+    };
+
+    /**
+     * @brief defer provides a RAII wrapper for your lambda function.
+     * @details For example:
+     * 
+     *     hicc::util::defer<bool> a_closer([](){
+     *         // ... your closer here
+     *     });
+     */
+    template<>
+    class defer<bool> final {
+    public:
+        defer(std::function<void()> const &fn, bool = false)
             : _fn(fn) {}
         ~defer() {
-            if (_fn) {
-                _fn();
-            }
+            if (_fn) { _fn(); }
         }
 
     private:
         std::function<void()> _fn;
     };
-
 
     inline std::string detect_shell_env() {
         auto *str = std::getenv("SHELL");
