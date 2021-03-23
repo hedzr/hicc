@@ -28,27 +28,47 @@
 
 namespace hicc::btree {
 
-    /**
-     * @brief provides B/B+-tree data structure in generic style.
-     * 
-     * @details The order, or branching factor, `b` of a B+ tree measures the capacity of 
-     * nodes (i.e., the number of children nodes) for internal nodes in the 
-     * tree. The actual number of children for a node, referred to here as `m`, 
-     * is constrained for internal nodes so that `b/2 <= m <= b`.
-     * 
-     * @tparam T your data type
-     * @tparam Container vector or list here
-     */
-    template<class T, int Degree = 5, class Comp = std::less<T>, bool auto_dot_png = false>
-    class btree final {
-    public:
-        btree();
+    // using counter_type = int;
+    using counter_type = short;
+    // using counter_type = std::size_t;
 
-        ~btree();
+    /**
+     * @brief provides B-tree data structure in generic style.
+     * @tparam T the element/key
+     * @tparam Comp 
+     * @details The degree, aka the Order of a B-tree, is the maximal children
+     * count. In our B-tree model, a node has:
+     * 
+     *     key:      [degree/2-1, degree-1]
+     *     children: [degree/2, degree]
+     * 
+     * For a 7-order B-tree, each node has between [7/2] and 7 children, so
+     * it contains 3,4,5 and 6 keys. NOTE [7/2] is rounded up ceiling.
+     * In coding with C/C++:
+     * 
+     *     const int max_payloads = _degree - 1;
+     *     const int min_payloads = max_payloads / 2;
+     *     const int max_children = _degree;
+     *     const int min_children = (_degree + 1) / 2;
+     *     const int M = _degree / 2;
+     *     const int _M = min_payloads + 1;
+     *     assert(M == _M);
+     */
+    template<class T, class Comp = std::less<T>>
+    class btree {
+    public:
+        btree(int degree = 4)
+            : _degree(degree)
+            , _size(0)
+            , _root(nullptr) {}
+        virtual ~btree() { clear(); }
 
     public:
         struct node;
         struct traversal_context;
+
+        using self_type = btree;
+        using size_type = std::size_t;
 
         using node_ptr = node *;
         using node_ref = node &;
@@ -56,183 +76,629 @@ namespace hicc::btree {
         using const_node_ref = node const &;
         using node_sptr = std::shared_ptr<node>;
 
-        using size_type = std::size_t;
-
-        using position = std::tuple<bool /*ok*/, const_node_ref, int>;
-        using lite_position = std::tuple<int, const_node_ref>;
-        using lite_ptr_position = std::tuple<int, const_node_ptr>;
-
         using elem_type = T;
         using elem_ptr = elem_type *;
         using const_elem_ptr = elem_type const *;
         using elem_ref = elem_type &;
         using const_elem_ref = elem_type const &;
 
-        // using visitor = std::function<bool(const_elem_ref, const_node_ref, int level, bool node_changed,
-        //                                    int ptr_parent_index, bool parent_ptr_changed, int ptr_index)>;
-
         using visitor_l = std::function<bool(traversal_context const &)>;
 
-        static const int P_LEN = Degree - 1;
-        static const int MID = P_LEN / 2;
+        struct traversal_context {
+            const_node_ref curr;
+            const_elem_ptr el;
+            int level;
+            int index;
+            int loop_base;
+            int parent_ptr_index;
+            int abs_index;
+            bool level_changed;
+            bool node_changed;
+            bool parent_ptr_index_changed;
+        };
 
-    public:
+        using position = std::tuple<bool /*ok*/, const_node_ref, int>;
+        using lite_position = std::tuple<int, const_node_ref>;
+        using lite_ptr_position = std::tuple<int, const_node_ptr>;
+
+        struct position_t {
+            const_node_ptr ptr;
+            int pos; // pointer to the payload or pointers
+            const_elem_ptr get() const { return ptr->_payloads[pos]; }
+            elem_ptr get() { return const_cast<node_ptr>(ptr)->_payloads[pos]; }
+            const_node_ptr operator->() const { return ptr; }
+            position_t &operator=(const position_t &o) {
+                ptr = o.ptr;
+                pos = o.pos;
+                return *this;
+            }
+            position_t &advance_to_first_child() {
+                ptr = ptr->child(0);
+                return *this;
+            }
+            position_t &advance_to_last_child() {
+                ptr = ptr->child(ptr->payload_count());
+                // for (auto t = Degree - 1; t >= 0; t--) {
+                //     if (auto *p = ptr->_pointers[t]; p) {
+                //         ptr = p;
+                //         break;
+                //     }
+                // }
+                return *this;
+            }
+            position_t last_child() const {
+                return {ptr->child(ptr->payload_count()), 0};
+                // for (auto t = Degree - 1; t >= 0; t--) {
+                //     if (auto *ptr = _pointers[t]; ptr)
+                //         return {this, t};
+                // }
+                // return {nullptr, -1};
+            }
+            position_t last_one() const {
+                return {ptr, ptr->payload_count() - 1};
+                // for (auto t = Degree - 1 - 1; t >= 0; t--) {
+                //     if (auto *ptr = _payloads[t]; ptr)
+                //         return {this, t};
+                // }
+                // return {nullptr, -1};
+            }
+            position_t first_child() const { return {ptr, 0}; }
+            position_t first_one() const { return {ptr, 0}; }
+            bool valid() const { return ptr && pos >= 0 && pos << ptr->_degree; }
+            operator bool() const { return valid(); }
+            bool operator!() const { return !valid(); }
+        };
+
         struct node {
-            // Container<T> _payload{};
-            // Container<node_ptr> _pointers{};
-            // std::array<node_ptr, Degree> _payloads{};
-            // std::array<node_ptr, Degree+1> _pointers{};
-            T *_payloads[Degree + 1];
-            node_ptr _pointers[Degree + 1];
-            node_ptr _parent{};
+            int _degree;
+            int _count;
+            elem_ptr *_payloads;
+            node_ptr *_pointers;
+            friend class btree;
 
-            using self_type = node;
-
-            node() {
-                for (int i = 0; i < Degree + 1; i++) {
-                    _pointers[i] = nullptr;
-                    _payloads[i] = nullptr;
+            node(int degree)
+                : _degree(degree)
+                , _count(0)
+                , _payloads(nullptr)
+                , _pointers(nullptr) {
+                if (_degree > 0) {
+                    const int max_payloads = _degree - 1;
+                    // const int min_payloads = max_payloads / 2;
+                    _payloads = new elem_ptr[max_payloads];
+                    _pointers = new node_ptr[_degree];
+                    for (int i = 0; i < max_payloads; i++) _payloads[i] = nullptr;
+                    for (int i = 0; i <= max_payloads; i++) _pointers[i] = nullptr;
                 }
             }
-
-            explicit node(elem_type *first_data, elem_type *second_data = nullptr)
-                : node() {
-                _payloads[0] = first_data;
-                _payloads[1] = second_data;
-            }
-
-            explicit node(node_ptr src, int start, int end)
-                : node() {
-                for (auto t = start, i = 0; t < end; t++, i++) _payloads[i] = src->_payloads[t];
-                for (auto t = start, i = 0; t <= end; t++, i++) _pointers[i] = src->_pointers[t];
-                _pointers[end - start] = src->_pointers[end];
-            }
-
-            node_ptr parent(node_ptr p, bool deep = false) {
-                _parent = p;
-                if (deep) {
-                    for (auto t = 0; t < Degree; t++) {
-                        if (auto *child = _pointers[t]; child) {
-                            child->_parent = this;
-                        } else
-                            break;
-                    }
+            ~node() {
+                if (_degree > 0) {
+#if defined(_DEBUG)
+                    auto str = to_string();
+                    hicc_verbose_debug("    ~node() for %p, %d payloads: [%s]", this, _count, str.c_str());
+#endif
+                    // const int max_payloads = _degree - 1;
+                    // const int min_payloads = max_payloads / 2;
+                    for (int i = 0; i < _count; i++)
+                        if (auto *p = _payloads[i]; p) delete p;
+                    for (int i = 0; i <= _count; i++)
+                        if (auto *p = _pointers[i]; p) delete p;
+                    delete[] _pointers;
+                    delete[] _payloads;
+#if defined(_DEBUG)
+                    hicc_verbose_debug("    ~node() for %p, %d payloads: [%s] END", this, _count, str.c_str());
+#endif
                 }
+            }
+            node_ptr reset_for_delete() {
+                const int max_payloads = _degree - 1;
+                // const int min_payloads = max_payloads / 2;
+                for (int i = 0; i < max_payloads; i++) _payloads[i] = nullptr;
+                for (int i = 0; i <= max_payloads; i++) _pointers[i] = nullptr;
                 return this;
             }
 
-            ~node() { clear(); }
+        public:
+            void insert_non_full(elem_ptr el) {
+                hicc_debug("    insert_non_full(%s) for node [%s]", elem_to_string(el).c_str(), to_string().c_str());
+                int idx = _count - 1;
+                if (is_leaf()) {
+                    while (idx >= 0 && is_less_than(el, _payloads[idx])) {
+                        _payloads[idx + 1] = _payloads[idx];
+                        idx--;
+                    }
+                    _payloads[idx + 1] = el;
+                    _count++;
+                    return;
+                }
+
+                const int max_payloads = _degree - 1;
+                while (idx >= 0 && is_less_than(el, _payloads[idx])) idx--;
+                if (_pointers[idx + 1]->_count == max_payloads) {
+                    _split_child(idx + 1, _pointers[idx + 1]);
+                    if (*_payloads[idx + 1] < *el) idx++;
+                }
+                _pointers[idx + 1]->insert_non_full(el);
+            }
+
+        private:
+            void _split_child(int idx, node_ptr y) {
+                const int max_payloads = _degree - 1;
+                const int min_payloads = max_payloads / 2;
+                const int _M = _degree / 2;
+                assert(_M == min_payloads + 1);
+
+                hicc_debug("    _split_child(%d) for node [%s]", idx, y->to_string().c_str());
+
+                node_ptr z = new node(y->_degree);
+                z->_count = min_payloads;
+                for (int j = 0; j < min_payloads; j++) z->_payloads[j] = y->_payloads[j + _M];
+                if (!y->is_leaf())
+                    for (int j = 0; j < _M; j++) z->_pointers[j] = y->_pointers[j + _M];
+
+                y->_count = min_payloads;
+
+                for (int j = _count; j >= idx + 1; j--) _pointers[j + 1] = _pointers[j];
+                _pointers[idx + 1] = z;
+                for (int j = _count - 1; j >= idx; j--) _payloads[j + 1] = _payloads[j];
+                _payloads[idx] = y->_payloads[_M - 1];
+                _count++;
+
+                for (int j = y->_count; j < max_payloads; j++) y->_payloads[j] = nullptr;
+                for (int j = y->_count + 1; j < _degree; j++) y->_pointers[j] = nullptr;
+            }
 
         public:
-            template<class A, typename... Args,
-                     std::enable_if_t<
-                             std::is_constructible<elem_type, A, Args...>::value &&
-                                     !std::is_same<std::decay_t<A>, elem_type>::value &&
-                                     !std::is_same<std::decay_t<A>, node>::value,
-                             int> = 0>
-            void emplace(btree &bt, A &&a0, Args &&...args) {
-                elem_type v(std::forward<A>(a0), std::forward<Args>(args)...);
-                insert_one(bt, v);
+            elem_ptr remove(const_elem_ref el) { return _remove(&el); }
+            elem_ptr remove(elem_ptr el) { return _remove(el); }
+
+        private:
+            /**
+             * @brief remove the key 'el' from the sub-tree rooted with this node.
+             * @param el the removing key
+             * @return the remove key, it should be euqal to 'el' but live with non-'const'
+             */
+            elem_ptr _remove(const_elem_ptr el) {
+                const int max_payloads = _degree - 1;
+                const int min_payloads = max_payloads / 2;
+                const int _M = _degree / 2;
+                assert(_M == min_payloads + 1);
+                UNUSED(min_payloads, max_payloads);
+
+                int idx = first_of_insertion_position(el);
+                hicc_debug("    _remove(%s) from node [%s] | pos found: %d | D=%d, _M=%d, [%d, %d]", elem_to_string(el).c_str(), to_string().c_str(), idx, _degree, _M, min_payloads, max_payloads);
+
+                // while the key to be removed is present in this node
+                if (idx < _count && is_equal_to(el, _payloads[idx])) {
+                    // erase it directly
+                    if (is_leaf())
+                        return _remove_at(idx);
+                    // or advance the focus into the internal node and
+                    // try removing it recursively.
+                    return _remove_from_internal_node(idx);
+                }
+
+                // if this node is a leaf node, then the key is not present in tree
+                if (is_leaf())
+                    return nullptr; // nothing to do
+
+                // The key to be removed is present in the sub-tree rooted
+                // with this node, the flag 'rightest' indicates whether the
+                // key is present in the sub-tree rooted with the last
+                // child of this node
+                bool rightest = idx == _count;
+
+                // if the child where the key is supposed to exist has less that _M
+                // keys, fill it at first. So we get a half-full node at least for
+                // the removing action in the child tree later.
+                if (_pointers[idx]->_count < _M)
+                    _fill(idx);
+
+                // if the last child has been merged/filled, it must have merged
+                // with the previous child and so we recurse on the (idx-1)th
+                // child.
+                // Or, we recurse on the (idx)th child which now has at least _M
+                // keys.
+                if (rightest && idx > _count)
+                    return _pointers[idx - 1]->_remove(el);
+                return _pointers[idx]->_remove(el);
             }
 
-            template<class A,
-                     std::enable_if_t<
-                             std::is_constructible<elem_type, A>::value &&
-                                     !std::is_same<std::decay_t<A>, elem_type>::value &&
-                                     !std::is_same<std::decay_t<A>, node>::value,
-                             int> = 0>
-            void emplace(btree &bt, A &&a) {
-                elem_type v(std::forward<A>(a));
-                insert_one(bt, v);
+            /**
+             * @brief remove the idx-th key from this node, if it is a leaf node
+             * @param idx 
+             * @return the removed key
+             */
+            elem_ptr _remove_at(int idx) {
+                elem_ptr removing = get_el_ptr(idx);
+                hicc_verbose_debug("    _remove_at(%d) (target=%s) for node [%s], cnt=%d", idx, elem_to_string(removing).c_str(), to_string().c_str(), _count);
+                for (int i = idx + 1; i < _count; ++i) _payloads[i - 1] = _payloads[i];
+                _payloads[_count-- - 1] = nullptr;
+                hicc_verbose_debug("    _remove_at(%d) (target=%s) END. node [%s], cnt=%d", idx, elem_to_string(removing).c_str(), to_string().c_str(), _count);
+                return removing;
             }
 
-            void insert_one(btree &bt, elem_type &&a) { _insert_one_entry(bt, &a); }
-            // void insert_one(node_ptr &root, elem_type const &a) { _insert_one(root, &a, false); }
-            void insert_one(btree &bt, elem_type a) { _insert_one_entry(bt, new elem_type(std::move(a))); }
-            void insert_one(btree &bt, elem_type *a) { _insert_one_entry(bt, a); }
+            /**
+             * @brief remove the idx-th key from this node - which is a non-leaf node
+             * @param idx 
+             * @return the removed key
+             */
+            elem_ptr _remove_from_internal_node(int idx) {
+                const int max_payloads = _degree - 1;
+                const int min_payloads = max_payloads / 2;
+                const int _M = _degree / 2;
+                assert(_M == min_payloads + 1);
+                UNUSED(min_payloads, max_payloads);
 
-            void remove(btree &bt, elem_type &&a) { _remove_one_entry(bt, &a); }
-            void remove(btree &bt, elem_type a) { _remove_one_entry(bt, &a); }
-            void remove(btree &bt, elem_type const *a) { _remove_one_entry(bt, a); }
+                elem_ptr k = _payloads[idx];
+                hicc_debug("    _remove_from_internal_node(%d) [target=%s] for node [%s]", idx, elem_to_string(k).c_str(), to_string().c_str());
 
-            void remove_by_position(btree &bt, node const &res, int index) { _remove_one_entry(bt, res, index); }
+                if (node_ptr p = _pointers[idx]; p->_count >= _M) {
+                    // If the child that precedes k (Children[idx]) has at least
+                    // _M keys, find the predecessor 'pred' of k in the subtree
+                    // rooted at Children[idx].
+                    // And, replace k by pred.
+                    // And, recursively delete pred in Children[idx]
+                    elem_ptr pred = _predecessor(idx);
+                    _payloads[idx] = pred;
+                    p->_remove(pred);
+                    return k;
+                }
 
+                if (node_ptr p = _pointers[idx + 1]; p->_count >= _M) {
+                    // If the child that successor k (Children[idx+1]) has at least
+                    // _M keys, find the successor 'succ' of k in the subtree
+                    // rooted at Children[idx+1].
+                    // And, replace k by succ.
+                    // And, recursively delete succ in Children[idx]
+                    elem_ptr succ = _successor(idx);
+                    _payloads[idx] = succ;
+                    p->_remove(succ);
+                    return k;
+                }
+
+                // If both Children[idx] and Children[idx+1] has less than _M keys,
+                // merge k and all of Children[idx+1] into Children[idx].
+                // After merged, Children[idx] will contain MAX-PAYLOADS keys.
+                // the node Children[idx+1] will be free after k was deleted from
+                // Children[idx] recursively.
+                _merge(idx);
+                return _pointers[idx]->_remove(k);
+            }
+
+            /**
+             * @brief find and return the predecessor key of this[idx]
+             * @param idx 
+             * @return the last key of the leaf
+             */
+            elem_ptr _predecessor(int idx) {
+                node_ptr cur = _pointers[idx];
+                while (!cur->is_leaf())
+                    cur = cur->_pointers[cur->_count];
+                return cur->_payloads[cur->_count - 1];
+            }
+
+            /**
+             * @brief find and return the successor key of this[idx]
+             * @param idx 
+             * @return the first key of the leaf
+             */
+            elem_ptr _successor(int idx) {
+                node_ptr cur = _pointers[idx + 1];
+                while (!cur->is_leaf())
+                    cur = cur->_pointers[0];
+                return cur->_payloads[0];
+            }
+
+            /**
+             * @brief to merge Children[idx] with Children[idx+1], and pull 
+             * an element from parent node (this node) too.
+             * @param idx an index in this node (parent node).
+             */
+            void _merge(int idx) {
+                const int max_payloads = _degree - 1;
+                const int min_payloads = max_payloads / 2;
+                const int _M = _degree / 2;
+                assert(_M == min_payloads + 1);
+                UNUSED(min_payloads, max_payloads);
+
+                node_ptr child = _pointers[idx];
+                node_ptr sibling = _pointers[idx + 1];
+                hicc_debug("    _merge(%d) for node [%s] and sibling [%s]", idx, child->to_string().c_str(), sibling->to_string().c_str());
+
+                assert(child->_count == _M - 1);
+                child->_payloads[_M - 1] = _payloads[idx];
+
+                for (int i = 0; i < sibling->_count; ++i) child->_payloads[i + _M] = sibling->_payloads[i];
+                if (!child->is_leaf())
+                    for (int i = 0; i <= sibling->_count; ++i) child->_pointers[i + _M] = sibling->_pointers[i];
+
+                for (int i = idx + 1; i < _count; ++i) _payloads[i - 1] = _payloads[i];
+                for (int i = idx + 2; i <= _count; ++i) _pointers[i - 1] = _pointers[i];
+                _pointers[_count] = nullptr;
+                _payloads[_count - 1] = nullptr;
+
+                child->_count += sibling->_count + 1;
+                _count--;
+
+                delete sibling->reset_for_delete();
+            }
+
+            /**
+             * @brief to fill Children[idx] which has less than _M-1 keys.
+             * @param idx 
+             */
+            void _fill(int idx) {
+                const int max_payloads = _degree - 1;
+                const int min_payloads = max_payloads / 2;
+                const int _M = _degree / 2;
+                assert(_M == min_payloads + 1);
+                UNUSED(min_payloads, max_payloads);
+
+                hicc_debug("    _fill(%d) for node [%s]", idx, to_string().c_str());
+
+                if (idx != 0 && _pointers[idx - 1]->_count >= _M)
+                    _rotate_from_left(idx);
+                else if (idx != _count && _pointers[idx + 1]->_count >= _M)
+                    _rotate_from_right(idx);
+                else {
+                    if (idx != _count)
+                        _merge(idx);
+                    else
+                        _merge(idx - 1);
+                }
+            }
+
+            /**
+             * @brief to rotate a key from Children[idx-1] to parent[idx], and pull
+             * the replaced key parent[idx] down to Children[idx]
+             * @param idx 
+             */
+            void _rotate_from_left(int idx) {
+                node_ptr child = _pointers[idx];
+                node_ptr sibling = _pointers[idx - 1];
+                hicc_debug("    _rotate_from_left(%d) for node [%s] and sibling [%s]", idx, child->to_string().c_str(), sibling->to_string().c_str());
+
+                for (int i = child->_count - 1; i >= 0; --i)
+                    child->_payloads[i + 1] = child->_payloads[i];
+
+                if (!child->is_leaf()) {
+                    for (int i = child->_count; i >= 0; --i)
+                        child->_pointers[i + 1] = child->_pointers[i];
+                }
+
+                child->_payloads[0] = _payloads[idx - 1];
+
+                if (!child->is_leaf()) {
+                    child->_pointers[0] = sibling->_pointers[sibling->_count];
+                    sibling->_pointers[sibling->_count] = nullptr;
+                }
+
+                _payloads[idx - 1] = sibling->_payloads[sibling->_count - 1];
+                sibling->_payloads[sibling->_count - 1] = nullptr;
+
+                child->_count++;
+                sibling->_count--;
+            }
+
+            /**
+             * @brief to rotate a key from Children[idx+1] to parent[idx], and pull
+             * the replaced key parent[idx] down to Children[idx]
+             * @param idx 
+             */
+            void _rotate_from_right(int idx) {
+                node_ptr child = _pointers[idx];
+                node_ptr sibling = _pointers[idx + 1];
+                hicc_debug("    _rotate_from_right(%d) for node [%s] and sibling [%s]", idx, child->to_string().c_str(), sibling->to_string().c_str());
+
+                child->_payloads[(child->_count)] = _payloads[idx];
+
+                if (!child->is_leaf())
+                    child->_pointers[(child->_count) + 1] = sibling->_pointers[0];
+
+                _payloads[idx] = sibling->_payloads[0];
+
+                for (int i = 1; i < sibling->_count; ++i)
+                    sibling->_payloads[i - 1] = sibling->_payloads[i];
+                sibling->_payloads[sibling->_count - 1] = nullptr;
+                if (!sibling->is_leaf()) {
+                    for (int i = 1; i <= sibling->_count; ++i)
+                        sibling->_pointers[i - 1] = sibling->_pointers[i];
+                    sibling->_pointers[sibling->_count] = nullptr;
+                }
+
+                child->_count++;
+                sibling->_count--;
+            }
+
+            int first_of_insertion_position(const_elem_ptr el) const {
+                int idx = 0;
+                while (idx < _count && is_less_than(_payloads[idx], el))
+                    ++idx;
+                return idx;
+            }
+
+        public:
+            bool is_leaf() const { return _pointers[0] == nullptr; }
+
+            const_elem_ref get_el(int index = 0) const { return *const_cast<node_ptr>(this)->get_el_ptr(index); }
+            elem_ref get_el(int index = 0) { return *get_el_ptr(index); }
+            elem_ptr get_el_ptr(int index = 0) {
+                return (index < 0 || index > _degree - 1) ? &_null_elem()
+                                                          : (_payloads[index] ? (_payloads[index]) : &_null_elem());
+            }
+            const_elem_ptr get_el_ptr(int index = 0) const { return const_cast<node_ptr>(this)->get_el_ptr(index); }
+
+            void set_el(int index, elem_ptr a) { _payloads[index] = a; }
+
+            const_node_ptr child(int i) const { return (i >= 0 && i <= _degree) ? _pointers[i] : nullptr; }
+            node_ptr child(int i) { return (i >= 0 && i <= _degree) ? _pointers[i] : nullptr; }
+
+            bool can_get_el(int index) const {
+                if (index < 0 || index > _degree - 1) return false;
+                return _payloads[index] != nullptr;
+            }
+            bool can_get_child(int index) const {
+                if (index < 0 || index > _degree) return false;
+                return _pointers[index] != nullptr;
+            }
+
+            elem_type const &operator[](int index) const {
+                if (index >= 0 && index < _degree - 1)
+                    return _payloads[index] ? *_payloads[index] : _null_elem();
+                return _null_elem();
+            }
+
+            elem_type &operator[](int index) {
+                if (index >= 0 && index < _degree - 1)
+                    return _payloads[index] ? *_payloads[index] : _null_elem();
+                return _null_elem();
+            }
+
+            bool operator!() const { return is_null(*this); }
+            operator bool() const { return !is_null(*this); }
+
+            // compare the pointers strictly
+            bool operator==(const_node_ref &rhs) const {
+                if (rhs._degree == 0 && _degree == 0) return true;
+                if (rhs._degree == 0 || _degree == 0) return false;
+
+                for (int k = 0; k < _degree - 1; ++k) {
+                    if (_payloads[k] != rhs._payloads[k])
+                        return false;
+                }
+                for (int k = 0; k < _degree; ++k) {
+                    if (_pointers[k] != rhs._pointers[k])
+                        return false;
+                }
+                if (_count != rhs._count) return false;
+                return true;
+            }
+
+            friend std::ostream &operator<<(std::ostream &os, node &o) {
+                os << o.to_string();
+                return os;
+            }
+
+            static T &_null_elem() {
+                static T _d{};
+                return _d;
+            }
+
+            static node_ref _null_node() {
+                static node _d{0};
+                return _d;
+            }
+
+            static bool is_null(T const &data) { return data == _null_elem(); }
+            static bool is_null(node const &data) { return data == _null_node(); }
+
+            static Comp &comparer() {
+                static Comp _c{};
+                return _c;
+            }
+
+            static bool is_less_than(const_elem_ref lhs, const_elem_ref rhs) { return node::comparer()(lhs, rhs); }
+            static bool is_less_than(const_elem_ptr lhs, const_elem_ptr rhs) { return node::comparer()(*lhs, *rhs); }
+
+            static bool is_equal_to(const_elem_ref a, const_elem_ref b) { return !is_less_than(a, b) && !is_less_than(b, a); }
+            static bool is_equal_to(const_elem_ptr a, const_elem_ptr b) { return !is_less_than(a, b) && !is_less_than(b, a); }
+
+        public:
             // const_node_ref walk(visitor const &visitor) const { return LNR(visitor, 9); }
+
+            /**
+             * @brief in-order traverse the sub-tree rooted with this node.
+             * @param visitor 
+             * @return reference to this node
+             */
             const_node_ref walk(visitor_l const &visitor) const {
-                int x{0};
-                return LNR(visitor, x, 0, 0, 0);
+                int abs_index{0};
+                return LNR(visitor, abs_index, 0, 0, 0);
             }
 
+            /**
+             * @brief pre-order traverse the sub-tree rooted with this node.
+             * @param visitor 
+             * @return reference to this node
+             */
             const_node_ref walk_nlr(visitor_l const &visitor) const {
-                int x{0};
-                return NLR(visitor, x, 0, 0, 0);
+                int abs_index{0};
+                return NLR(visitor, abs_index, 0, 0, 0);
             }
 
+            /**
+             * @brief leveled traverse the sub-tree rooted with this node.
+             * @param visitor 
+             * @return reference to this node.
+             */
             const_node_ref walk_level_traverse(visitor_l const &visitor) const { return Level(visitor); }
 
+            /**
+             * @brief depth traverse the sub-tree rooted with this node.
+             * @param visitor 
+             * @return reference to this node.
+             */
             const_node_ref walk_depth_traverse(visitor_l const &visitor) const { return Depth(visitor); }
 
+            /**
+             * @brief test the existence of a key 'data'
+             * @param data 
+             * @return whether the key is exist in this tree
+             */
             bool exists(elem_type const &data) const {
+                int idx = first_of_insertion_position(&data);
+                if (idx < _count && is_equal_to(_payloads[idx], &data))
+                    return true;
+                if (node_ptr p = _pointers[idx]; p)
+                    return p->exists(data);
+                return false;
+            }
+            bool exists(elem_type const *data) const { return exists(*data); }
+
+            /** 
+             * @brief test the existence of a key 'data' with heavy matching algorithm.
+             * @param data 
+             * @return 
+             */
+            bool exists_by_traverse(elem_type const &data) const {
                 bool found{};
-                walk([data, &found](
-                             const_elem_ref el,
-                             const_node_ref node_this,
-                             int level, bool node_changed,
-                             int parent_ptr_index, bool parent_ptr_changed,
-                             int ptr_index) -> bool {
-                    if (el == data) {
+                walk([data, &found](traversal_context const &ctx) -> bool {
+                    if (node::is_equal_to(*ctx.el, data)) {
                         found = true;
                         return false;
                     }
-                    if (el < data) {
+                    if (node::is_less_than(*ctx.el, data)) {
                         // continue to search
                     } else {
                         return false; // not found
                     }
-                    UNUSED(el, node_this, level, node_changed);
-                    UNUSED(parent_ptr_index, parent_ptr_changed, ptr_index);
                     return true; // false to terminate the walking
                 });
                 return found;
             }
 
+            /**
+             * @brief find the given key within this tree
+             * @param data 
+             * @return position object ( a tuple of [ok,node_ref,idx] ) of the search result.
+             */
             position find(elem_type const &data) const {
                 int index{};
-#if 1
-                while (index < Degree - 1 && _payloads[index] && comparer()(*(_payloads[index]), data))
+                while (index < _degree - 1 && _payloads[index] && comparer()(*(_payloads[index]), data))
                     index++;
-                if (index < Degree - 1 && _payloads[index] && !comparer()(data, *(_payloads[index])))
+                if (index < _degree - 1 && _payloads[index] && !comparer()(data, *(_payloads[index])))
                     return {true, *this, index};
                 if (_pointers[index] == nullptr) // is leaf?
                     return {false, _null_node(), -1};
                 return _pointers[index]->find(data);
-#else
-                node const *res{};
-                walk([data, &res, &index](
-                             const_elem_ref el,
-                             const_node_ref node_this,
-                             int level, bool /*node_changed*/,
-                             int /*parent_ptr_index*/, bool /*parent_ptr_changed*/,
-                             int ptr_index) -> bool {
-                    if (el == data) {
-                        res = &node_this;
-                        index = ptr_index;
-                        return false;
-                    }
-                    if (el < data) {
-                        //
-                    } else {
-                        return false; // not found
-                    }
-                    UNUSED(level);
-                    return true; // false to terminate the walking
-                });
-                if (res)
-                    return {true, *res, index};
-                return {false, _null_node(), -1};
-#endif
             }
+            position find(elem_type const *data) const { return find(*data); }
 
+            /**
+             * @brief find by the given absolute-index within this tree
+             * @param data 
+             * @return position object ( a tuple of [ok,node_ref,idx] ) of the search result.
+             */
             position find_by_index(int index) const {
                 node const *res{};
                 int saved{index};
@@ -253,6 +719,11 @@ namespace hicc::btree {
                 return {false, _null_node(), -1};
             }
 
+            /**
+             * @brief find this tree with a given match callback function.
+             * @param data 
+             * @return reference to this node.
+             */
             const_node_ref find(std::function<bool(const_elem_ptr, const_node_ptr, int /*level*/, bool /*node_changed*/,
                                                    int /*index*/, int /*abs_index*/)> const &matcher) const {
                 walk([matcher](traversal_context const &ctx) -> bool {
@@ -262,598 +733,7 @@ namespace hicc::btree {
                 return (*this);
             }
 
-            void _reset() {
-                for (int i = 0; i < Degree; i++) {
-                    _pointers[i] = nullptr;
-                    _payloads[i] = nullptr;
-                }
-                _parent = nullptr;
-                //                _size = 0;
-            }
-
-            void clear() {
-                for (int i = 0; i < Degree; i++) {
-                    if (_pointers[i]) {
-                        delete _pointers[i];
-                        _pointers[i] = nullptr;
-                    }
-                    if (_payloads[i]) {
-                        delete _payloads[i];
-                        _payloads[i] = nullptr;
-                    }
-                }
-                _parent = nullptr;
-                // _size = 0;
-            }
-
-        private:
-            void _insert_one_entry(btree &bt, elem_ptr a) {
-                std::ostringstream orig, elem;
-                orig << to_string();
-                elem << elem_to_string(a);
-                hicc_debug("insert '%s' to %s", elem.str().c_str(), orig.str().c_str());
-
-                _insert_node(bt._root, a, nullptr, nullptr);
-                bt._size++;
-                if (bt._after_inserted)
-                    bt._after_inserted(bt, a);
-                if (bt._after_changed)
-                    bt._after_changed(bt);
-                if (auto_dot_png) {
-                    std::array<char, 200> name;
-                    std::sprintf(name.data(), "auto.%s%04lu._insert.dot", bt._seq_prefix.c_str(), bt.dot_seq_inc());
-                    std::ostringstream ttl;
-                    ttl << "insert '" << elem.str() << "' into " << orig.str();
-                    bt.dot(name.data(), ttl.str().c_str());
-                }
-            }
-
-            void _insert_node(node_ptr &root, elem_ptr el,
-                              node_ptr el_left_child = nullptr,
-                              node_ptr el_right_child = nullptr) {
-                bool in_recursive = el_left_child || el_right_child;
-                for (int i = 0; i < P_LEN; i++) {
-                    auto *vp = _payloads[i];
-                    if (vp == nullptr) {
-                        if (in_recursive) {
-                            hicc_verbose_debug("  -> put...move '%s' up to parent node.", elem_to_string(el).c_str());
-                            _payloads[i] = el;
-                            if (el_left_child) _pointers[i] = el_left_child->parent(this, true);
-                            if (el_right_child) _pointers[i + 1] = el_right_child->parent(this, true);
-                            return;
-                        }
-
-                        if (_pointers[i]) {
-                            // has_child? forward a into it
-                            _pointers[i]->_insert_node(root, el);
-                            return;
-                        }
-
-                        _payloads[i] = el;
-                        // root->_size++;
-                        return;
-                    }
-
-                    if (comparer()(*el, *vp)) {
-                        // less than this one in payloads[], insert it
-
-                        if (!in_recursive) {
-                            // has_child? forward a into it
-                            if (_pointers[i]) {
-                                _pointers[i]->_insert_node(root, el);
-                                return;
-                            }
-                        }
-
-                        // recursively, or no child, insert at position `i`
-                        auto [has_slot, j] = _find_free_slot(i);
-                        if (has_slot) {
-                            for (int pos = j; pos > i; --pos) _payloads[pos] = _payloads[pos - 1];
-                            _payloads[i] = el;
-                            // if (!in_recursive) root->_size++;
-                            if (el_left_child || el_right_child) {
-                                hicc_verbose_debug("  -> splitting...move '%s' up to parent node.",
-                                                   elem_to_string(el).c_str());
-                                for (auto t = Degree; t >= i; t--) _pointers[t] = _pointers[t - 1];
-                                if (el_left_child) _pointers[i] = el_left_child->parent(this, true);
-                                if (el_right_child) _pointers[i + 1] = el_right_child->parent(this, true);
-                            }
-                            return;
-                        }
-
-#ifdef _DEBUG
-                        if (in_recursive)
-                            hicc_debug("    split this node again: %s + %s...", this->to_string().c_str(), elem_to_string(el).c_str());
-                        else
-                            hicc_debug("  split this node: %s + %s...", this->to_string().c_str(), elem_to_string(el).c_str());
-#endif
-                        for (auto t = Degree - 1; t > i; t--) _payloads[t] = _payloads[t - 1];
-                        for (auto t = Degree; t > i; t--) _pointers[t] = _pointers[t - 1];
-                        _payloads[i] = el;
-                        // if (!in_recursive) root->_size++;
-                        if (el_left_child) _pointers[i] = el_left_child->parent(this, true);
-                        if (el_right_child) _pointers[i + 1] = el_right_child->parent(this, true);
-                        _split_and_raise_up(root, i, el_left_child, el_right_child);
-                        return;
-                    }
-                }
-
-                if (!in_recursive) {
-                    // has_child? forward `a` into it
-                    if (_pointers[P_LEN]) {
-                        _pointers[P_LEN]->_insert_node(root, el);
-                        return;
-                    }
-                }
-
-                hicc_debug("  recursively: `%s` is greater than every one in node %s, create a new parent if necessary", elem_to_string(el).c_str(), to_string().c_str());
-                _payloads[P_LEN] = el;
-                // root->_size++;
-                if (el_left_child) _pointers[P_LEN] = el_left_child->parent(this, true);
-                if (el_right_child) _pointers[P_LEN + 1] = el_right_child->parent(this, true);
-                _split_and_raise_up(root, P_LEN, el_left_child, el_right_child);
-            }
-
-            void _split_and_raise_up(node_ptr &root, int a_pos, node_ptr a_left, node_ptr a_right) {
-                auto *new_parent_data = _payloads[MID];
-                hicc_debug("    split and raise '%s' up...", elem_to_string(new_parent_data).c_str());
-
-                if (_parent) {
-                    node_ptr left = this;
-                    node_ptr right = new node(this, MID + 1, Degree);
-                    for (auto t = MID + 1; t <= Degree; t++) _pointers[t] = nullptr;
-                    for (auto t = MID; t < Degree; t++) _payloads[t] = nullptr;
-                    _parent->_insert_node(root, new_parent_data, left, right);
-                    if (a_pos < MID) {
-                        if (a_left) left->_pointers[a_pos] = a_left->parent(left, true);
-                        if (a_right) left->_pointers[a_pos + 1] = a_right->parent(left, true);
-                    } else if (a_pos >= MID) {
-                        auto pos = a_pos - MID - 1;
-                        if (a_left) right->_pointers[pos] = a_left->parent(right, true);
-                        if (a_right) right->_pointers[pos + 1] = a_right->parent(right, true);
-                    }
-                    return;
-                }
-
-                auto *new_parent_node = new node(new_parent_data);
-                node_ptr left = this->parent(new_parent_node, true);
-                node_ptr right = (new node(this, MID + 1, Degree))->parent(new_parent_node, true);
-                for (auto t = MID + 1; t <= Degree; t++) left->_pointers[t] = nullptr;
-                for (auto t = MID; t < Degree; t++) left->_payloads[t] = nullptr;
-                new_parent_node->_pointers[0] = left;
-                new_parent_node->_pointers[1] = right;
-
-                root = new_parent_node;
-            }
-
-            bool _remove_one_entry(btree &bt, const_elem_ptr a) {
-                std::ostringstream orig, elem;
-                orig << to_string();
-                elem << elem_to_string(a);
-                hicc_debug("remove '%s' from %s", elem.str().c_str(), orig.str().c_str());
-                auto [ok, res, index] = find(*a);
-                if (ok) {
-                    if (auto raised = _remove_one(bt, bt._root, const_cast<node_ptr>(&res), index); raised) {
-                        delete raised;
-                        if (bt._root) {
-#ifdef _DEBUG
-                            if (bt._size <= 0)
-                                assert(false && "null root node?");
-#endif
-                            --bt._size;
-                        }
-                        if (bt._after_removed)
-                            bt._after_removed(bt, a);
-                        if (bt._after_changed)
-                            bt._after_changed(bt);
-                        if (auto_dot_png) {
-                            std::array<char, 200> name;
-                            std::sprintf(name.data(), "auto.%s%04lu._remove.dot", bt._seq_prefix.c_str(), bt.dot_seq_inc());
-                            std::ostringstream ttl;
-                            ttl << "remove '" << elem.str() << "' from " << orig.str();
-                            bt.dot(name.data(), ttl.str().c_str());
-                        }
-                        return true;
-                    }
-                }
-                return false;
-            }
-
-            bool _remove_one_entry(btree &bt, const_node_ref res, int index) {
-                std::ostringstream orig, elem;
-                orig << to_string();
-                elem << elem_to_string(res.get_el(index));
-                hicc_debug("remove '%s' from %s by position: node(%s), index=%d",
-                           elem.str().c_str(), to_string().c_str(), res.to_string().c_str(), index);
-                // auto *saved = root;
-                if (auto raised = _remove_one(bt, bt._root, const_cast<node *>(&res), index); raised) {
-                    --bt._size;
-                    if (bt._after_removed)
-                        bt._after_removed(bt, raised);
-                    if (bt._after_changed)
-                        bt._after_changed(bt);
-                    if (auto_dot_png) {
-                        std::array<char, 200> name;
-                        std::sprintf(name.data(), "auto.%s%04lu._remove.dot", bt._seq_prefix.c_str(), bt.dot_seq_inc());
-                        std::ostringstream ttl;
-                        ttl << "remove '" << elem.str() << "' from " << orig.str();
-                        bt.dot(name.data(), ttl.str().c_str());
-                    }
-                    delete raised;
-                    // if (saved != root) --_size;
-                    return true;
-                }
-                return false;
-            }
-
-            elem_ptr _remove_one(btree &bt, node_ptr &root, node *res, int index, bool dont_balance = false) {
-                if (!(res && index >= 0)) return nullptr;
-
-                auto *removing = res->_payloads[index];
-                assert(removing && "the 'removing' shouldn't be null");
-
-                if (res->has_children()) {
-                    if (auto [idx, ref] = next_minimal_payload(res, index, removing); ref) {
-                        hicc_debug("      . replace with '%s' (idx=%d)...", elem_to_string(ref._payloads[idx]).c_str(), idx);
-                        if (auto raised = _remove_one(bt, root, const_cast<node_ptr>(&ref), idx, true); raised) {
-                            res->_payloads[index] = raised;
-                            if (ref.empty()) {
-                                if (auto ii = parent_pointers_idx(&ref); ii >= 0) {
-                                    if (auto *sibling = res->_pointers[ii + 1]; sibling) {
-                                        _rotate_sibling_always(root, const_cast<node_ptr>(&ref), 0, ref._parent, ii, sibling->_payloads[0]);
-                                        _remove_one(bt, root, sibling, 0, true);
-                                        if (sibling->empty()) {
-                                            delete res->_pointers[ii + 1];
-                                            res->_pointers[ii + 1] = nullptr;
-                                        }
-                                    } else {
-                                        delete res->_pointers[ii];
-                                        res->_pointers[ii] = nullptr;
-                                        //         for (auto t = ii; t < Degree; t++) res->_pointers[t] = res->_pointers[t + 1];}
-                                    }
-                                }
-                            } else if (res->_parent) {
-                                DEBUG_ONLY(dbg_dump(bt, std::cout, "BEFORE rebalance/pull_up..."));
-                                auto child_cnt = ref.payload_count();
-                                auto cnt = res->payload_count();
-                                if (cnt + child_cnt <= Degree - 1)
-                                    _pull_up(root, res, index, const_cast<node_ptr>(&ref));
-                                else
-                                    _rebalance(bt, root, const_cast<node_ptr>(&ref), idx, ref._payloads[idx]);
-                            }
-                        }
-                        return removing;
-                    }
-                    // return removing;
-                }
-
-                // remove 'removing' directly
-                for (auto t = index; t < Degree - 1; t++) res->_payloads[t] = res->_payloads[t + 1];
-                if (!dont_balance)
-                    _rebalance(bt, root, res, index, removing);
-
-                UNUSED(root, res, index);
-                return removing;
-            }
-
-            void _rebalance(btree &bt, node_ptr &root, node *res, int index, elem_ptr removing) {
-                if (auto cnt = res->payload_count(); cnt < Degree / 2 && res->_parent) {
-                    auto parent_idx = parent_pointers_idx(res);
-                    if (parent_idx >= 0) {
-                        auto parent = res->_parent;
-                        if (cnt == 0) {
-                            auto *p = parent->_pointers[parent_idx];
-                            parent->_pointers[parent_idx] = nullptr;
-                            if (auto *c = p->_pointers[0]; c) {
-                                parent->_pointers[parent_idx] = c->parent(p->_parent);
-                                p->_reset();
-                            }
-                            delete p;
-                            return;
-                        }
-                        if (cnt == 1) {
-                            if (auto parent_cnt = parent->payload_count(); parent_cnt + cnt < Degree) {
-                                bool simple{};
-                                if (res->_payloads[index] == nullptr && is_rightest(parent, parent_idx))
-                                    index--, simple = true; // rightest branch
-                                else if (parent_idx == 0) {
-                                    // // if (res->_pointers[index] && res->_pointers[index + 1])
-                                    // //     simple = true; // leftest branch
-                                }
-                                if (simple) {
-                                    _raise_up(root, res, index, parent, parent_idx);
-                                    return;
-                                }
-                            }
-                        }
-                        if (auto ptr = parent->_pointers[parent_idx + 1]; parent_idx + 1 < Degree && ptr) {
-                            // has right sibling
-                            if (auto c = ptr->payload_count(); c > Degree / 2) {
-                                _rotate_sibling(bt, root, res, index, res->_parent, parent_idx, ptr);
-                                return;
-                            }
-                            _merge_sibling(bt, root, res, index, res->_parent, parent_idx, const_cast<node_ptr>(ptr), true);
-                            return;
-                        }
-                        if (auto ptr = parent->_pointers[parent_idx - 1]; parent_idx > 0 && ptr) {
-                            // has left sibling
-                            if (ptr->payload_count() > Degree / 2) {
-                                _rotate_sibling(bt, root, res, index, res->_parent, parent_idx, ptr);
-                                return;
-                            }
-                            _merge_sibling(bt, root, res, index, res->_parent, parent_idx, const_cast<node_ptr>(ptr), false);
-                            return;
-                        }
-                    }
-                    _pull_up(root, res, index, res);
-
-                } else if (cnt == 0) {
-                    auto *p = res->_parent;
-                    if (p) {
-                        for (auto t = 0; t <= Degree; t++) {
-                            if (p->_pointers[t] == res) {
-                                p->_pointers[t] = nullptr;
-                                delete res;
-                                break;
-                            }
-                            if (p->_pointers[t] == nullptr)
-                                break;
-                        }
-                    }
-                }
-                UNUSED(root, res, index);
-                UNUSED(removing);
-            }
-
-            void
-            _merge_sibling(btree &bt, node_ptr &root, node *res, int index, node_ptr parent,
-                           int parent_idx, node_ptr sibling, bool right_side) {
-                // for (auto t = index; t < Degree - 1; t++) {
-                //     if (res->_payloads[t])
-                //         res->_payloads[t] = res->_payloads[t + 1];
-                //     else
-                //         break;
-                // }
-
-                if (right_side) {
-                    bool find_first = is_last_one(parent_idx, parent);
-                    int saved = find_first ? 0 : res->_last_payload_index();
-                    int parent_idx_real = parent_idx;
-                    if (find_first) {
-                        // last child
-                        for (auto t = Degree; t > 0; t--) res->_payloads[t] = res->_payloads[t - 1];
-                        for (auto t = Degree; t > 0; t--) res->_pointers[t] = res->_pointers[t - 1];
-                        res->_payloads[0] = parent->_payloads[parent_idx];
-                    } else {
-                        index = saved + 1;
-                        // pull down the parent's one into position 'saved'
-                        res->_payloads[index++] = parent->_payloads[parent_idx];
-                        // and appends all payloads in sibling
-                        for (auto t = 0; t <= Degree; t++) {
-                            if (auto *p = sibling->_payloads[t]; p) {
-                                res->_payloads[index] = p;
-                                res->_pointers[index] = sibling->_pointers[t];
-                                index++;
-                            } else {
-                                res->_pointers[index] = sibling->_pointers[t];
-                                break;
-                            }
-                        }
-                    }
-                    if (sibling) {
-                        sibling->_reset();
-                        delete sibling;
-                    }
-
-                    for (auto t = parent_idx_real; t < Degree; t++) parent->_payloads[t] = parent->_payloads[t + 1];
-                    for (auto t = parent_idx + 1; t < Degree; t++) parent->_pointers[t] = parent->_pointers[t + 1];
-
-                    if (parent->empty()) {
-                        // res->_size = root->_size;
-                        root = res->parent(nullptr, true);
-                        parent->_reset();
-                        delete parent;
-                    } else
-                        _rebalance(bt, root, parent, parent_idx_real, parent->_payloads[parent_idx_real]);
-                    return;
-                }
-
-                auto pi = parent->_payloads[parent_idx] ? parent_idx : parent_idx - 1;
-
-                if (pi < parent_idx) {
-                    _merge_sibling(bt, root, sibling, 0, parent, pi, res, true);
-                    return;
-                }
-
-                for (auto t = Degree; t > 0; t--) res->_payloads[t] = res->_payloads[t - 1];
-                for (auto t = Degree; t > 0; t--) res->_pointers[t] = res->_pointers[t - 1];
-                res->_payloads[0] = parent->_payloads[pi];
-
-                for (auto x = 1; x < Degree - 1; x++) {
-                    if (auto vd = sibling->_payloads[x]; vd) {
-                        for (auto t = Degree; t > 0; t--) res->_payloads[t] = res->_payloads[t - 1];
-                        for (auto t = Degree; t > 0; t--) res->_pointers[t] = res->_pointers[t - 1];
-                        res->_payloads[0] = vd;
-                    } else
-                        break;
-                }
-
-                parent->_payloads[pi] = sibling->_payloads[0];
-                for (auto t = parent_idx; t < Degree - 1; t++) parent->_pointers[t] = parent->_pointers[t + 1];
-                parent->_pointers[pi] = res;
-                sibling->_reset();
-                delete sibling;
-            }
-
-            // pull down parent[parent_idx] to position 'index'
-            void _pull_down(node_ptr &root, node *res, int index, node_ptr parent, int parent_idx) {
-                for (auto t = Degree; t > index; t--) res->_payloads[t] = res->_payloads[t - 1];
-                for (auto t = Degree; t > index; t--) res->_pointers[t] = res->_pointers[t - 1];
-                res->_payloads[index] = parent->_payloads[parent_idx];
-                UNUSED(root, res, index);
-            }
-
-            void _raise_up(node_ptr &root, node *res, int index, node_ptr parent, int parent_idx) {
-                for (auto t = Degree; t > parent_idx; t--) parent->_payloads[t] = parent->_payloads[t - 1];
-                for (auto t = Degree; t > parent_idx; t--) parent->_pointers[t] = parent->_pointers[t - 1];
-                // if (res->_payloads[index] == nullptr) index--;
-                parent->_payloads[parent_idx] = res->_payloads[index];
-                parent->_pointers[parent_idx] = res->_pointers[index]->parent(parent);
-                parent->_pointers[parent_idx + 1] = res->_pointers[index + 1]->parent(parent);
-                res->_reset();
-                delete res;
-                UNUSED(root);
-            }
-
-            //
-            void _pull_up(node_ptr &root, node *res, int index, node_ptr child) {
-                auto parent_idx = parent_pointers_idx(child);
-                res->_pointers[parent_idx] = nullptr;
-                for (auto t = 0; t < Degree - 1; t++) {
-                    if (auto vd = child->_payloads[t]; vd) {
-                        for (auto x = Degree - 1; x > index; x--) res->_payloads[x] = res->_payloads[x - 1];
-                        for (auto x = Degree; x > parent_idx; x--) res->_pointers[x] = res->_pointers[x - 1];
-                        res->_payloads[++index] = vd;
-                    } else
-                        break;
-                }
-                child->_reset();
-                delete child;
-                UNUSED(root);
-            }
-
-            //
-            void _rotate_sibling(btree &bt, node_ptr &root, node *res, int index, node_ptr parent, int parent_idx, const_node_ptr sibling) {
-                // if(sibling->payload_count()>Degree/2){
-                //     // rotate directly
-                // }else{
-                //     // delete first one, and rotate
-                // }
-                if (sibling->payload_count() >= Degree / 2 + 1) {
-                    auto *removing = sibling->_payloads[0];
-                    if (auto *removed = _remove_one(bt, root, const_cast<node_ptr>(sibling), 0, true); removed) {
-                        assert(removed == removing);
-                        if (_rotate_sibling_always(root, res, index, parent, parent_idx, removed))
-                            return;
-                    }
-                    UNUSED(removing);
-                } else {
-                    return;
-                }
-                assert(false && "unexpected error");
-            }
-
-            //
-            bool _rotate_sibling_always(node_ptr &root, node *res, int index, node_ptr parent, int parent_idx, elem_ptr removed) {
-                auto *pull_down = parent->_payloads[parent_idx];
-                parent->_payloads[parent_idx] = removed;
-                auto ii = index;
-                if (res->_payloads[ii] == nullptr) ii--;
-                if (ii >= 0) {
-                    if (!comparer()(*pull_down, *(res->_payloads[ii])))
-                        ii++;
-                    for (auto t = Degree; t > ii; t--) res->_payloads[t] = res->_payloads[t - 1];
-                    for (auto t = Degree; t > ii; t--) res->_pointers[t] = res->_pointers[t - 1];
-                } else
-                    ii = 0;
-                res->_payloads[ii] = pull_down;
-                UNUSED(root);
-                return true;
-            }
-
-        public:
-            node &operator+(node &rhs) {
-                node &lhs = (*this);
-                assert(lhs.payload_count() + rhs.payload_count() < Degree);
-                // auto lc = lhs.payload_count(), rc = lhs.payload_count();
-                int idx = 0;
-                for (int i = 0; i < Degree; ++i) {
-                    if (lhs._payloads[i] == nullptr) {
-                        idx = i;
-                        break;
-                    }
-                }
-
-                for (int i = 0; i < Degree; ++i) {
-                    if (rhs._payloads[i] != nullptr) {
-                        lhs._payloads[idx] = rhs._payloads[i];
-                        rhs._payloads[i] = nullptr;
-                        if (lhs._pointers[idx] && rhs._pointers[i]) {
-                            // merge the two children, recursively if necessary
-                            // assertm(false, "not implement yet");
-                            node_ptr root = &lhs;
-                            _merge(root, &lhs, idx, lhs._pointers[idx], rhs._pointers[i]);
-                        } else {
-                            lhs._pointers[idx] = rhs._pointers[i];
-                        }
-                        rhs._pointers[i] = nullptr;
-                        idx++;
-                    }
-                }
-
-                return (*this);
-            }
-
-            node &operator+=(node &rhs) {
-                this->operator+(rhs);
-                return (*this);
-            }
-
-            // compare the pointers strictly
-            bool operator==(const_node_ref &rhs) const {
-                for (int k = 0; k < Degree - 1; ++k) {
-                    if (_payloads[k] != rhs._payloads[k])
-                        return false;
-                }
-                for (int k = 0; k < Degree; ++k) {
-                    if (_pointers[k] != rhs._pointers[k])
-                        return false;
-                }
-                if (_parent != rhs._parent)
-                    return false;
-                return true;
-            }
-
-            elem_type const &operator[](int index) const {
-                if (index >= 0 && index < Degree - 1)
-                    return _payloads[index] ? *_payloads[index] : _null_elem();
-                return _null_elem();
-            }
-
-            elem_type &operator[](int index) {
-                if (index >= 0 && index < Degree - 1)
-                    return _payloads[index] ? *_payloads[index] : _null_elem();
-                return _null_elem();
-            }
-
-            bool operator!() const { return is_null(*this); }
-
-            operator bool() const { return !is_null(*this); }
-
-            bool is_last_one_of_parent(const_node_ptr ptr, int parent_idx) const {
-                if (auto parent = ptr->_parent; parent) {
-                    if (auto cnt = parent->payload_count(); parent_idx >= cnt)
-                        return true;
-                }
-                return false;
-            }
-            bool is_last_one(int parent_idx, const_node_ptr parent) const {
-                if (parent) {
-                    if (auto cnt = parent->payload_count(); parent_idx >= cnt)
-                        return true;
-                }
-                return false;
-            }
-
-            int level() const {
-                int l{};
-                auto *p = this;
-                while (p->_parent)
-                    p = p->_parent, l++;
-                return l;
-            }
-
-        private:
+        protected:
             // in-order traversal
             //
             // never used in context:
@@ -863,7 +743,7 @@ namespace hicc::btree {
                 bool parent_ptr_changed{loop_base == 0};
                 bool node_changed{true};
                 int count{0};
-                for (int i = 0, pi = 0; i < P_LEN; i++, pi++) {
+                for (int i = 0, pi = 0; i < _degree - 1; i++, pi++) {
                     auto *n = _pointers[i];
                     if (n) {
                         if (auto &z = n->LNR(visitor, abs_index, level + 1, pi, count); is_null(z))
@@ -893,9 +773,9 @@ namespace hicc::btree {
                         break;
                 }
 
-                auto *n = _pointers[Degree - 1];
+                auto *n = _pointers[_degree - 1];
                 if (n) {
-                    if (auto &z = n->LNR(visitor, abs_index, level + 1, Degree - 1, count); is_null(z))
+                    if (auto &z = n->LNR(visitor, abs_index, level + 1, _degree - 1, count); is_null(z))
                         return z;
                     count += n->payload_count() + 1;
                 }
@@ -925,10 +805,10 @@ namespace hicc::btree {
                     if (!_visit_payloads(*this, ctx, visitor))
                         return _null_node();
                     parent_ptr_changed = false;
-                    abs_index=ctx.abs_index;
+                    abs_index = ctx.abs_index;
                 }
 
-                for (int pi = 0; pi < Degree; pi++) {
+                for (int pi = 0; pi < _degree; pi++) {
                     auto *n = _pointers[pi];
                     if (n) {
                         assert(n->_parent == this);
@@ -947,13 +827,13 @@ namespace hicc::btree {
                         if (!_visit_payloads(*n, ctx, visitor))
                             return _null_node();
                         parent_ptr_changed = false;
-                        abs_index=ctx.abs_index;
+                        abs_index = ctx.abs_index;
                     } else
                         break;
                 }
 
                 int count{0};
-                for (int pi = 0; pi < Degree; pi++) {
+                for (int pi = 0; pi < _degree; pi++) {
                     auto *n = _pointers[pi];
                     if (n) {
                         if (auto &z = n->NLR(visitor, abs_index, level + 1, pi, count); is_null(z)) {
@@ -971,7 +851,7 @@ namespace hicc::btree {
                 std::list<traversal_context> queue;
                 // std::list<std::tuple<node_ptr, int /*index*/, int /*loop_base*/, int /*parent_ptr_index*/>> queue;
                 auto abs_index{0}, level{0}, last_level{-1}, last_parent_ptr_index{-1};
-                queue.push_back({*this, &get_el(), level, 0, 0, 0, 0, true, true, true});
+                queue.push_back({*this, &get_el(0), level, 0, 0, 0, 0, true, true, true});
 
                 while (!queue.empty()) {
                     // auto [curr, index, loop_base, parent_ptr_index] = queue.front();
@@ -991,7 +871,7 @@ namespace hicc::btree {
                             return (*this);
 
                         auto loop_base_tmp = pos.loop_base;
-                        for (auto i = 0; i < Degree; i++) {
+                        for (auto i = 0; i < _degree; i++) {
                             if (auto *p = pos.curr._pointers[i]; p) {
                                 queue.push_back({
                                         *p,
@@ -1029,7 +909,7 @@ namespace hicc::btree {
                             return (*this);
 
                         auto loop_base_tmp = ctx.loop_base;
-                        for (auto i = 0; i < Degree; i++) {
+                        for (auto i = 0; i < _degree; i++) {
                             if (auto p = ctx.curr->_pointers[i]; p) {
                                 queue.push_back({
                                         *p,
@@ -1053,10 +933,9 @@ namespace hicc::btree {
                 return (*this);
             }
 
-            static bool
-            _visit_payloads(const_node_ref ref, traversal_context &ctx, visitor_l const &visitor) {
+            static bool _visit_payloads(const_node_ref ref, traversal_context &ctx, visitor_l const &visitor) {
                 bool node_changed{true};
-                for (int pi = 0; pi < Degree - 1; pi++) {
+                for (int pi = 0; pi < ref._degree - 1; pi++) {
                     auto *t = ref._payloads[pi];
                     if (t) {
                         ctx.node_changed = node_changed;
@@ -1071,259 +950,13 @@ namespace hicc::btree {
                 return true;
             }
 
-            const_elem_ref get_el(int index = 0) const {
-                return (index < 0 || index >= Degree - 1) ? _null_elem()
-                                                          : (_payloads[index] ? *(_payloads[index]) : _null_elem());
-            }
-
-            std::tuple<bool, int> _find_free_slot(int start_index) const {
-                bool has_slot = false;
-                int j = start_index + 1;
-                for (; j < P_LEN; ++j) {
-                    auto *vpt = _payloads[j];
-                    if (vpt == nullptr) {
-                        has_slot = true;
-                        break;
-                    }
-                }
-                return {has_slot, j};
-            }
-
-            int _last_payload_index() const {
-                if (_payloads[0] != nullptr) {
-                    for (auto i = 1; i < Degree; ++i) {
-                        if (_payloads[i] == nullptr)
-                            return (i - 1);
-                    }
-                }
-                return -1;
-            }
-
         public:
-            static Comp &comparer() {
-                static Comp _c{};
-                return _c;
-            }
-
-            static std::string elem_to_string(elem_type const *a) {
-                std::ostringstream os;
-                os << (*a);
-                return os.str();
-            }
-
-            static std::string elem_to_string(elem_type const &a) {
-                std::ostringstream os;
-                os << a;
-                return os.str();
-            }
-
-            std::string to_string() const {
-                std::ostringstream os;
-                os << '[';
-                for (int i = 0; i < Degree - 1; ++i) {
-                    if (_payloads[i]) {
-                        if (i > 0) os << ',';
-                        os << (*_payloads[i]);
-                    }
-                }
-                os << ']';
-                return os.str();
-            }
-
-            std::string c_str() const { return to_string(); }
-
-            int degree() const { return Degree; }
-
-            const_node_ptr child(int i) const {
-                if (i >= 0 && i < Degree) return _pointers[i];
-                return nullptr;
-            }
-
-            bool has_children() const {
-                for (auto i = 0; i < Degree; ++i) {
-                    if (_pointers[i] != nullptr)
-                        return true;
-                }
-                return false;
-            }
-
-            bool has_children(node const *res, int index) const {
-                assert(index >= 0 && index < Degree);
-                return (res->_pointers[index] || res->_pointers[index + 1]);
-            }
-
-            bool has_left_child(node const *res, int index) const {
-                assert(index >= 0 && index < Degree);
-                return (res->_pointers[index]);
-            }
-
-            bool has_right_children(node const *res, int index) const {
-                assert(index >= 0 && index < Degree);
-                return (res->_pointers[index + 1]);
-            }
-
-            bool has_right_sibling(node const *res, int index, elem_ptr removing) const {
-                assert(index >= 0 && index < Degree);
-                if (auto const *p = res->_parent; p) {
-                    for (auto t = Degree - 1 - 1; t >= 0; t--) {
-                        if (p->_payloads[t] == nullptr) continue;
-                        if (*removing < *(p->_payloads[t])) continue;
-                        if (p->_pointers[t + 1] != nullptr)
-                            return p->_pointers[t + 1] != res;
-                        break;
-                    }
-                    return p->_pointers[1] != nullptr;
-                }
-                UNUSED(index);
-                return false;
-            }
-
-            lite_ptr_position find_right_sibling(node const *res, int index, elem_ptr removing) const {
-                assert(index >= 0 && index < Degree);
-                if (auto const *p = res->_parent; p) {
-                    for (auto t = Degree - 1 - 1; t >= 0; t--) {
-                        if (p->_payloads[t] == nullptr) continue;
-                        if (*removing < *(p->_payloads[t])) continue;
-                        if (p->_pointers[t + 1] != nullptr)
-                            return {t + 1, p->_pointers[t + 1] == res ? nullptr : p->_pointers[t + 1]};
-                        break;
-                    }
-                    return {0, p->_pointers[1]};
-                }
-                UNUSED(index);
-                return {-1, nullptr};
-            }
-
-            bool has_left_sibling(node const *res, int index, elem_ptr removing) const {
-                assert(index >= 0 && index < Degree);
-                if (auto const *p = res->_parent; p) {
-                    for (auto t = Degree - 1 - 1; t >= 0; t--) {
-                        if (p->_payloads[t] == nullptr) continue;
-                        if (*removing < *(p->_payloads[t]))
-                            return p->_pointers[t - 1] != nullptr;
-                    }
-                    if (p->_pointers[0] != res) return true;
-                }
-                UNUSED(index);
-                return false;
-            }
-
-            lite_ptr_position find_left_sibling(node const *res, int index, elem_ptr removing) const {
-                assert(index >= 0 && index < Degree);
-                if (auto const *p = res->_parent; p) {
-                    for (auto t = Degree - 1 - 1; t >= 0; t--) {
-                        if (p->_payloads[t] == nullptr) continue;
-                        if (*removing < *(p->_payloads[t])) {
-                            if (p->_pointers[t - 1] != nullptr)
-                                return {t - 1, p->_pointers[t - 1]};
-                            break;
-                        }
-                    }
-                    return {0, p->_pointers[0] == res ? nullptr : p->_pointers[0]};
-                }
-                UNUSED(index);
-                return {-1, nullptr};
-            }
-
-            static int parent_pointers_idx(node const *res) {
-                if (res && res->_parent) {
-                    for (auto t = Degree - 1; t >= 0; t--) {
-                        if (auto p = res->_parent->_pointers[t]; p == nullptr)
-                            continue;
-                        else if (p == res)
-                            return t;
-                    }
-                }
-                return -1;
-            }
-
-            static lite_position next_minimal_payload(node const *res, int index, elem_ptr removing) {
-                if (res) {
-                    assert(index >= -1 && index < Degree);
-                    for (auto t = index + 1; t < Degree; t++) {
-                        if (auto *p = res->_pointers[t]; p != nullptr)
-                            return next_minimal_payload(p, -1, removing);
-                        if (auto *p = res->_payloads[t]; p != nullptr)
-                            return {t, *res};
-                        break;
-                    }
-                    auto *ptr = res;
-                retry_parent:
-                    if (auto *p = ptr->_parent; p != nullptr) {
-                        if (auto pi = parent_pointers_idx(ptr); pi >= 0) {
-                            if (p->_payloads[pi] == nullptr) {
-                                ptr = p;
-                                goto retry_parent;
-                            }
-                            if (comparer()(*removing, *(p->_payloads[pi])))
-                                return {pi, *p};
-                            return next_minimal_payload(p->_pointers[pi + 1], -1, removing);
-                        }
-                        return {0, *p};
-                    }
-                }
-                return {-1, _null_node()};
-            }
-
-            static lite_position next_payload(node const *res, int index, elem_ptr removing) {
-                assert(index >= -1 && index < Degree);
-                for (auto t = index + 1; t < Degree; t++) {
-                    if (auto *p = res->_pointers[t]; p != nullptr)
-                        return next_payload(p, -1, removing);
-
-                    if (auto *p = res->_payloads[t]; p != nullptr)
-                        return {t, *res};
-                }
-
-                if (auto *p = res->_parent; p != nullptr) {
-                    for (auto t = Degree - 1; t >= 0; t--) {
-                        if (auto *x = p->_payloads[t]; x == nullptr)
-                            continue;
-                        else if (comparer()(*x, *removing)) {
-                            // auto pos = t + 1;
-                            return next_payload(p, t, removing);
-                        }
-                    }
-                    return {0, *p};
-                }
-
-                return {-1, _null_node()};
-            }
-
-            static bool is_rightest(const_node_ptr parent, int parent_idx) {
-                return (parent->_pointers[parent_idx] && parent->_pointers[parent_idx] == nullptr);
-            }
-
-            int payload_count() const {
-                assert(this);
-                int i{0};
-                for (; i < Degree - 1; ++i) {
-                    if (auto *vp = _payloads[i]; vp == nullptr) {
-                        break;
-                    }
-                }
-                return i;
-            }
-
-            int total_from_calculating() const {
-                int count = 0;
-                walk([&count](traversal_context const &ctx) -> bool {
-                    count++;
-                    UNUSED(ctx);
-                    return true;
-                });
-                return count;
-            }
-
-            bool empty() const { return _payloads[0] == nullptr; }
-
-        public:
-            void dbg_dump(btree const &bt, std::ostream &os = std::cout, const char *headline = nullptr) const {
+            void dbg_dump(size_type known_size, std::ostream &os = std::cout, const char *headline = nullptr) const {
                 if (headline) os << headline;
 
                 int count = total_from_calculating();
 
-                walk_level_traverse([&bt, count, &os](traversal_context const &ctx) -> bool {
+                Level([known_size, count, &os](traversal_context const &ctx) -> bool {
                     if (ctx.node_changed) {
                         if (ctx.index == 0 && ctx.level_changed)
                             os << '\n'
@@ -1332,11 +965,11 @@ namespace hicc::btree {
                             os << ' ' << '|' << ' ';
                         else
                             os << ' ';
-                        os << ctx.curr.to_string();
+                        os << '[' << ctx.curr.to_string() << ']';
                         if (ctx.level == 0) {
-                            os << '/' << bt._size;
+                            os << '/' << known_size;
                             os << "/dyn:" << count;
-                            assertm(ctx.curr._parent == nullptr, "root's parent must be nullptr");
+                            // assertm(ctx.curr.parent() == nullptr, "root's parent must be nullptr");
                         }
                         // os << '{' << std::boolalpha << ctx.parent_ptr_index << ',' << (ctx.parent_ptr_index_changed?'T':'_') << ',' << ctx.loop_base << '}';
                         // os << '{' << ctx.level << ',' << std::boolalpha
@@ -1347,147 +980,314 @@ namespace hicc::btree {
                     return true; // false to terminate the walking
                 });
                 os << '\n';
+                // assert(known_size == (size_type) count);
+            }
+
+            void assert_it(btree &bt, int level = 0) {
+                const int max_payloads = _degree - 1;
+                const int min_payloads = max_payloads / 2;
+                const int _M = _degree / 2;
+                assert(_M == min_payloads + 1);
+
+                for (int t = 0; t < _count; t++)
+                    if (auto *p = _payloads[t]; !p)
+                        assertm(_payloads[t] != nullptr, "the payloads lower than _count must be valid pointers to the elem_type.");
+                for (int t = _count; t < max_payloads; t++)
+                    if (auto *p = _payloads[t]; p)
+                        assertm(_payloads[t] == nullptr, "the payloads larger than _count must be nullptr.");
+                for (int t = _count + 1; t < _degree; t++)
+                    if (auto *p = _pointers[t]; p)
+                        assertm(_pointers[t] == nullptr, "the payloads larger than _count must be nullptr.");
+
+                if (this == bt._root) {
+                    std::vector<elem_ptr> els;
+                    std::cout << "loop for btree: ";
+                    walk([&els](traversal_context const &ctx) -> bool {
+                        std::cout << elem_to_string(ctx.el) << ',';
+                        if (els.size()) {
+                            elem_ptr last = els.back();
+                            assert(is_less_than(last, ctx.el));
+                        }
+                        for (auto *ptr : els) {
+                            assert(ptr != ctx.el); // wrong case: elem_ptr duplicated
+                        }
+                        els.push_back(const_cast<elem_ptr>(ctx.el));
+                        return true;
+                    });
+                    std::cout << '\n';
+                } else {
+                    assertm(_count >= min_payloads, "_count should be larger than min_payloads.");
+                    assertm(_count <= max_payloads, "_count should be lower than max_payloads.");
+                }
+
+                for (int t = 0; t <= max_payloads; t++)
+                    if (auto *p = _pointers[t]; p)
+                        p->assert_it(bt, level + 1);
+            }
+
+        public:
+            int total_from_calculating() const {
+                int count = 0;
+                int abs_index = 0;
+                int level = 0;
+                int parent_ptr_index = 0;
+                LNR([&count](traversal_context const &ctx) -> bool {
+                    count++;
+                    UNUSED(ctx);
+                    return true;
+                },
+                    abs_index, level, parent_ptr_index);
+                return count;
+            }
+
+            int payload_count() const { return _count; }
+            void inc_payload_count() { _count++; }
+            void dec_payload_count() { _count--; }
+
+            std::string to_string() const {
+                std::ostringstream os;
+                for (int i = 0; i < _count; i++) {
+                    if (elem_ptr p = _payloads[i]; p) {
+                        if (i > 0) os << ',';
+                        os << elem_to_string(p);
+                    } else
+                        break;
+                }
+                return os.str();
+            }
+            std::string c_str() const { return to_string(); }
+            static std::string elem_to_string(const_elem_ptr el) {
+                std::ostringstream os;
+                os << (*el);
+                return os.str();
+            }
+            static std::string elem_to_string(const_elem_ref el) {
+                std::ostringstream os;
+                os << (el);
+                return os.str();
             }
         };
 
     public:
-        struct traversal_context {
-            const_node_ref curr;
-            const_elem_ptr el;
-            int level;
-            int index;
-            int loop_base;
-            int parent_ptr_index;
-            int abs_index;
-            bool level_changed;
-            bool node_changed;
-            bool parent_ptr_index_changed;
-        };
-
-    public:
-        template<typename... Args>
-        void insert(Args &&...args) {
-            (_root->insert_one(*this, args), ...);
-            DEBUG_ONLY(assert_it());
-        }
-
-        void insert(elem_type *a_new_data_ptr) {
-            assert(a_new_data_ptr);
-            _root->insert_one(*this, a_new_data_ptr);
-            DEBUG_ONLY(assert_it());
-        }
-
         template<class A, typename... Args,
                  std::enable_if_t<
                          std::is_constructible<elem_type, A, Args...>::value &&
+                                 !std::is_same<std::decay_t<A>, elem_type>::value &&
                                  !std::is_same<std::decay_t<A>, node>::value,
                          int> = 0>
         void emplace(A &&a0, Args &&...args) {
-            _root->emplace(*this, std::forward<A>(a0), std::forward<Args>(args)...);
-            DEBUG_ONLY(assert_it());
+            elem_type v(std::forward<A>(a0), std::forward<Args>(args)...);
+            insert(v);
         }
 
         template<class A,
                  std::enable_if_t<
                          std::is_constructible<elem_type, A>::value &&
+                                 !std::is_same<std::decay_t<A>, elem_type>::value &&
                                  !std::is_same<std::decay_t<A>, node>::value,
                          int> = 0>
         void emplace(A &&a) {
-            _root->emplace(*this, std::forward<A>(a));
-            DEBUG_ONLY(assert_it());
+            elem_type v(std::forward<A>(a));
+            insert(v);
         }
+
+    public:
+        /**
+         * @brief the main function to insert a new key in this tree
+         * @param a 
+         */
+        void insert(elem_type &&a) { _insert(new elem_type(a)); }
+        void insert(const_elem_ref el) { _insert(new elem_type(el)); }
+        // void insert(elem_type el) { _insert(new elem_type(el)); }
 
         template<typename... Args>
-        void remove(Args &&...args) {
-            (_root->remove(*this, args), ...);
+        void insert(Args &&...args) { (_insert(new elem_type(args)), ...); }
+        template<typename... Args>
+        void insert(Args const &...args) { (_insert(new elem_type(args)), ...); }
+        void insert(elem_ptr a_new_data_ptr) { _insert(a_new_data_ptr); }
+
+    private:
+        void _insert(elem_ptr el) {
+            auto el_str = node::elem_to_string(el);
+            hicc_debug("insert '%s' ...", el_str.c_str());
+            if (_root == nullptr) {
+                _root = new node(_degree);
+                _root->set_el(0, el);
+                _root->_count = 1;
+                DEBUG_ONLY(_dbg_after_inserted(el_str));
+                return;
+            }
+
+            const int max_payloads = _degree - 1;
+            if (_root->_count == max_payloads) {
+                node_ptr np = new node(_degree);
+                np->_pointers[0] = _root;
+                np->_split_child(0, _root);
+                int i = 0;
+                if (node::is_less_than(np->_payloads[0], el)) i++;
+                np->_pointers[i]->insert_non_full(el);
+                _root = np;
+                DEBUG_ONLY(_dbg_after_inserted(el_str));
+                return;
+            }
+
+            _root->insert_non_full(el);
+            DEBUG_ONLY(_dbg_after_inserted(el_str));
+        }
+#if defined(_DEBUG)
+        void _dbg_after_inserted(std::string const &el_str) {
+            std::ostringstream os;
+            os << "after '" << el_str << "' inserted .";
+            DEBUG_ONLY(dbg_dump(std::cout, os.str().c_str()));
             DEBUG_ONLY(assert_it());
         }
+#endif
 
-        void remove(elem_type *el) {
-            _root->remove(*this, el);
+    public:
+        /**
+         * @brief the main function to remove a given key within this tree
+         * @param a 
+         */
+        void remove(elem_type &&a) { _remove(&a); }
+        void remove(const_elem_ref el) { _remove(el); }
+        void remove(elem_ptr el) { _remove(el); }
+
+        template<typename... Args>
+        void remove(Args &&...args) { (_remove(&args), ...); }
+        template<typename... Args>
+        void remove(Args const &...args) { (_remove(&args), ...); }
+
+    private:
+        void _remove(const_elem_ref el) {
+            auto el_str = node::elem_to_string(el);
+            hicc_debug("remove '%s' ...", el_str.c_str());
+            if (_root == nullptr)
+                return;
+            elem_ptr removed = _root->remove(el);
+            _check_root_is_empty(el_str);
+            if (removed)
+                delete removed;
+        }
+        void _remove(elem_ptr el) {
+            auto el_str = node::elem_to_string(el);
+            hicc_debug("remove '%s' ...", el_str.c_str());
+            if (_root == nullptr)
+                return;
+            elem_ptr removed = _root->remove(el);
+            _check_root_is_empty(el_str);
+            if (removed)
+                delete removed;
+        }
+        void _check_root_is_empty(const std::string &el_str) {
+            if (_root->_count == 0) {
+                node_ptr tmp = _root;
+                if (_root->is_leaf())
+                    _root = nullptr;
+                else
+                    _root = _root->_pointers[0];
+                delete tmp->reset_for_delete();
+            }
+
+#if defined(_DEBUG)
+            std::ostringstream os;
+            os << "after '" << el_str << "' removed .";
+            DEBUG_ONLY(dbg_dump(std::cout, os.str().c_str()));
             DEBUG_ONLY(assert_it());
+#else
+            UNUSED(el_str);
+#endif
         }
 
-        void remove_by_position(node const &res, int index) {
-            _root->remove_by_position(*this, res, index);
-            DEBUG_ONLY(assert_it());
-        }
-
-        void remove_by_position(position pos) {
-            if (std::get<0>(pos))
-                _root->remove_by_position(*this, std::get<1>(pos), std::get<2>(pos));
-            DEBUG_ONLY(assert_it());
-        }
-
-        //
-
-        bool exists(elem_type const &data) const { return _root->exists(data); }
-
-        //
-
-        position find(elem_type const &data) const { return _root->find(data); }
-
-        position find_by_index(int index) const { return _root->find_by_index(index); }
-
-        const_node_ref find(std::function<bool(const_elem_ptr, const_node_ptr, int /*level*/, bool /*node_changed*/,
-                                               int /*ptr_index*/)> const &matcher) const { return find(matcher); }
-
-        //
-
-        lite_position next_payload(const_node_ptr ptr, int index) const {
-            return node::next_payload(ptr, index, ptr->_payloads[index]);
-        }
-
-        lite_position next_payload(lite_position const &pos) const {
-            auto [idx, ptr] = pos;
-            return node::next_payload(ptr, idx, ptr->_payloads[idx]);
-        }
-
-        lite_position next_payload(position const &pos) const {
-            auto [ok, ref, idx] = pos;
-            if (ok)
-                return node::next_payload(&ref, idx, ref._payloads[idx]);
-            return {-1, _null_node()};
-        }
-
-        lite_position next_minimal_payload(const_node_ref ref, int index) const {
-            return node::next_minimal_payload(&ref, index, ref._payloads[index]);
-        }
-
-        lite_position next_minimal_payload(lite_position const &pos) const {
-            auto [idx, ptr] = pos;
-            return node::next_minimal_payload(ptr, idx, ptr->_payloads[idx]);
-        }
-
-        lite_position next_minimal_payload(position const &pos) const {
-            auto [ok, ref, idx] = pos;
-            if (ok)
-                return node::next_minimal_payload(&ref, idx, ref._payloads[idx]);
-            return {-1, _null_node()};
-        }
-
-        //
-
-        void _reset() { _root->_reset(); }
+    public:
         void clear() {
-            _root->clear();
-            _size = 0;
+            if (_root)
+                delete _root;
         }
 
-        size_type size() const { return _size; }
-        size_type capacity() const { return _size; }
+        void dbg_dump(std::ostream &os = std::cout, const char *headline = nullptr) const {
+            if (_root)
+                _root->dbg_dump(_size, os, headline);
+        }
 
-        const_node_ref walk(visitor_l const &v) const { return _root->walk(v); }
-        node_ref walk(visitor_l const &v) { return const_cast<node_ref>(_root->walk(v)); }
+        void assert_it() {
+            if (_root)
+                _root->assert_it(*this, 0);
+        }
 
-        const_node_ref walk_nlr(visitor_l const &v) const { return _root->walk_nlr(v); }
-        node_ref walk_nlr(visitor_l const &v) { return const_cast<node_ref>(_root->walk_nlr(v)); }
+        int total_count() const {
+            if (_root)
+                return _root->total_from_calculating();
+            return 0;
+        }
+        size_type size() const { return total_count(); }
 
-        const_node_ref walk_level_traverse(visitor_l const &v) const { return _root->walk_level_traverse(v); }
-        node_ref walk_level_traverse(visitor_l const &v) { return const_cast<node_ref>(_root->walk_level_traverse(v)); }
+        bool exists(const_elem_ref data) const {
+            if (_root)
+                return _root->exists(data);
+            return false;
+        }
+        bool exists(const_elem_ptr data_ptr) const { return exists(*data_ptr); }
 
-        const_node_ref walk_depth_traverse(visitor_l const &v) const { return _root->walk_depth_traverse(v); }
-        node_ref walk_depth_traverse(visitor_l const &v) { return const_cast<node_ref>(_root->walk_depth_traverse(v)); }
+        position find(elem_type const &data) const {
+            if (_root)
+                return _root->find(data);
+            return {false, node::_null_node(), -1};
+        }
+        position find_by_index(int index) const {
+            if (_root)
+                return _root->find_by_index(index);
+            return {false, node::_null_node(), -1};
+        }
+        const_node_ref find(std::function<bool(const_elem_ptr, const_node_ptr, int /*level*/, bool /*node_changed*/,
+                                               int /*index*/, int /*abs_index*/)> const &matcher) const {
+            if (_root)
+                return _root->find(matcher);
+            return node::_null_node();
+        }
+
+        /**
+         * @brief in-order traverse the sub-tree rooted with this node.
+         * @param visitor 
+         * @return reference to this node
+         */
+        const_node_ref walk(visitor_l const &visitor) const {
+            if (_root)
+                return _root->walk(visitor);
+            return node::_null_node();
+        }
+
+        /**
+         * @brief pre-order traverse the sub-tree rooted with this node.
+         * @param visitor 
+         * @return reference to this node
+         */
+        const_node_ref walk_nlr(visitor_l const &visitor) const {
+            if (_root)
+                return _root->walk_nlr(visitor);
+            return node::_null_node();
+        }
+
+        /**
+         * @brief leveled traverse the sub-tree rooted with this node.
+         * @param visitor 
+         * @return reference to this node.
+         */
+        const_node_ref walk_level_traverse(visitor_l const &visitor) const {
+            if (_root)
+                return _root->walk_level_traverse(visitor);
+            return node::_null_node();
+        }
+
+        /**
+         * @brief depth traverse the sub-tree rooted with this node.
+         * @param visitor 
+         * @return reference to this node.
+         */
+        const_node_ref walk_depth_traverse(visitor_l const &visitor) const {
+            if (_root)
+                return _root->walk_depth_traverse(visitor);
+            return node::_null_node();
+        }
 
         std::vector<elem_type> to_vector() const {
             std::vector<elem_type> vec;
@@ -1500,276 +1300,26 @@ namespace hicc::btree {
             return vec;
         }
 
-        //
-
-        static bool is_null(T const &data) { return data == _null_elem(); }
-
-        static bool is_null(node const &data) { return data == _null_node(); }
-
-        int total_from_calculating() const { return _root->total_from_calculating(); }
-
-#if defined(_DEBUG) || 1
-
-        void dbg_dump(std::ostream &os = std::cout, const char *headline = nullptr) const { _root->dbg_dump(*this, os, headline); }
-
-        void assert_it() const {
-
-            int count = total_from_calculating();
-            if ((std::size_t) count != _size)
-                dbg_dump();
-            assertm((std::size_t) count == _size,
-                    "expecting _size is equal to the btree size (countof) exactly");
-
-            walk([this](traversal_context const &ctx) -> bool {
-                int i;
-                for (i = 0; i < Degree; i++) {
-                    auto const *vp = ctx.curr._pointers[i];
-                    if (vp) {
-                        if (vp->_parent != &ctx.curr) {
-                            std::ostringstream os, os1;
-                            if (vp->_parent) os1 << '(' << vp->_parent->to_string() << ')';
-                            os << "node " << vp->to_string() << " has parent " << vp->_parent << os1.str()
-                               << ". but not equal to " << &ctx.curr << " (" << ctx.curr.to_string() << ").\n";
-                            dbg_dump(os);
-                            assertm(false, os.str());
-                        }
-                    }
-                }
-
-                for (i = 0; i < Degree; i++) {
-                    if (auto const *vp = ctx.curr._pointers[i]; !vp)
-                        break;
-                }
-                for (; i < Degree + 1; i++) {
-                    auto const *vp = ctx.curr._pointers[i];
-                    std::ostringstream os;
-                    if (vp) {
-                        dbg_dump();
-                        os << "extra slot " << i << " in pointers must be nullptr";
-                    }
-                    assertm(vp == nullptr, os.str().c_str());
-                }
-
-                for (i = 0; i < Degree; i++) {
-                    if (auto const *vp = ctx.curr._payloads[i]; !vp)
-                        break;
-                }
-                for (; i < Degree + 1; i++) {
-                    auto const *vp = ctx.curr._payloads[i];
-                    std::ostringstream os;
-                    if (vp) {
-                        dbg_dump();
-                        os << "extra slot " << i << " in payloads must be nullptr";
-                    }
-                    assertm(vp == nullptr, os.str().c_str());
-                }
-
-                for (i = 0; i < Degree; i++) {
-                    auto *data = ctx.curr._payloads[i];
-                    auto const *cp = ctx.curr._pointers[i];
-                    if (data) {
-                        if (cp) {
-                            for (int k = 0; k < Degree; ++k) {
-                                auto *vp = cp->_payloads[k];
-                                if (vp) {
-                                    if (node::comparer()(*vp, *data) == false && *vp != *data) {
-                                        dbg_dump(std::cerr);
-                                        std::ostringstream os;
-                                        os << "left children (" << node::elem_to_string(vp)
-                                           << ") should be less than its parent (" << node::elem_to_string(data)
-                                           << ").";
-                                        assertm(false, os.str());
-                                    }
-                                }
-                            }
-                        }
-                    } else if (cp && i > 0 && ctx.curr._payloads[i - 1] == nullptr) {
-                        std::ostringstream os;
-                        os << "for node " << ctx.curr.to_string() << ", payloads[" << i << "] and #" << (i - 1)
-                           << " are both null but pointers[" << i << "] is pointing to somewhere (" << cp->to_string()
-                           << ").";
-                        assertm(false, os.str());
-                    }
-                    if (data == nullptr)
-                        break;
-                }
-
-                auto *data = ctx.curr._payloads[i - 1];
-                auto *cp = ctx.curr._pointers[i];
-                if (cp && data) {
-                    for (int k = 0; k < Degree; ++k) {
-                        auto *vp = cp->_payloads[k];
-                        if (vp) {
-                            bool lt = node::comparer()(*data, *vp);
-                            if (!lt) {
-                                // excludes if they are equal.
-                                if (*data != *vp) {
-                                    std::ostringstream os;
-                                    os << "right child " << node::elem_to_string(vp)
-                                       << " should be greater than its parent " << node::elem_to_string(data) << '\n';
-                                    dbg_dump(os);
-                                    assertm(lt, os.str());
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // for (int k = 0; k < Degree; ++k) {
-                //     auto *vp = cp->_payloads[k];
-                //     if (vp) {
-                //         bool lt = node::comparer()(*data, *vp);
-                //         if (!lt) {
-                //             std::ostringstream os;
-                //             os << "right child " << node::elem_to_string(vp) << " should be greater than its parent " << node::elem_to_string(data);
-                //             assertm(lt, os.str());
-                //         }
-                //         // assertm(node::comparer()(*vp, *data), "left children should be less than its parent");
-                //     }
-                // }
-
-                /* for (int k = 0; k < Degree; ++k) {
-                    auto *vp = cp->_payloads[k];
-                    if (vp) {
-                        lt = node::comparer()(*data, *vp);
-                        if (!lt) {
-                            std::ostringstream os;
-                            os << "right child " << node::elem_to_string(vp) << " should be greater than its parent " << node::elem_to_string(data);
-                            assertm(lt, os.str());
-                            std::cerr << os.str() << '\n';
-                            // [16,31]
-                            // [3,7,10,13] [18,21] [55,87]
-                            // [1,2] [5,6] [8,9] [11,12] [14,15] | [17,17]
-                            // [19,20] [28,29] | [33,47] [56,66,69] [78]
-                        }
-                    }
-                } */
-
-                // UNUSED(el, node_changed, level, parent_ptr_index, parent_ptr_changed, ptr_index);
-                return true;
-            });
+        std::string to_string() const {
+            if (_root) return _root->to_string();
+            return std::string{};
         }
 
-        /**
-         * @brief dot generate a graphviz .dot file and transform it as a PNG too.
-         * @param filename such as 'aa.dot'
-         * @param verbose assume 'dot -v ...'
-         * @details graphviz must be installed at first, 'dot' should be PATH-searchable.
-         */
-        void dot(const char *filename, const char *title, bool verbose = false) {
-            UNUSED(filename);
-            std::unique_ptr<std::ofstream, std::function<void(std::ofstream *)>>
-                    ofs(new std::ofstream(filename),
-                        [filename, verbose](std::ofstream *os) {
-                            os->close();
-                            std::cout << "aa.dot was written." << '\n';
-                            std::array<char, 512> cmd;
-                            std::sprintf(cmd.data(), "dot '%s' -T png -o '%s.png' %s", filename, filename, verbose ? "-v" : "");
-                            std::cout << "executing: " << std::quoted(cmd.data()) << '\n';
-                            // process::exec dot("dot aa.dot -T png -o aa.png");
-                            process::exec dot(cmd.data());
-                            std::cout << dot.rdbuf();
-                        });
-
-            btree::size_type total = size();
-            walk_level_traverse([total, title, &ofs](btree::traversal_context const &ctx) -> bool {
-                if (ctx.abs_index == 0) {
-                    *ofs << "graph {" << '\n';
-                    if (title && *title)
-                        *ofs << "labelloc=\"t\";\n"
-                             << "label=\"" << title << "\";" << '\n';
-                }
-                if (ctx.node_changed) {
-                    auto from = std::quoted(ctx.curr.to_string());
-                    if (ctx.abs_index == 0) {
-                        *ofs << from << " [color=green];" << '\n';
-                    }
-                    for (int i = 0; i < ctx.curr.degree(); ++i) {
-                        if (auto const *child = ctx.curr.child(i); child) {
-                            *ofs << from << " -- ";
-                            *ofs << std::quoted(child->to_string()) << ';'
-                                 << ' ' << '#' << ' ' << std::boolalpha
-                                 << ctx.abs_index << ':' << ' '
-                                 << ctx.level << ',' << ctx.index << ',' << ctx.parent_ptr_index
-                                 << ',' << ctx.loop_base << ','
-                                 << ctx.level_changed
-                                 << ',' << ctx.parent_ptr_index_changed
-                                 << '\n';
-                        } else
-                            break;
-                    }
-                    *ofs << '\n';
-                }
-                if (ctx.abs_index == (int) total - 1) {
-                    *ofs << "}" << '\n';
-                }
-                // std::cout << "abs_idx: " << ctx.abs_index << ", total: " << total << '\n';
-                return true;
-            });
-        }
-#endif
-
-        size_type dot_seq_inc() { return _seq_no++; }
-        btree &dot_seq(size_type seq_no) {
-            _seq_no = seq_no;
-            return *this;
-        }
-        btree &dot_prefix(const char *s) {
-            if (s && *s) {
-                _seq_prefix = s;
-                if (_seq_prefix[_seq_prefix.length() - 1] != '.')
-                    _seq_prefix += '.';
-            } else {
-                _seq_prefix.clear();
-            }
-            return *this;
-        }
-
-    protected:
-        static T &_null_elem() {
-            static T _d;
-            return _d;
-        }
-
-        static node_ref _null_node() {
-            static node _d;
-            return _d;
-        }
-
-        void _clear_all() {
-            _root->clear();
-            delete _root;
-            _root = nullptr;
+        friend std::ostream &operator<<(std::ostream &os, btree &o) {
+            o.dbg_dump(os);
+            return os;
         }
 
     private:
-        node_ptr _root{};
-        size_type _size{};
-        node_ptr _first_leaf{};
-        node_ptr _last_leaf{};
+        int _degree;
+        int _size;
+        node_ptr _root;
 
-        std::function<void(btree &, const_elem_ptr a)> _after_inserted;
-        std::function<void(btree &, const_elem_ptr a)> _after_removed;
-        std::function<void(btree &)> _after_changed;
+    }; // btree<T>
 
-        size_type _seq_no{};
-        std::string _seq_prefix{};
-    };
-
-    template<class T, int Degree, class Comp, bool B>
-    inline btree<T, Degree, Comp, B>::btree()
-        : _root(new node{}) {
-    }
-
-    template<class T, int Degree, class Comp, bool B>
-    inline btree<T, Degree, Comp, B>::~btree() {
-        _clear_all();
-    }
-
-    // template<class T, int Degree, class Comp>
-    // inline typename btree<T, Degree, Comp>::size_type btree<T, Degree, Comp>::node::_size{};
 
 } // namespace hicc::btree
+
 
 
 #endif //HICC_CXX_HZ_BTREE_HH

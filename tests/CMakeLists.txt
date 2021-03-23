@@ -95,6 +95,7 @@ define_test_program(sso-2 sso-2.cc)
 define_test_program(priority-queue priority-queue.cc)
 
 define_test_program(btree btree.cc)
+define_test_program(bt0 bt0.cc)
 
 #define_test_program(any-1 any_1.cc)
 #define_test_program(visit-any

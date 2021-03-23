@@ -19,11 +19,18 @@ _deps
 
 
 *.dot
-refs?/
-save?/
-SAVE?/
-outputs?/
-dists?/
+auto*.png
+bin/
+ref/
+res/
+sav/
+save/
+SAV/
+SAVE/
+output/
+outputs/
+dist/
+dists/
 dist-.+/
 # libs?/
 docs/cmake-vars.txt

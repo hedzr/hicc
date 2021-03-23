@@ -10,6 +10,7 @@
 #include <iostream>
 #include <utility>
 #include <vector>
+#include <sstream>
 
 
 #if !defined(_DEBUG) && defined(DEBUG)
@@ -77,6 +78,24 @@ inline void UNUSED([[maybe_unused]] Args &&...args) {
 #define RELEASE_ONLY(...) /* __VA_ARGS__ */
 #endif
 #endif
+
+
+#ifndef ASSERTIONS_ONLY
+#if defined(HICC_ENABLE_ASSERTIONS) && defined(_DEBUG)
+#define ASSERTIONS_ONLY(...) __VA_ARGS__
+#else
+#define ASSERTIONS_ONLY(...) /* __VA_ARGS__ */
+#endif
+#endif
+
+#ifndef NO_ASSERTIONS_ONLY
+#if defined(HICC_ENABLE_ASSERTIONS)
+#define NO_ASSERTIONS_ONLY(...) /* __VA_ARGS__ */
+#else
+#define NO_ASSERTIONS_ONLY(...) __VA_ARGS__
+#endif
+#endif
+
 
 #ifndef __COPY
 #define __COPY(m) this->m = o.m
@@ -217,18 +236,42 @@ typedef std::vector<std::string> string_array;
 #endif
 
 
-const char *const DEFAULT_KEY_PREFIX = "app";
-const char *const DEFAULT_CLI_KEY_PREFIX = "app.cli";
+#ifndef _VECTOR_TO_STRING_HELPERS_DEFINED
+#define _VECTOR_TO_STRING_HELPERS_DEFINED
+template<class TX,
+        template<typename, typename...> class Container = std::vector>
+static std::string vector_to_string(Container<TX> const &vec) {
+    std::ostringstream os;
+    os << '[';
+    int ix = 0;
+    for (auto const &v : vec) {
+        if (ix++ > 0) os << ',';
+        os << v;
+    }
+    return os.str();
+}
+
+template<class TX,
+        template<typename, typename...> class Container = std::vector>
+inline std::ostream &operator<<(std::ostream &os, Container<TX> &o) {
+    os << vector_to_string(o);
+    return os;
+}
+#endif
 
 
-const char *const UNSORTED_GROUP = "1230.Unsorted";
-const char *const SYS_MGMT_GROUP = "9000.System Management";
-// nobody group: 3333 .. 3333+50
-// When you specify a group without leading sorter piece (just
-// like '1230.'), we name it as nobody group.
-// We sort those all nobody group with an auto-increasing
-// number which have a base from 3333.
-const char *const NOBODY_GROUP_SORTER = "3333";
+// const char *const DEFAULT_KEY_PREFIX = "app";
+// const char *const DEFAULT_CLI_KEY_PREFIX = "app.cli";
+//
+//
+// const char *const UNSORTED_GROUP = "1230.Unsorted";
+// const char *const SYS_MGMT_GROUP = "9000.System Management";
+// // nobody group: 3333 .. 3333+50
+// // When you specify a group without leading sorter piece (just
+// // like '1230.'), we name it as nobody group.
+// // We sort those all nobody group with an auto-increasing
+// // number which have a base from 3333.
+// const char *const NOBODY_GROUP_SORTER = "3333";
 
 //template<class T=std::string>
 //constexpr T UNSORTED_GROUP = T("1230.Unsorted");
