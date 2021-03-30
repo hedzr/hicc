@@ -8,9 +8,10 @@
 
 #include <initializer_list>
 #include <iostream>
+#include <iterator>
+#include <sstream>
 #include <utility>
 #include <vector>
-#include <sstream>
 
 
 #if !defined(_DEBUG) && defined(DEBUG)
@@ -238,9 +239,34 @@ typedef std::vector<std::string> string_array;
 
 #ifndef _VECTOR_TO_STRING_HELPERS_DEFINED
 #define _VECTOR_TO_STRING_HELPERS_DEFINED
+
+// namespace cmdr::detail {
+//     using std::begin;
+//
+//     template<class T>
+//     inline auto check() -> decltype(begin(std::declval<T>())) {}
+// }
+//
+// template<class T, class = decltype(cmdr::detail::check<T>())>
+// inline constexpr bool is_iterable(int) { return true; }
+//
+// template<class>
+// inline constexpr bool is_iterable(unsigned) { return false; }
+
+template<typename T, typename = void>
+struct is_iterable : std::false_type {};
+
+template<typename T>
+struct is_iterable<T, std::void_t<decltype(std::begin(std::declval<T>())),
+        decltype(std::end(std::declval<T>()))>> : std::true_type {};
+
+template<typename T>
+constexpr bool is_iterable_v = is_iterable<T>::value;
+
 template<class TX,
-        template<typename, typename...> class Container = std::vector>
-static std::string vector_to_string(Container<TX> const &vec) {
+        template<typename, typename...> class Container = std::vector,
+        std::enable_if_t<is_iterable<Container<TX>>::value, int> = 0>
+inline std::string vector_to_string(Container<TX> const &vec) {
     std::ostringstream os;
     os << '[';
     int ix = 0;
@@ -252,7 +278,8 @@ static std::string vector_to_string(Container<TX> const &vec) {
 }
 
 template<class TX,
-        template<typename, typename...> class Container = std::vector>
+        template<typename, typename...> class Container = std::vector,
+        std::enable_if_t<is_iterable<Container<TX>>::value, int> = 0>
 inline std::ostream &operator<<(std::ostream &os, Container<TX> &o) {
     os << vector_to_string(o);
     return os;
