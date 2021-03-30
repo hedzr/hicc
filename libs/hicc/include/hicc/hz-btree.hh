@@ -988,6 +988,7 @@ namespace hicc::btree {
                 const int min_payloads = max_payloads / 2;
                 const int _M = _degree / 2;
                 assert(_M == min_payloads + 1);
+                UNUSED(_M, min_payloads, max_payloads);
 
                 for (int t = 0; t < _count; t++)
                     if (auto *p = _payloads[t]; !p)
