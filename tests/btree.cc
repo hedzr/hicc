@@ -56,6 +56,9 @@ void n_test_btree() {
 
     std::cout << "btree: " << vector_to_string(bt.to_vector()) << '\n';
     std::cout << "btree: " << bt << '\n';
+
+    std::list<int> vec2 = {5, 9, 19};
+    std::cout << vector_to_string(vec2) << '\n';
 }
 
 
@@ -94,7 +97,7 @@ void n_test_btree_rand(int count = 100 * 1000) {
         } else {
             // int index1 = std::rand();
             // auto index = (int) (((double) index1) / RAND_MAX * bt.size());
-            std::uniform_int_distribution<int> uniform_dist_s(0, bt.size());
+            std::uniform_int_distribution<int> uniform_dist_s(0, (int)bt.size());
             int index = uniform_dist_s(e1);
             auto pos = bt.find_by_index(index);
             if (std::get<0>(pos)) {

@@ -26,7 +26,7 @@
 //#define UNUSED(...) [__VA_ARGS__](){}
 //#endif
 template<typename... Args>
-inline void UNUSED([[maybe_unused]] Args &&...args) {
+inline void UNUSED([[maybe_unused]] Args &&... args) {
     (void) (sizeof...(args));
 }
 
@@ -253,19 +253,54 @@ typedef std::vector<std::string> string_array;
 // template<class>
 // inline constexpr bool is_iterable(unsigned) { return false; }
 
+#ifdef OS_WIN
+template<typename T, typename = void>
+struct is_iterable : std::false_type {};
+
+template<typename T>
+struct is_iterable<T, std::void_t<decltype(std::declval<T>().begin()),
+                                  decltype(std::declval<T>().end())>>
+    : std::true_type {};
+
+template<class Container,
+         std::enable_if_t<
+                 is_iterable<Container>::value &&
+                         !std::is_same<Container, std::string>::value,
+                 int> = 0>
+inline std::string vector_to_string(Container const &vec) {
+    std::ostringstream os;
+    os << '[';
+    int ix = 0;
+    for (auto const &v : vec) {
+        if (ix++ > 0) os << ',';
+        os << v;
+    }
+    return os.str();
+}
+
+template<class Container,
+         std::enable_if_t<
+                 is_iterable<Container>::value &&
+                         !std::is_same<Container, std::string>::value,
+                 int> = 0>
+inline std::ostream &operator<<(std::ostream &os, Container const &o) {
+    os << vector_to_string(o);
+    return os;
+}
+#else
 template<typename T, typename = void>
 struct is_iterable : std::false_type {};
 
 template<typename T>
 struct is_iterable<T, std::void_t<decltype(std::begin(std::declval<T>())),
-        decltype(std::end(std::declval<T>()))>> : std::true_type {};
+                                  decltype(std::end(std::declval<T>()))>> : std::true_type {};
 
 template<typename T>
 constexpr bool is_iterable_v = is_iterable<T>::value;
 
 template<class TX,
-        template<typename, typename...> class Container = std::vector,
-        std::enable_if_t<is_iterable<Container<TX>>::value, int> = 0>
+         template<typename, typename...> class Container = std::vector,
+         std::enable_if_t<is_iterable<Container<TX>>::value, int> = 0>
 inline std::string vector_to_string(Container<TX> const &vec) {
     std::ostringstream os;
     os << '[';
@@ -278,13 +313,14 @@ inline std::string vector_to_string(Container<TX> const &vec) {
 }
 
 template<class TX,
-        template<typename, typename...> class Container = std::vector,
-        std::enable_if_t<is_iterable<Container<TX>>::value, int> = 0>
+         template<typename, typename...> class Container = std::vector,
+         std::enable_if_t<is_iterable<Container<TX>>::value, int> = 0>
 inline std::ostream &operator<<(std::ostream &os, Container<TX> &o) {
     os << vector_to_string(o);
     return os;
 }
-#endif
+#endif //OS_WIN
+#endif //_VECTOR_TO_STRING_HELPERS_DEFINED
 
 
 // const char *const DEFAULT_KEY_PREFIX = "app";

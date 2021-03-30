@@ -172,7 +172,7 @@ namespace hicc::btree {
                 for (auto t = start, i = 0; t < end; t++, i++) _payloads[i] = src->_payloads[t];
                 for (auto t = start, i = 0; t <= end; t++, i++) _pointers[i] = src->_pointers[t];
                 _pointers[end - start] = src->_pointers[end];
-                _count = dyn_payload_count();
+                _count = (counter_type)dyn_payload_count();
             }
 
             bool is_root() const { return _parent == nullptr; }
@@ -384,7 +384,7 @@ namespace hicc::btree {
 #if defined(HICC_ENABLE_PRECONDITION_CHECKS)
                 if (auto_dot_png) {
                     std::array<char, 200> name;
-                    std::sprintf(name.data(), "auto.%s%04lu._insert.dot", bt._seq_prefix.c_str(), bt.dot_seq_inc());
+                    std::sprintf(name.data(), "auto.%s%04zu._insert.dot", bt._seq_prefix.c_str(), bt.dot_seq_inc());
                     std::ostringstream ttl;
                     ttl << "insert '" << elem.str() << "' into " << orig.str();
                     bt.dot(name.data(), ttl.str().c_str(), false);
@@ -534,7 +534,7 @@ namespace hicc::btree {
                 int lc = left->payload_count();
                 for (auto t = pos; t < lc; t++) left->_payloads[t] = nullptr;
                 for (auto t = pos - fix + 1; t <= lc; t++) left->_pointers[t] = nullptr;
-                left->_count = pos;
+                left->_count = (counter_type)pos;
                 for (auto t = Degree - 1; t > pos_of_child; t--) this->_pointers[t] = this->_pointers[t - 1];
                 for (auto t = Degree - 1; t > pos_of_child; t--) this->_payloads[t] = this->_payloads[t - 1];
                 this->_payloads[pos_of_child] = mid;
@@ -728,7 +728,7 @@ namespace hicc::btree {
 #if defined(HICC_ENABLE_PRECONDITION_CHECKS)
                     if (auto_dot_png) {
                         std::array<char, 200> name;
-                        std::sprintf(name.data(), "auto.%s%04lu._remove.dot", bt._seq_prefix.c_str(), bt.dot_seq_inc());
+                        std::sprintf(name.data(), "auto.%s%04zu._remove.dot", bt._seq_prefix.c_str(), bt.dot_seq_inc());
                         std::ostringstream ttl;
                         ttl << "remove '" << elem.str() << "' from " << orig.str();
                         bt.dot(name.data(), ttl.str().c_str(), false);
@@ -760,7 +760,7 @@ namespace hicc::btree {
 #if defined(HICC_ENABLE_PRECONDITION_CHECKS)
                     if (auto_dot_png) {
                         std::array<char, 200> name;
-                        std::sprintf(name.data(), "auto.%s%04lu._remove.dot", bt._seq_prefix.c_str(), bt.dot_seq_inc());
+                        std::sprintf(name.data(), "auto.%s%04zu._remove.dot", bt._seq_prefix.c_str(), bt.dot_seq_inc());
                         std::ostringstream ttl;
                         ttl << "remove '" << elem.str() << "' from " << orig.str();
                         bt.dot(name.data(), ttl.str().c_str(), false);
@@ -910,7 +910,7 @@ namespace hicc::btree {
                     for (auto t = 0; t <= sibling->payload_count(); t++) mid->_pointers[t + M] = sibling->_pointers[t];
                 for (auto t = index + 1; t < payload_count(); t++) _payloads[t - 1] = _payloads[t];
                 for (auto t = index + 2; t <= payload_count(); t++) _pointers[t - 1] = _pointers[t];
-                mid->_count += sibling->payload_count() + 1;
+                mid->_count += (counter_type)(sibling->payload_count() + 1);
                 dec_payload_count();
                 delete sibling->_reset_for_delete();
             }
@@ -1647,10 +1647,11 @@ namespace hicc::btree {
                 return false;
             }
 #endif
-
+            #if 0
             static lite_position next_minimal_payload(node const *res, int index, elem_ptr removing) {
                 if (res) {
                     assert(index >= -1 && index < Degree);
+
                     for (auto t = index + 1; t < Degree; t++) {
                         if (auto *p = res->_pointers[t]; p != nullptr)
                             return next_minimal_payload(p, -1, removing);
@@ -1658,6 +1659,7 @@ namespace hicc::btree {
                             return {t, *res};
                         break;
                     }
+
                     auto *ptr = res;
                 retry_parent:
                     if (auto *p = ptr->parent(); p != nullptr) {
@@ -1675,7 +1677,7 @@ namespace hicc::btree {
                 }
                 return {-1, _null_node()};
             }
-
+            #endif
             static lite_position next_payload(node const *res, int index, elem_ptr removing) {
                 assert(index >= -1 && index < Degree);
                 for (auto t = index + 1; t < Degree; t++) {
@@ -1856,6 +1858,7 @@ namespace hicc::btree {
             return {-1, _null_node()};
         }
 
+        #if 0
         lite_position next_minimal_payload(const_node_ref ref, int index) const {
             return node::next_minimal_payload(&ref, index, ref._payloads[index]);
         }
@@ -1864,14 +1867,14 @@ namespace hicc::btree {
             auto [idx, ptr] = pos;
             return node::next_minimal_payload(ptr, idx, ptr->_payloads[idx]);
         }
-
+        
         lite_position next_minimal_payload(position const &pos) const {
             auto [ok, ref, idx] = pos;
             if (ok)
                 return node::next_minimal_payload(&ref, idx, ref._payloads[idx]);
             return {-1, _null_node()};
         }
-
+        #endif
 
         node_ptr _reset_for_delete() { return _root->_reset_for_delete(); }
         void clear() {
@@ -2310,13 +2313,16 @@ void test_btree_1_remove(hicc::btree::btreeT<int, 5, std::less<int>, use_auto_do
     } else {
         assert(false && "'21' not found");
     }
+    #if 0
     if (auto [idx, ref] = bt.next_minimal_payload(bt.find(32)); ref) {
         // std::cout << ref[idx] << '\n';
         assert(ref[idx] == 33);
     } else {
         assert(false && "'32' not found");
     }
+    #endif
 
+    #if 0
     auto vec = bt.to_vector();
 
     for (auto it = vec.begin(); it != vec.end(); it++) {
@@ -2343,6 +2349,7 @@ void test_btree_1_remove(hicc::btree::btreeT<int, 5, std::less<int>, use_auto_do
             assertm(false, msg.str().c_str());
         }
     }
+    #endif
 
     bt.remove(21);
     NO_ASSERTIONS_ONLY(bt.dbg_dump());
@@ -2362,6 +2369,7 @@ void test_btree_1_remove(hicc::btree::btreeT<int, 5, std::less<int>, use_auto_do
     bt.remove(28);
     NO_ASSERTIONS_ONLY(bt.dbg_dump());
 
+    #if 0
     for (auto v : vec) {
         if (v == 97) {
             // bt.dbg_dump();
@@ -2370,6 +2378,7 @@ void test_btree_1_remove(hicc::btree::btreeT<int, 5, std::less<int>, use_auto_do
         bt.remove(v);
         NO_ASSERTIONS_ONLY(bt.dbg_dump());
     }
+    #endif
 }
 
 void test_btree_2() {
@@ -2692,7 +2701,7 @@ void test_btree_rand() {
         } else {
             // int index1 = std::rand();
             // auto index = (int) (((double) index1) / RAND_MAX * bt.size());
-            std::uniform_int_distribution<int> uniform_dist_s(0, bt.size());
+            std::uniform_int_distribution<int> uniform_dist_s(0, (int)bt.size());
             int index = uniform_dist_s(e1);
             auto pos = bt.find_by_index(index);
             if (std::get<1>(pos)) {
