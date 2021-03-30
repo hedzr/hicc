@@ -249,7 +249,7 @@ namespace hicc::btree {
 
         public:
             elem_ptr remove(const_elem_ref el) { return _remove(&el); }
-            elem_ptr remove(elem_ptr el) { return _remove(el); }
+            elem_ptr remove(const_elem_ptr el) { return _remove(el); }
 
         private:
             /**
@@ -1008,9 +1008,11 @@ namespace hicc::btree {
                         if (els.size()) {
                             elem_ptr last = els.back();
                             assert(is_less_than(last, ctx.el));
+                            UNUSED(last);
                         }
                         for (auto *ptr : els) {
                             assert(ptr != ctx.el); // wrong case: elem_ptr duplicated
+                            UNUSED(ptr);
                         }
                         els.push_back(const_cast<elem_ptr>(ctx.el));
                         return true;
@@ -1169,7 +1171,7 @@ namespace hicc::btree {
             if (removed)
                 delete removed;
         }
-        void _remove(elem_ptr el) {
+        void _remove(const_elem_ptr el) {
             auto el_str = node::elem_to_string(el);
             hicc_debug("remove '%s' ...", el_str.c_str());
             if (_root == nullptr)
@@ -1320,7 +1322,6 @@ namespace hicc::btree {
 
 
 } // namespace hicc::btree
-
 
 
 #endif //HICC_CXX_HZ_BTREE_HH
