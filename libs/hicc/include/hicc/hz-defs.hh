@@ -26,7 +26,7 @@
 //#define UNUSED(...) [__VA_ARGS__](){}
 //#endif
 template<typename... Args>
-inline void UNUSED([[maybe_unused]] Args &&... args) {
+inline void UNUSED([[maybe_unused]] Args &&...args) {
     (void) (sizeof...(args));
 }
 
@@ -300,7 +300,9 @@ constexpr bool is_iterable_v = is_iterable<T>::value;
 
 template<class TX,
          template<typename, typename...> class Container = std::vector,
-         std::enable_if_t<is_iterable<Container<TX>>::value, int> = 0>
+         std::enable_if_t<is_iterable<Container<TX>>::value &&
+                                  !std::is_same<std::decay_t<Container<TX>>, std::string>::value,
+                          int> = 0>
 inline std::string vector_to_string(Container<TX> const &vec) {
     std::ostringstream os;
     os << '[';
@@ -314,7 +316,9 @@ inline std::string vector_to_string(Container<TX> const &vec) {
 
 template<class TX,
          template<typename, typename...> class Container = std::vector,
-         std::enable_if_t<is_iterable<Container<TX>>::value, int> = 0>
+         std::enable_if_t<is_iterable<Container<TX>>::value &&
+                                  !std::is_same<std::decay_t<Container<TX>>, std::string>::value,
+                          int> = 0>
 inline std::ostream &operator<<(std::ostream &os, Container<TX> &o) {
     os << vector_to_string(o);
     return os;
