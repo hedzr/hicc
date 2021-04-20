@@ -16,13 +16,23 @@
 #if defined(OS_WIN) || defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
 #include <windows.h>
 #endif
+#include <array>
+
+#include "hz-defs.hh"
+#include "hz-path.hh"
+
 
 namespace hicc::process {
 
     namespace detail {
+
+        namespace fs = std::filesystem;
+
         class execbuf : public std::streambuf {
         protected:
             std::string output;
+            std::string tmpfile_stderr;
+
             int_type underflow() override {
                 if (gptr() < egptr()) return traits_type::to_int_type(*gptr());
                 return traits_type::eof();
@@ -34,7 +44,7 @@ namespace hicc::process {
             // }
 
 #if defined(OS_WIN) || defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
-            private:
+        private:
             int system_and_capture(
                     std::string cmdline,     //Command Line
                     std::string workdir,     //set to '.' for current directory
@@ -193,9 +203,11 @@ namespace hicc::process {
                 setg((char *) this->output.data(), (char *) this->output.data(), (char *) (this->output.data() + this->output.size()));
 
 #else // try POSIX
-                std::array<char, 128> buffer;
+                tmpfile_stderr = path::tmpname();
+                std::array<char, 512> cmd;
+                std::sprintf(cmd.data(), "%s 2>%s", command, tmpfile_stderr.c_str());
                 // std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(command, "r"), pclose);
-                std::unique_ptr<FILE, std::function<void(FILE *)>> pipe(popen(command, "r"), [this](FILE *f) {
+                std::unique_ptr<FILE, std::function<void(FILE *)>> pipe(popen(cmd.data(), "r"), [this](FILE *f) {
                     _rc = pclose(f);
                     if (_rc == EXIT_SUCCESS) {        // == 0
                     } else if (_rc == EXIT_FAILURE) { // EXIT_FAILURE is not used by all programs, maybe needs some adaptation.
@@ -204,16 +216,28 @@ namespace hicc::process {
                 if (!pipe) {
                     throw std::runtime_error("popen() failed!");
                 }
-                while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
-                    this->output += buffer.data();
+
+                //std::array<char, 128> buffer;
+                int ch;
+                while ((ch = fgetc(pipe.get())) != EOF) {
+                    this->output += (char) ch;
                 }
+                // while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
+                //     this->output += buffer.data();
+                // }
+                // pipe.reset();
                 setg((char *) this->output.data(), (char *) this->output.data(), (char *) (this->output.data() + this->output.size()));
+
+                _ef = std::ifstream(tmpfile_stderr);
 
 // auto rc = pclose(pipe);
 #endif
             }
 
+            std::streamsize size() const { return output.length(); }
+
             int _rc;
+            std::ifstream _ef;
         };
     } // namespace detail
 
@@ -231,12 +255,20 @@ namespace hicc::process {
 
     public:
         exec(char const *command)
-                : std::istream(nullptr)
-                , buffer(command) {
+            : std::istream(nullptr)
+            , buffer(command) {
             this->rdbuf(&buffer);
         }
 
-        int retcode() const { return buffer._rc; }
+        int ret_code() const { return buffer._rc / 256; }
+        std::ifstream &stderr_stream() { return buffer._ef; }
+
+        friend std::ostream &operator<<(std::ostream &os, exec const &o) {
+            if (o.buffer.size())
+                os << o.rdbuf();
+            return os;
+        }
+        // inline std::streambuf* rdbuf() const{return &buffer;}
     };
 
 
