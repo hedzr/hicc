@@ -334,5 +334,19 @@ namespace hicc::util {
 
 } //namespace hicc::util
 
+template <class T>
+inline bool compare_vector_values(std::vector<T> const &v1, std::vector<T> const &v2) {
+    bool not_ok = false;
+    if (v1.size() == v2.size()) {
+        for (std::size_t i = 0; i < v1.size(); i++) {
+            if (std::strcmp(v1[i], v2[i]) != 0) {
+                not_ok = true;
+                break;
+            }
+        }
+    } else
+        not_ok = true;
+    return (not_ok == false);
+}
 
 #endif //HICC_CXX_HZ_UTIL_HH
