@@ -148,6 +148,9 @@ namespace hicc::path {
         return p;
     }
 
+#endif
+
+
     // Join the paths...
     template<class T, class... Args>
     fs::path &join(fs::path &p, T const &arg, Args &...args) {
@@ -159,7 +162,7 @@ namespace hicc::path {
     }
     // Join the paths...
     template<class A, class... Args,
-             std::enable_if_t<!std::is_same<A, std::filesystem::path>::value, int> = 0>
+            std::enable_if_t<!std::is_same<A, std::filesystem::path>::value, int> = 0>
     fs::path join(A const &arg, Args... args) {
         auto p = fs::path(arg);
         if constexpr (sizeof...(Args) > 0) {
@@ -183,9 +186,6 @@ namespace hicc::path {
     inline std::filesystem::path get_current_dir() {
         return std::filesystem::current_path();
     }
-
-#endif
-
 
     inline std::filesystem::path get_current_directory() { return get_current_dir(); }
     inline std::filesystem::path get_pwd() { return get_current_dir(); }
