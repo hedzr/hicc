@@ -257,9 +257,9 @@ namespace hicc::path {
     }
 
     inline std::filesystem::path tmpname() {
-        std::string name1 = fs::temp_directory_path();
-        fs::path p = path::join(name1, "logs", "stderr.txt");
-        hicc::path::ensure_directory(path::dirname(p));
+        auto name1 = fs::temp_directory_path();
+        auto p = path::join(name1, "logs", "stderr.txt");
+        ensure_directory(path::dirname(p));
         return p;
     }
     inline std::filesystem::path tmpdir() {
