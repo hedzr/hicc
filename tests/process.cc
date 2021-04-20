@@ -16,7 +16,7 @@ void test_stdout_capture() {
     std::cout << "stdout:" << '\n';
     std::cout << ex;
     std::cout.flush();
-    std::cout.good();
+    // std::cout.good();
     
     std::cout << '\n';
     std::cout << "done!" << '\n';
@@ -52,8 +52,9 @@ int main() {
     std::fstream file;
     file.open("cout.txt.log", std::ios::out);
 
-    std::cout << "This line written to screen, pwd: " << hicc::path::get_current_dir()
-              << "\n";
+    std::cout << "This line written to screen, pwd: ";
+    std::cout << hicc::path::get_current_dir();
+    std::cout << "\n";
     {
         hicc::os::pipe_all_to p1(file.rdbuf());
         std::cout << "This line written to file "

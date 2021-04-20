@@ -39,18 +39,18 @@ namespace hicc::os {
         }
     };
 
-    template<std::ostream *stdout = &std::cout>
+    template<std::ostream *std_out_device = &std::cout>
     class pipe_std_dev_to {
         std::streambuf *stream_buffer_;
 
     public:
         pipe_std_dev_to(std::streambuf *stream_buffer_file = nullptr) {
-            stream_buffer_ = (*stdout).rdbuf();
+            stream_buffer_ = (*std_out_device).rdbuf();
             if (stream_buffer_file)
-                (*stdout).rdbuf(stream_buffer_file);
+                (*std_out_device).rdbuf(stream_buffer_file);
         }
         virtual ~pipe_std_dev_to() {
-            (*stdout).rdbuf(stream_buffer_);
+            (*std_out_device).rdbuf(stream_buffer_);
         }
     };
 

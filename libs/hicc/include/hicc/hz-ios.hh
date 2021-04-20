@@ -11,6 +11,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <filesystem>
 
 template<class _CharT, class _Traits = std::char_traits<_CharT>>
 inline std::basic_ostream<_CharT, _Traits> &operator<<(std::basic_ostream<_CharT, _Traits> &os, std::basic_ostringstream<_CharT, _Traits> const &iss) {

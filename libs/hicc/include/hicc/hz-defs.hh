@@ -13,6 +13,8 @@
 #include <utility>
 #include <vector>
 
+#include <filesystem>
+
 
 #if !defined(_DEBUG) && defined(DEBUG)
 #define _DEBUG DEBUG
@@ -265,7 +267,8 @@ struct is_iterable<T, std::void_t<decltype(std::declval<T>().begin()),
 template<class Container,
          std::enable_if_t<
                  is_iterable<Container>::value &&
-                         !std::is_same<Container, std::string>::value,
+                         !std::is_same<Container, std::string>::value &&
+                         !std::is_same<Container, std::filesystem::path>::value,
                  int> = 0>
 inline std::string vector_to_string(Container const &vec) {
     std::ostringstream os;
@@ -281,7 +284,8 @@ inline std::string vector_to_string(Container const &vec) {
 template<class Container,
          std::enable_if_t<
                  is_iterable<Container>::value &&
-                         !std::is_same<Container, std::string>::value,
+                         !std::is_same<Container, std::string>::value &&
+                         !std::is_same<Container, std::filesystem::path>::value,
                  int> = 0>
 inline std::ostream &operator<<(std::ostream &os, Container const &o) {
     os << vector_to_string(o);
