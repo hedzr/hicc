@@ -39,9 +39,9 @@ inline std::basic_ostream<_CharT, _Traits> &operator<<(std::basic_ostream<_CharT
 namespace hicc::io {
 
 
-    class [[maybe_unused]] ios_flags_saver {
+    class ios_flags_saver {
     public:
-        [[maybe_unused]] explicit ios_flags_saver(std::ostream &os)
+        explicit ios_flags_saver(std::ostream &os)
             : ios(os)
             , f(os.flags()) {}
         ~ios_flags_saver() { ios.flags(f); }
