@@ -25,6 +25,8 @@
 
 #include "hz-btree.hh"
 #include "hz-priority-queue.hh"
+#include "hz-process.hh"
+#include "hz-os-io-redirect.hh"
 
 #include "hz-util.hh"
 
