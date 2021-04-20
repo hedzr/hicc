@@ -242,12 +242,15 @@ namespace hicc::process {
     } // namespace detail
 
     /**
-     * @brief execute a shell command and capture the stdout.
+     * @brief execute a shell command and capture the stdout, stderr and return code.
      * @details For example:
      * 
      *             hicc::process::exec dot("dot aa.dot -T png -o aa.png -v");
-     *             std::cout << dot.rdbuf();
-     *             
+     *             std::cout &lt;&lt; dot;                     // for stdout
+     *             std::cout &lt;&lt; ex.stderr_stream();      // for stderr & stdlog
+     *             std::cout &lt;&lt; "executed: rec-code = " &lt;&lt; ex.ret_code() &lt;&lt; '\n';
+     * 
+     * NOTE that it's not fully completed in Windows, more testing and coding needed.
      */
     class exec : public std::istream {
     protected:
