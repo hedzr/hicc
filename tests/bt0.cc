@@ -21,6 +21,7 @@ const bool use_auto_dot_for_case_1 = true;
 
 #include "hicc/hz-btree.hh"
 #include "hicc/hz-chrono.hh"
+#include "hicc/hz-process.hh"
 
 
 namespace hicc::btree {
