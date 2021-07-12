@@ -39,7 +39,7 @@ class HiccCxx < Formula
   # depends_on "graphviz" => :optional
   # depends_on "valgrind" => :optional
   # depends_on "yaml-cpp" => :optional
-  depends_on :xcode => "9.3"
+  depends_on :xcode => "12.0"
   conflicts_with "cmdr-cxx", because: "cmdr-cxx also ships the most of codes of hicc-cxx."
 
   def install

@@ -5,6 +5,42 @@ Hi, cc! `hicc` is a C++17 template class library to provide some basic data stru
 It's experimental, for studying basically. The stables of them will be migrated into [cmdr-cxx](https://github.com/hedzr/cmdr-cxx).
 
 
+
+
+## For Developer
+
+
+
+### Build
+
+> gcc 10+: passed
+>
+> clang 12+: passed
+>
+> msvc build tool 16.7.2, 16.8.5 (VS2019 or Build Tool) passed
+
+```bash
+# configure
+cmake -DENABLE_AUTOMATE_TESTS=OFF -S . -B build/
+# build
+cmake --build build/
+# install
+cmake --build build/ --target install
+# sometimes maybe sudo: sudo cmake --build build/ --target install
+```
+
+### ninja, [Optional]
+
+We used ninja for faster building.
+
+
+### Other Options
+
+1. `BUILD_DOCUMENTATION`=OFF
+2. `ENABLE_TESTS`=OFF
+
+
+
 ## btree
 
 The B-tree generic implementation here.
