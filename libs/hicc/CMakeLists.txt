@@ -184,11 +184,14 @@ debug_print_value(CMAKE_PROJECT_VERSION)
 debug_print_value(PROJECT_VERSION)
 debug_print_value(VERSION)
 
-#install(TARGETS ${CLI_NAME}
-#        EXPORT ${PROJECT_NAME}Targets
-#        DESTINATION ${CMAKE_INSTALL_BINDIR}
-#        )
-#
+
+if (ENABLE_HICC_CLI_APP)
+    install(TARGETS ${CLI_NAME}
+        EXPORT ${PROJECT_NAME}Targets
+        DESTINATION ${CMAKE_INSTALL_BINDIR}
+        )
+endif()
+
 #install(EXPORT ${PROJECT_NAME}Targets
 #        FILE ${PROJECT_NAME}Targets.cmake
 #        NAMESPACE ${PROJECT_NAME}::
