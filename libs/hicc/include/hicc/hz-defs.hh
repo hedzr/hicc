@@ -691,7 +691,7 @@ namespace hicc::cross {
     //
     // Apple's allocation reference: http://bit.ly/malloc-small
     constexpr std::size_t max_align_v = detail::max_align_v;
-    DISABLE_MSVC_WARNINGS(4367)
+    DISABLE_MSVC_WARNINGS(4324) // structure was padded due to alignment specifier
     struct alignas(max_align_v) max_align_t {};
     RESTORE_MSVC_WARNINGS
     //  Memory locations within the same cache line are subject to destructive
@@ -726,7 +726,7 @@ namespace hicc::cross {
     constexpr std::size_t cacheline_align_v = has_extended_alignment
                                                       ? hardware_constructive_interference_size
                                                       : max_align_v;
-    DISABLE_MSVC_WARNINGS(4367)
+    DISABLE_MSVC_WARNINGS(4324) // structure was padded due to alignment specifier
     struct alignas(cacheline_align_v) cacheline_align_t {};
     RESTORE_MSVC_WARNINGS
     
