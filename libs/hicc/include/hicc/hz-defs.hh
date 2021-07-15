@@ -115,9 +115,14 @@ inline void UNUSED([[maybe_unused]] Args &&...args) {
 
 #ifndef DISABLE_MSVC_WARNINGS
 #if defined(_MSC_VER)
-#define DISABLE_MSVC_WARNINGS(...) pr
+#define DISABLE_MSVC_WARNINGS(...) \
+    __pragma(warning(push)) \
+    __pragma(warning(disable:__VAR_ARGS__)) /*disable _ctlState prefast warning*/
+#define RESTORE_MSVC_WARNINGS \
+    __pragma(warning(pop))
 #else
 #define DISABLE_MSVC_WARNINGS(...) /* __VAR_ARGS__ */
+#define RESTORE_MSVC_WARNINGS
 #endif
 #endif
 
@@ -686,9 +691,9 @@ namespace hicc::cross {
     //
     // Apple's allocation reference: http://bit.ly/malloc-small
     constexpr std::size_t max_align_v = detail::max_align_v;
-    DISABLE_WARNINGS
+    DISABLE_MSVC_WARNINGS(4367)
     struct alignas(max_align_v) max_align_t {};
-    RESTORE_WARNINGS
+    RESTORE_MSVC_WARNINGS
     //  Memory locations within the same cache line are subject to destructive
     //  interference, also known as false sharing, which is when concurrent
     //  accesses to these different memory locations from different cores, where at
@@ -721,9 +726,9 @@ namespace hicc::cross {
     constexpr std::size_t cacheline_align_v = has_extended_alignment
                                                       ? hardware_constructive_interference_size
                                                       : max_align_v;
-    DISABLE_WARNINGS
+    DISABLE_MSVC_WARNINGS(4367)
     struct alignas(cacheline_align_v) cacheline_align_t {};
-    RESTORE_WARNINGS
+    RESTORE_MSVC_WARNINGS
     
 
     inline constexpr std::size_t cache_line_size() {
