@@ -1,5 +1,9 @@
 # hicc-cxx
 
+![CMake Build Matrix](https://github.com/hedzr/hicc/workflows/CMake%20Build%20Matrix/badge.svg) <!-- 
+![CMake Build Matrix](https://github.com/hedzr/hicc/workflows/CMake%20Build%20Matrix/badge.svg?event=release) 
+--> [![GitHub tag (latest SemVer)](https://img.shields.io/github/tag/hedzr/hicc.svg?label=release)](https://github.com/hedzr/hicc/releases)
+
 Hi, cc! `hicc` is a C++17 template class library to provide some basic data structures and algorithms.
 
 It's experimental, for studying basically. The stables of them will be migrated into [cmdr-cxx](https://github.com/hedzr/cmdr-cxx).
