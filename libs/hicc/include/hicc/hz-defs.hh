@@ -110,6 +110,22 @@ inline void UNUSED([[maybe_unused]] Args &&...args) {
 #endif
 #endif
 
+#ifndef DISABLE_MSVC_WARNINGS
+#if defined(_MSC_VER)
+#define DISABLE_MSVC_WARNINGS(...) pr
+#else
+#define DISABLE_MSVC_WARNINGS(...) /* __VAR_ARGS__ */
+#endif
+#endif
+
+#ifndef DISABLE_WARNINGS
+#define DISABLE_WARNINGS \
+    _Pragma("GCC diagnostic push") \
+    _Pragma("GCC diagnostic ignored \"-Wall\"")
+#define RESTORE_WARNINGS \
+    _Pragma("GCC diagnostic pop")
+#endif
+
 
 //
 
@@ -159,11 +175,27 @@ template<typename T, size_t N>
 }
 
 
-//
+// PORTABILITY MACROS --------------------------------
 
+#if defined(__GNUC__)
+#define HICC_EXPORT __attribute__((__visibility__("default")))
+#else
+#define HICC_EXPORT
+#endif
+#if defined(__has_feature)
+#define HICC_HAS_FEATURE(...) __has_feature(__VA_ARGS__)
+#else
+#define HICC_HAS_FEATURE(...) 0
+#endif
+#if HICC_HAS_FEATURE(thread_sanitizer) || __SANITIZE_THREAD__
+#ifndef HICC_SANITIZE_THREAD
+#define HICC_SANITIZE_THREAD 1
+#endif
+#endif
 
 #ifndef _OS_MACROS
 #define _OS_MACROS
+
 // https://stackoverflow.com/questions/5919996/how-to-detect-reliably-mac-os-x-ios-linux-windows-in-c-preprocessor/46177613
 // https://stackoverflow.com/questions/142508/how-do-i-check-os-with-a-preprocessor-directive/8249232
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
@@ -218,6 +250,126 @@ template<typename T, size_t N>
 #endif
 #endif //_OS_MACROS
 
+#ifdef OS_UNIX
+#undef OS_UNIX
+#define OS_UNIX 1
+#else
+#define OS_UNIX 0
+#endif
+
+#ifdef OS_FREEBSD
+#undef OS_FREEBSD
+#define OS_FREEBSD 1
+#else
+#define OS_FREEBSD 0
+#endif
+
+#ifdef OS_LINUX
+#undef OS_LINUX
+#define OS_LINUX 1
+#else
+#define OS_LINUX 0
+#endif
+
+#ifdef OS_APPLE
+#undef OS_APPLE
+#define OS_APPLE 1
+#else
+#define OS_APPLE 0
+#endif
+
+#ifdef OS_WIN
+#undef OS_WIN
+#define OS_WIN 1
+#else
+#define OS_WIN 0
+#endif
+
+#if defined(_POSIX_VERSION)
+#define OS_POSIX 1
+#else
+#define OS_POSIX 0
+#endif
+
+#if defined(__arm__)
+#define ARCH_ARM 1
+#else
+#define ARCH_ARM 0
+#endif
+
+#if defined(__x86_64__) || defined(_M_X64)
+#define ARCH_X64 1
+#else
+#define ARCH_X64 0
+#endif
+
+#if defined(__aarch64__)
+#define ARCH_AARCH64 1
+#else
+#define ARCH_AARCH64 0
+#endif
+
+#if defined(__powerpc64__)
+#define ARCH_PPC64 1
+#else
+#define ARCH_PPC64 0
+#endif
+
+#if defined(__has_builtin)
+#define HAS_BUILTIN(...) __has_builtin(__VA_ARGS__)
+#else
+#define HAS_BUILTIN(...) 0
+#endif
+#if defined(__has_cpp_attribute)
+#if __has_cpp_attribute(nodiscard)
+#define HAS_NODISCARD [[nodiscard]]
+#endif
+#endif
+
+#if !defined HAS_NODISCARD
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#define HAS_NODISCARD _Check_return_
+#elif defined(__GNUC__)
+#define HAS_NODISCARD __attribute__((__warn_unused_result__))
+#else
+#define HAS_NODISCARD
+#endif
+#endif
+
+namespace hicc::cross {
+    constexpr bool kIsArchArm = ARCH_ARM == 1;
+    constexpr bool kIsArchAmd64 = ARCH_X64 == 1;
+    constexpr bool kIsArchAArch64 = ARCH_AARCH64 == 1;
+    constexpr bool kIsArchPPC64 = ARCH_PPC64 == 1;
+} // namespace hicc::cross
+namespace hicc::cross {
+#ifdef NDEBUG
+    constexpr auto kIsDebug = false;
+#else
+    constexpr auto kIsDebug = true;
+#endif
+} // namespace hicc::cross
+namespace hicc::cross {
+#if defined(_MSC_VER)
+    constexpr bool kIsMsvc = true;
+#else
+    constexpr bool kIsMsvc = false;
+#endif
+} // namespace hicc::cross
+namespace hicc::cross {
+#if FOLLY_SANITIZE_THREAD
+    constexpr bool kIsSanitizeThread = true;
+#else
+    constexpr bool kIsSanitizeThread = false;
+#endif
+} // namespace hicc::cross
+namespace hicc::cross {
+#if defined(__linux__) && !FOLLY_MOBILE
+    constexpr auto kIsLinux = true;
+#else
+    constexpr auto kIsLinux = false;
+#endif
+} // namespace hicc::cross
 
 //
 
@@ -228,6 +380,38 @@ struct always_false : std::false_type {};
 template<typename T>
 [[maybe_unused]] constexpr bool always_false_v = always_false<T>::value;
 
+namespace hicc::cross {
+    template<typename T>
+    constexpr T constexpr_max(T a) {
+        return a;
+    }
+    template<typename T, typename... Ts>
+    constexpr T constexpr_max(T a, T b, Ts... ts) {
+        return b < a ? constexpr_max(a, ts...) : constexpr_max(b, ts...);
+    }
+    namespace detail {
+        template<typename T>
+        constexpr T constexpr_log2_(T a, T e) {
+            return e == T(1) ? a : constexpr_log2_(a + T(1), e / T(2));
+        }
+        template<typename T>
+        constexpr T constexpr_log2_ceil_(T l2, T t) {
+            return l2 + T(T(1) << l2 < t ? 1 : 0);
+        }
+        template<typename T>
+        constexpr T constexpr_square_(T t) {
+            return t * t;
+        }
+    } // namespace detail
+    template<typename T>
+    constexpr T constexpr_log2(T t) {
+        return detail::constexpr_log2_(T(0), t);
+    }
+    template<typename T>
+    constexpr T constexpr_log2_ceil(T t) {
+        return detail::constexpr_log2_ceil_(constexpr_log2(t), t);
+    }
+} // namespace hicc::cross
 
 #ifndef _CONST_CHARS_DEFINED
 #define _CONST_CHARS_DEFINED
@@ -255,7 +439,7 @@ typedef std::vector<std::string> string_array;
 // template<class>
 // inline constexpr bool is_iterable(unsigned) { return false; }
 
-#ifdef OS_WIN
+#if OS_WIN
 template<typename T, typename = void>
 struct is_iterable : std::false_type {};
 
@@ -359,7 +543,7 @@ inline std::ostream &operator<<(std::ostream &os, Container<TX> &o) {
 
 #include <stdlib.h>
 
-#if defined(OS_WIN)
+#if OS_WIN
 #include <sstream>
 #define WIN32_LEAN_AND_MEAN
 #define VC_EXTRALEAN
@@ -421,6 +605,146 @@ namespace hicc::cross {
     inline T min(T a, T b) { return std::min(a, b); }
 } // namespace hicc::cross
 #endif
+
+
+// Work around bug https://gcc.gnu.org/bugzilla/show_bug.cgi?id=56019
+#ifdef __GNUC__
+#if __GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 9)
+namespace std {
+    using ::max_align_t;
+}
+#endif
+#endif
+namespace hicc::cross {
+    //  has_extended_alignment
+    //
+    //  True if it may be presumed that the platform has static extended alignment;
+    //  false if it may not be so presumed, even when the platform might actually
+    //  have it. Static extended alignment refers to extended alignment of objects
+    //  with automatic, static, or thread storage. Whether the there is support for
+    //  dynamic extended alignment is a property of the allocator which is used for
+    //  each given dynamic allocation.
+    //
+    //  Currently, very heuristical - only non-mobile 64-bit linux gets the extended
+    //  alignment treatment. Theoretically, this could be tuned better.
+    constexpr bool has_extended_alignment =
+            kIsLinux && sizeof(void *) >= sizeof(std::uint64_t);
+    namespace detail {
+        // Implemented this way because of a bug in Clang for ARMv7, which gives the
+        // wrong result for `alignof` a `union` with a field of each scalar type.
+        // Modified for RocksDB to use C++11 only
+        constexpr std::size_t max_align_v = constexpr_max(
+                alignof(long double),
+                alignof(double),
+                alignof(float),
+                alignof(long long int),
+                alignof(long int),
+                alignof(int),
+                alignof(short int),
+                alignof(bool),
+                alignof(char),
+                alignof(char16_t),
+                alignof(char32_t),
+                alignof(wchar_t),
+                alignof(void *),
+                alignof(std::max_align_t));
+    } // namespace detail
+
+    // max_align_v is the alignment of max_align_t.
+    //
+    // max_align_t is a type which is aligned at least as strictly as the
+    // most-aligned basic type (see the specification of std::max_align_t). This
+    // implementation exists because 32-bit iOS platforms have a broken
+    // std::max_align_t (see below).
+    //
+    // You should refer to this as `::folly::max_align_t` in portable code, even if
+    // you have `using namespace folly;` because C11 defines a global namespace
+    // `max_align_t` type.
+    //
+    // To be certain, we consider every non-void fundamental type specified by the
+    // standard. On most platforms `long double` would be enough, but iOS 32-bit
+    // has an 8-byte aligned `double` and `long long int` and a 4-byte aligned
+    // `long double`.
+    //
+    // So far we've covered locals and other non-allocated storage, but we also need
+    // confidence that allocated storage from `malloc`, `new`, etc will also be
+    // suitable for objects with this alignment requirement.
+    //
+    // Apple document that their implementation of malloc will issue 16-byte
+    // granularity chunks for small allocations (large allocations are page-size
+    // granularity and page-aligned). We think that allocated storage will be
+    // suitable for these objects based on the following assumptions:
+    //
+    // 1. 16-byte granularity also means 16-byte aligned.
+    // 2. `new` and other allocators follow the `malloc` rules.
+    //
+    // We also have some anecdotal evidence: we don't see lots of misaligned-storage
+    // crashes on 32-bit iOS apps that use `double`.
+    //
+    // Apple's allocation reference: http://bit.ly/malloc-small
+    constexpr std::size_t max_align_v = detail::max_align_v;
+    DISABLE_WARNINGS
+    struct alignas(max_align_v) max_align_t {};
+    RESTORE_WARNINGS
+    //  Memory locations within the same cache line are subject to destructive
+    //  interference, also known as false sharing, which is when concurrent
+    //  accesses to these different memory locations from different cores, where at
+    //  least one of the concurrent accesses is or involves a store operation,
+    //  induce contention and harm performance.
+    //
+    //  Microbenchmarks indicate that pairs of cache lines also see destructive
+    //  interference under heavy use of atomic operations, as observed for atomic
+    //  increment on Sandy Bridge.
+    //
+    //  We assume a cache line size of 64, so we use a cache line pair size of 128
+    //  to avoid destructive interference.
+    //
+    //  mimic: std::hardware_destructive_interference_size, C++17
+    constexpr std::size_t hardware_destructive_interference_size =
+            kIsArchArm ? 64 : 128;
+    static_assert(hardware_destructive_interference_size >= max_align_v, "math?");
+    //  Memory locations within the same cache line are subject to constructive
+    //  interference, also known as true sharing, which is when accesses to some
+    //  memory locations induce all memory locations within the same cache line to
+    //  be cached, benefiting subsequent accesses to different memory locations
+    //  within the same cache line and heping performance.
+    //
+    //  mimic: std::hardware_constructive_interference_size, C++17
+    constexpr std::size_t hardware_constructive_interference_size = 64;
+    static_assert(hardware_constructive_interference_size >= max_align_v, "math?");
+    //  A value corresponding to hardware_constructive_interference_size but which
+    //  may be used with alignas, since hardware_constructive_interference_size may
+    //  be too large on some platforms to be used with alignas.
+    constexpr std::size_t cacheline_align_v = has_extended_alignment
+                                                      ? hardware_constructive_interference_size
+                                                      : max_align_v;
+    DISABLE_WARNINGS
+    struct alignas(cacheline_align_v) cacheline_align_t {};
+    RESTORE_WARNINGS
+    
+
+    inline constexpr std::size_t cache_line_size() {
+#ifdef KNOWN_L1_CACHE_LINE_SIZE
+        return KNOWN_L1_CACHE_LINE_SIZE;
+#else
+        return hardware_destructive_interference_size;
+#endif
+    }
+
+    // struct alignas(hardware_constructive_interference_size)
+    //         OneCacheLiner { // 占据一条缓存线
+    //     std::atomic_uint64_t x{};
+    //     std::atomic_uint64_t y{};
+    // } oneCacheLiner;
+    //
+    // struct TwoCacheLiner { // 占据二条缓存线
+    //     alignas(hardware_destructive_interference_size) std::atomic_uint64_t x{};
+    //     alignas(hardware_destructive_interference_size) std::atomic_uint64_t y{};
+    // } twoCacheLiner;
+    //
+    // inline auto now() noexcept { return std::chrono::high_resolution_clock::now(); }
+
+} // namespace hicc::cross
 
 
 #endif //HICC_CXX_HZ_DEFS_HH

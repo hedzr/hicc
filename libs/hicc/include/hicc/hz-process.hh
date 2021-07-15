@@ -13,7 +13,7 @@
 #include <streambuf>
 #include <string>
 #include <thread>
-#if defined(OS_WIN) || defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
 #include <windows.h>
 #endif
 #include <array>
@@ -43,7 +43,7 @@ namespace hicc::process {
             //     return traits_type::eof();
             // }
 
-#if defined(OS_WIN) || defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
         private:
             int system_and_capture(
                     std::string cmdline,     //Command Line
@@ -188,7 +188,7 @@ namespace hicc::process {
 
         public:
             execbuf(const char *command) {
-#if defined(OS_WIN) || defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
                 // _rc = std::system(command); // execute the UNIX command "ls -l >test.txt"
                 //                            //std::cout << std::ifstream("test.txt").rdbuf();
                 //                            // std::cout << "Exit code: " << WEXITSTATUS(_rc) << std::endl;

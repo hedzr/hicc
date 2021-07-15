@@ -17,12 +17,13 @@
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
 #ifndef OS_WIN
-#define OS_WIN
+#define OS_WIN 1
 #endif
 #ifdef _WIN64
 #else
 #endif
 #else
+#define OS_WIN 0
 #include <execinfo.h>
 #endif
 
@@ -412,7 +413,7 @@ namespace hicc::exception {
             std::ostringstream o;
             o << arg << "  " << file << ":" << line;
             msg = o.str();
-#if !defined(OS_WIN)
+#if !OS_WIN
             auto v = hicc::debug::save_stacktrace(2);
             st.swap(v);
 #endif
@@ -455,7 +456,7 @@ namespace hicc::debug {
         std::cerr << '\n';
         if (print_stack) {
             if (depth == 0 && "hicc::exception::hicc_exception" == type(e)) {
-#if !defined(OS_WIN)
+#if !OS_WIN
                 print_stacktrace(((hicc::exception::hicc_exception const *) (&e))->stacktrace());
 #endif
             }
@@ -483,7 +484,7 @@ namespace hicc::debug {
 // SIGSEGV handler
 //
 
-#if !defined(OS_WIN)
+#if !OS_WIN
 namespace hicc::debug {
 
     /**
