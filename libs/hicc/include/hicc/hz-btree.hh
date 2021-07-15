@@ -20,8 +20,9 @@
 #include <type_traits>
 #include <typeinfo>
 
-#include "hz-dbg.hh"
 #include "hz-defs.hh"
+
+#include "hz-dbg.hh"
 #include "hz-log.hh"
 #include "hz-util.hh"
 
