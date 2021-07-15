@@ -117,11 +117,11 @@ inline void UNUSED([[maybe_unused]] Args &&...args) {
 #if defined(_MSC_VER)
 #define DISABLE_MSVC_WARNINGS(...) \
     __pragma(warning(push)) \
-    __pragma(warning(disable:__VAR_ARGS__)) /*disable _ctlState prefast warning*/
+    __pragma(warning(disable:__VA_ARGS__)) /*disable _ctlState prefast warning*/
 #define RESTORE_MSVC_WARNINGS \
     __pragma(warning(pop))
 #else
-#define DISABLE_MSVC_WARNINGS(...) /* __VAR_ARGS__ */
+#define DISABLE_MSVC_WARNINGS(...) /* __VA_ARGS__ */
 #define RESTORE_MSVC_WARNINGS
 #endif
 #endif
