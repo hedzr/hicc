@@ -15,6 +15,9 @@
 
 #include <filesystem>
 
+#include <cstddef>
+#include <cstdint>
+
 
 #if !defined(_DEBUG) && defined(DEBUG)
 #define _DEBUG DEBUG

@@ -15,15 +15,17 @@
 #include <typeinfo>
 
 
+#ifndef OS_WIN
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
 #ifndef OS_WIN
 #define OS_WIN 1
 #endif
-#ifdef _WIN64
-#else
-#endif
 #else
 #define OS_WIN 0
+#endif
+#endif
+
+#if !OS_WIN
 #include <execinfo.h>
 #endif
 
