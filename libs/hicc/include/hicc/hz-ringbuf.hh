@@ -93,9 +93,9 @@ namespace hicc::ringbuf {
                 }
             }
 
-            if (CANNOT_ENQUEUE == CE_DEFAULT)
+            if constexpr (CANNOT_ENQUEUE == CE_DEFAULT)
                 return false;
-            if (CANNOT_ENQUEUE == CE_BLOCKED_AND_SPIN) {
+            if constexpr (CANNOT_ENQUEUE == CE_BLOCKED_AND_SPIN) {
                 using namespace std::chrono_literals;
                 std::this_thread::yield();
 #if OS_LINUX
@@ -118,9 +118,9 @@ namespace hicc::ringbuf {
                 }
             }
 
-            if (CANNOT_ENQUEUE == CE_DEFAULT)
+            if constexpr (CANNOT_ENQUEUE == CE_DEFAULT)
                 return ret; // std::nullopt;
-            if (CANNOT_ENQUEUE == CE_BLOCKED_AND_SPIN) {
+            if constexpr (CANNOT_ENQUEUE == CE_BLOCKED_AND_SPIN) {
                 using namespace std::chrono_literals;
                 std::this_thread::yield();
 #if OS_LINUX
