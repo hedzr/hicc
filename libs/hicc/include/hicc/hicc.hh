@@ -28,8 +28,12 @@
 #include "hz-process.hh"
 #include "hz-os-io-redirect.hh"
 
+#include "hz-ringbuf.hh"
+#include "hz-pool.hh"
+
 #include "hz-util.hh"
 
+// #include "hz-x-class.hh"
 
 namespace hicc {
     //

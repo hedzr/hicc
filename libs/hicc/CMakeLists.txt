@@ -82,11 +82,16 @@ set(header_files
         ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hz-if.hh
         ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hz-ios.hh
         ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hz-log.hh
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hz-os-io-redirect.hh
         ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hz-path.hh
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hz-pool.hh
         ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hz-priority-queue.hh
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hz-process.hh
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hz-ringbuf.hh
         ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hz-string.hh
         ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hz-terminal.hh
         ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hz-util.hh
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hz-x-class.hh
         # ${CMAKE_GENERATED_DIR}/hicc-version.hh
         )
 

@@ -160,7 +160,7 @@ captures/
 # IntelliJ
 *.iml
 .idea/workspace.xml
-.idea/tasks.xml
+.idea/_tasks.xml
 .idea/gradle.xml
 .idea/assetWizardSettings.xml
 .idea/dictionaries
@@ -403,7 +403,7 @@ tmtags
 ##### VisualStudioCode
 .vscode/*
 !.vscode/settings.json
-!.vscode/tasks.json
+!.vscode/_tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
 *.code-workspace
@@ -427,7 +427,7 @@ nbdist/
 
 # User-specific stuff
 .idea/**/workspace.xml
-.idea/**/tasks.xml
+.idea/**/_tasks.xml
 .idea/**/usage.statistics.xml
 .idea/**/dictionaries
 .idea/**/shelf
@@ -648,7 +648,7 @@ bld/
 
 # Visual Studio 2015/2017 cache/options directory
 .vs/
-# Uncomment if you have tasks that create the project's static files in wwwroot
+# Uncomment if you have _tasks that create the project's static files in wwwroot
 #wwwroot/
 
 # Visual Studio 2017 auto generated files

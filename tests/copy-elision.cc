@@ -13,7 +13,7 @@
 #include <vector>
 
 // #include "hicc/hz-pool.hh"
-
+#include "hicc/hz-x-class.hh"
 
 std::vector<std::string> vec;
 
@@ -47,51 +47,22 @@ void test_ff() {
     printf("\n");
 }
 
-class X {
-    std::string _str;
-
-    void _ct(const char *leading) {
-        printf("  - %s: X[ptr=%p].str: %p, '%s'\n", leading, (void *) this, (void *) _str.c_str(), _str.c_str());
-    }
-
-public:
-    X() { _ct("ctor()"); }
-    ~X() { _ct("dtor"); }
-    X(std::string &&s)
-        : _str(std::move(s)) { _ct("ctor(s)"); }
-    X(std::string const &s)
-        : _str(s) { _ct("ctor(s(const&))"); }
-    X &operator=(std::string &&s) {
-        _str = std::move(s);
-        _ct("operator=(&&s)");
-        return (*this);
-    }
-    X &operator=(std::string const &s) {
-        _str = s;
-        _ct("operator=(&&s)");
-        return (*this);
-    }
-
-    const char *c_str() const { return _str.c_str(); }
-    operator const char *() const { return _str.c_str(); }
-};
-
-void fz(X x) {
+void fz(hicc::debug::X x) {
     printf("\n");
 
-    X v = std::move(x);
+    hicc::debug::X v = std::move(x);
     printf("  = fz : v = [%p, '%s'], x = [%p, '%s']\n", (void *) &v, v.c_str(), (void *) &x, x.c_str());
 }
 
-void fz1(X &&x) {
+void fz1(hicc::debug::X &&x) {
     printf("\n");
 
-    X v = std::move(x);
+    hicc::debug::X v = std::move(x);
     printf("  = fz1: v = [%p, '%s'], x = [%p, '%s']\n", (void *) &v, v.c_str(), (void *) &x, x.c_str());
 }
 
 void test_fz() {
-    X x1("aa");
+    hicc::debug::X x1("aa");
     fz(x1);
     fz1(std::move(x1));
 }
