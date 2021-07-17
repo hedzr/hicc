@@ -18,6 +18,11 @@
 #include <cstddef>
 #include <cstdint>
 
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif
 
 #if !defined(_DEBUG) && defined(DEBUG)
 #define _DEBUG DEBUG

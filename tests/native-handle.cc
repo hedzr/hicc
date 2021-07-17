@@ -8,6 +8,9 @@
 #include <mutex>
 #include <thread>
 
+#include "hicc/hz-defs.hh"
+
+#if OS_POSIX
 // 在 POSIX 系统上用 native_handle 启用 C++ 线程的实时调度
 
 std::mutex iomutex;
@@ -36,3 +39,10 @@ void test_native_handle() {
     t1.join();
     t2.join();
 }
+
+#else
+
+void test_native_handle() {
+}
+
+#endif
