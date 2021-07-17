@@ -98,18 +98,13 @@ namespace hicc::ringbuf {
             if (CANNOT_ENQUEUE == CE_BLOCKED_AND_SPIN) {
                 using namespace std::chrono_literals;
                 std::this_thread::yield();
+#if OS_LINUX
+                std::this_thread::sleep_for(1ns);
+#endif
                 goto _retry;
             }
             return false;
         }
-        // bool enqueue(const T &elem) {
-        //     size_t b = _b.load(), f = _f;
-        //     if (_full(b, f))
-        //         return false;
-        //     _f++;
-        //     _coll[f & _Mask] = elem;
-        //     return true;
-        // }
         std::optional<T> dequeue() {
             size_t b, f, nb;
             std::optional<T> ret;
@@ -128,6 +123,9 @@ namespace hicc::ringbuf {
             if (CANNOT_ENQUEUE == CE_BLOCKED_AND_SPIN) {
                 using namespace std::chrono_literals;
                 std::this_thread::yield();
+#if OS_LINUX
+                std::this_thread::sleep_for(1ns);
+#endif
                 goto _retry;
             }
             return ret;

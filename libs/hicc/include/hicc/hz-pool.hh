@@ -93,7 +93,7 @@ namespace hicc::pool {
         thread_pool &operator=(thread_pool &&) = delete;
         ~thread_pool() { join(); }
         template<class F, class R = std::result_of_t<F &()>>
-        std::future<R> queue_task(F task) {
+        std::future<R> queue_task(F &&task) {
             std::packaged_task<R()> p(std::move(task));
             auto r = p.get_future();
             // _tasks.push_back(std::move(p));

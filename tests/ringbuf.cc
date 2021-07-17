@@ -159,8 +159,8 @@ void test_ringbuf() {
         }
     }
 
-    hicc_debug("");
-    hicc_debug("");
+    printf("__ END1\n");
+    printf("\n");
 
     {
         // enqueue/dequeue test
@@ -174,9 +174,12 @@ void test_ringbuf() {
             // t.detach();
             threads.queue_task(foo(ti, rb));
         }
-        hicc_debug("waiting...");
+        printf("\nwaiting...\n\n");
+        // hicc_debug("waiting...");
         threads.join();
     }
+    
+    printf("__ END2\n");
 }
 
 int main() {
@@ -184,7 +187,11 @@ int main() {
     std::cout << "hardware_constructive_interference_size: " << hicc::cross::hardware_constructive_interference_size << '\n';
     std::cout << "hardware_destructive_interference_size: " << hicc::cross::hardware_destructive_interference_size << '\n';
     std::cout << "sizeof(std::max_align_t): " << sizeof(std::max_align_t) << '\n';
-
+    {
+        unsigned int n = std::thread::hardware_concurrency();
+        std::cout << n << " concurrent _threads are supported.\n";
+    }
+    
     // test_mq();
 
     test_tiny_pool();
