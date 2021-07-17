@@ -17,7 +17,6 @@
 #include <random>
 #include <string>
 #include <vector>
-#include <optional>
 
 #include "hz-defs.hh"
 
@@ -83,7 +82,9 @@ namespace hicc::ringbuf {
     public:
         bool enqueue(T &&elem) {
             size_t b, f, nf;
+            DISABLE_UNUSED_WARNINGS
         _retry:
+            RESTORE_UNUSED_WARNINGS
             b = _b.load(std::memory_order_acquire), f = _f.load(std::memory_order_acquire);
             if (!_full(b, f)) {
                 nf = (f + 1) & _Mask;
@@ -108,7 +109,9 @@ namespace hicc::ringbuf {
         std::optional<T> dequeue() {
             size_t b, f, nb;
             std::optional<T> ret;
+            DISABLE_UNUSED_WARNINGS
         _retry:
+            RESTORE_UNUSED_WARNINGS
             b = _b.load(std::memory_order_acquire), f = _f.load(std::memory_order_acquire);
             if (!_empty(b, f)) {
                 nb = (b + 1) & _Mask;

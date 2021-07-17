@@ -47,9 +47,9 @@ namespace hicc::cross {
         std::lock_guard lk{cout_mutex};
         std::cout << "oneCacheLinerThread() spent " << elapsed.count() << " ms\n";
         if constexpr (xy)
-            oneCacheLiner.x = elapsed.count();
+            oneCacheLiner.x = (uint64_t) elapsed.count();
         else
-            oneCacheLiner.y = elapsed.count();
+            oneCacheLiner.y = (uint64_t) elapsed.count();
     }
 
     template<bool xy>
@@ -66,9 +66,9 @@ namespace hicc::cross {
         std::lock_guard lk{cout_mutex};
         std::cout << "twoCacheLinerThread() spent " << elapsed.count() << " ms\n";
         if constexpr (xy)
-            twoCacheLiner.x = elapsed.count();
+            twoCacheLiner.x = (uint64_t) elapsed.count();
         else
-            twoCacheLiner.y = elapsed.count();
+            twoCacheLiner.y = (uint64_t) elapsed.count();
     }
 
 } // namespace hicc::cross

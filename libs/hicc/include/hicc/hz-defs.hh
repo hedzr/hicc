@@ -120,9 +120,10 @@ inline void UNUSED([[maybe_unused]] Args &&...args) {
 
 #ifndef DISABLE_MSVC_WARNINGS
 #if defined(_MSC_VER)
-#define DISABLE_MSVC_WARNINGS(...) \
-    __pragma(warning(push)) \
-    __pragma(warning(disable:__VA_ARGS__)) /*disable _ctlState prefast warning*/
+#define DISABLE_MSVC_WARNINGS(...)   \
+    __pragma(warning(push))          \
+            __pragma(warning(disable \
+                             : __VA_ARGS__)) /*disable _ctlState prefast warning*/
 #define RESTORE_MSVC_WARNINGS \
     __pragma(warning(pop))
 #else
@@ -132,11 +133,31 @@ inline void UNUSED([[maybe_unused]] Args &&...args) {
 #endif
 
 #ifndef DISABLE_WARNINGS
-#define DISABLE_WARNINGS \
+#if defined(_MSC_VER)
+#define DISABLE_WARNINGS __pragma(warning(push, 1))
+#define RESTORE_WARNINGS __pragma(warning(pop))
+#else
+#define DISABLE_WARNINGS           \
     _Pragma("GCC diagnostic push") \
-    _Pragma("GCC diagnostic ignored \"-Wall\"")
+            _Pragma("GCC diagnostic ignored \"-Wall\"")
 #define RESTORE_WARNINGS \
     _Pragma("GCC diagnostic pop")
+#endif
+#endif
+
+#ifndef DISABLE_UNUSED_WARNINGS
+#if defined(_MSC_VER)
+#define DISABLE_UNUSED_WARNINGS \
+    __pragma(warning(push))     \
+            __pragma(warning(disable : 4100 4101 4102))
+#define RESTORE_UNUSED_WARNINGS
+#else
+#define DISABLE_UNUSED_WARNINGS    \
+    _Pragma("GCC diagnostic push") \
+            _Pragma("GCC diagnostic ignored \"-Wunused\"")
+#define RESTORE_UNUSED_WARNINGS \
+    _Pragma("GCC diagnostic pop")
+#endif
 #endif
 
 
@@ -734,7 +755,7 @@ namespace hicc::cross {
     DISABLE_MSVC_WARNINGS(4324) // structure was padded due to alignment specifier
     struct alignas(cacheline_align_v) cacheline_align_t {};
     RESTORE_MSVC_WARNINGS
-    
+
 
     inline constexpr std::size_t cache_line_size() {
 #ifdef KNOWN_L1_CACHE_LINE_SIZE
