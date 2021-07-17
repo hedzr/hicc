@@ -6,7 +6,6 @@
 #include <cstring>
 #include <iostream>
 #include <mutex>
-#include <pthread.h>
 #include <thread>
 
 #include <sstream>

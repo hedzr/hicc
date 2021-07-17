@@ -6,7 +6,6 @@
 #include <cstring>
 #include <iostream>
 #include <mutex>
-#include <pthread.h>
 #include <thread>
 
 // 在 POSIX 系统上用 native_handle 启用 C++ 线程的实时调度

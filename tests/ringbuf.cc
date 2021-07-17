@@ -4,7 +4,6 @@
 
 #include <future>
 #include <mutex>
-#include <pthread.h>
 #include <random>
 #include <thread>
 
