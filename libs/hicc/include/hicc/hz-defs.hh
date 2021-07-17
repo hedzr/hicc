@@ -150,7 +150,7 @@ inline void UNUSED([[maybe_unused]] Args &&...args) {
 #define DISABLE_UNUSED_WARNINGS \
     __pragma(warning(push))     \
             __pragma(warning(disable : 4100 4101 4102))
-#define RESTORE_UNUSED_WARNINGS
+#define RESTORE_UNUSED_WARNINGS __pragma(warning(pop)) 
 #else
 #define DISABLE_UNUSED_WARNINGS    \
     _Pragma("GCC diagnostic push") \
@@ -161,6 +161,18 @@ inline void UNUSED([[maybe_unused]] Args &&...args) {
             _Pragma("GCC diagnostic ignored \"-Wunused-value\"")
 #define RESTORE_UNUSED_WARNINGS \
     _Pragma("GCC diagnostic pop")
+#endif
+#endif
+
+#ifndef DISABLE_ALIGN_WARNINGS // structure was padded due to alignment specifier
+#if defined(_MSC_VER)
+#define DISABLE_ALIGN_WARNINGS \
+    __pragma(warning(push))     \
+            __pragma(warning(disable : 4324))
+#define RESTORE_ALIGN_WARNINGS __pragma(warning(pop)) 
+#else
+#define DISABLE_ALIGN_WARNINGS
+#define RESTORE_ALIGN_WARNINGS
 #endif
 #endif
 

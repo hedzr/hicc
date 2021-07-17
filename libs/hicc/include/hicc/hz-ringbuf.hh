@@ -131,7 +131,7 @@ namespace hicc::ringbuf {
             return ret;
         }
         RESTORE_UNUSED_WARNINGS
-        
+
     private:
         template<typename TI>
         inline TI next_pow2(TI v) {
