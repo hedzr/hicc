@@ -35,6 +35,8 @@ endif ()
 #endfunction()
 #do_stuff(A B C D E)
 
+find_package (Threads REQUIRED)
+
 function(define_test_program name)
     #set(src_list )
     foreach (f ${ARGN})
@@ -50,6 +52,7 @@ function(define_test_program name)
     target_link_libraries(${PROJECT_NAME}-${name}
             PRIVATE
             Catch2::Catch2
+            ${CMAKE_THREAD_LIBS_INIT}
             libs::hicc
             # cmdr11::cmdr11
             # fmt::fmt-header-only
@@ -63,7 +66,7 @@ function(define_test_program name)
         target_compile_options(${PROJECT_NAME}-${name} PRIVATE /W4 /WX /utf-8)
     else ()
         target_compile_options(${PROJECT_NAME}-${name} PRIVATE
-                -pedantic -Wall -Wextra -Wshadow -Werror
+                -pedantic -Wall -Wextra -Wshadow -Werror -pthread
                 )
         if (DEBUG)
             target_compile_options(${PROJECT_NAME}-${name} PRIVATE

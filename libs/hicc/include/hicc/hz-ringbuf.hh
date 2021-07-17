@@ -113,7 +113,7 @@ namespace hicc::ringbuf {
             if (!_empty(b, f)) {
                 nb = (b + 1) & _Mask;
                 if (_b.compare_exchange_strong(b, nb, std::memory_order_release)) {
-                    ret.template emplace(std::move(_coll[b & _Mask]));
+                    ret.emplace(std::move(_coll[b & _Mask]));
                     return ret;
                 }
             }

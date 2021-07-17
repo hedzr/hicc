@@ -30,7 +30,7 @@ namespace hicc::pool {
         void emplace_back(T &&t) {
             {
                 lock l(_m);
-                _data.template emplace_back(std::move(t));
+                _data.emplace_back(std::move(t));
             }
             _cv.notify_one();
         }
@@ -54,7 +54,7 @@ namespace hicc::pool {
             _cv.wait(l, [this] { return _abort || !_data.empty(); });
             if (_abort) return ret; // std::nullopt;
 
-            ret.template emplace(std::move(_data.back()));
+            ret.emplace(std::move(_data.back()));
             _data.pop_back();
             return ret;
         }
