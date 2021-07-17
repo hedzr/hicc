@@ -23,7 +23,7 @@
 #include "hicc/hz-pool.hh"
 #include "hicc/hz-ringbuf.hh"
 
-
+DISABLE_ALIGN_WARNINGS
 namespace oliver {
 
     constexpr std::size_t cacheline_align_v = 64;
@@ -55,6 +55,7 @@ namespace oliver {
     }
 
 } // namespace oliver
+RESTORE_ALIGN_WARNINGS
 
 typedef hicc::ringbuf::ring_buffer<std::string, hicc::ringbuf::CE_BLOCKED_AND_SPIN> blocked_ring_buf;
 
