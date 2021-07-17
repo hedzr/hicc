@@ -100,6 +100,7 @@ namespace hicc::ringbuf {
                 std::this_thread::yield();
                 goto _retry;
             }
+            return false;
         }
         // bool enqueue(const T &elem) {
         //     size_t b = _b.load(), f = _f;
@@ -129,6 +130,7 @@ namespace hicc::ringbuf {
                 std::this_thread::yield();
                 goto _retry;
             }
+            return ret;
         }
 
     private:

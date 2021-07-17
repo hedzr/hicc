@@ -67,14 +67,14 @@ struct tiny_pool {
     class capture {
     public:
         capture(tiny_pool &tp)
-            : tp(tp)
-            , lk(tp.m) {}
+            : _tp(tp)
+            , _lk(tp.m) {}
         ~capture() {
-            tp.ready = true;
-            std::notify_all_at_thread_exit(tp.cv, std::move(lk));
+            _tp.ready = true;
+            std::notify_all_at_thread_exit(_tp.cv, std::move(_lk));
         }
-        tiny_pool &tp;
-        std::unique_lock<std::mutex> lk;
+        tiny_pool &_tp;
+        std::unique_lock<std::mutex> _lk;
     };
 
     void wait() {
