@@ -52,7 +52,7 @@ function(define_test_program name)
     target_link_libraries(${PROJECT_NAME}-${name}
             PRIVATE
             Catch2::Catch2
-            ${CMAKE_THREAD_LIBS_INIT}
+            Threads::Threads
             libs::hicc
             # cmdr11::cmdr11
             # fmt::fmt-header-only
