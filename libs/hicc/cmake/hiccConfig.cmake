@@ -46,8 +46,6 @@ if (NOT TARGET hicc::hicc)
     string(REGEX MATCH "CMDR_GIT_COMMIT_HASH xT\\(\\\"([0-9a-f.-]+)\\\"\\)" _ ${ver})
     set(HICC_VERSION_GIT_HASH ${CMAKE_MATCH_1})
     
-    add_compile_options(-pthread)
-    
     message(">=< HICC_VERSION        = ${HICC_VERSION_MAJOR}.${HICC_VERSION_MINOR}.${HICC_VERSION_PATCH}")
     message(">=< HICC_VERSION_STRING = ${HICC_VERSION_STRING} (HASH: ${HICC_VERSION_GIT_HASH})")
     message(">=< HICC_INCLUDE_DIR    = ${HICC_INCLUDE_DIR}")

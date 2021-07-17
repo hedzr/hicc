@@ -51,7 +51,7 @@ namespace oliver {
     // .zero   56
 
     void test_vv1() {
-        printf("%c, %lu\n", vv1.a, vv1._f.operator unsigned long());
+        printf("%c, %lu\n", vv1.a, (long)vv1._f);
     }
 
 } // namespace oliver
