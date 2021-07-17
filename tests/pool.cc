@@ -22,7 +22,7 @@ void test_mq() {
     {
         xmq.emplace_back(std::move(x1));
         hicc_debug("  xmq.emplace_back(std::move(x1)) DONE. AND, xmq.pop_front() ...");
-        std::optional<hicc::debug::X> vv = xmq.pop_front_bad();
+        std::optional<hicc::debug::X> vv = xmq.pop_front();
         hicc_debug("vv (%p): '%s'", (void *) &vv, vv.value().c_str());
     }
     hicc_debug("x1 (%p): '%s'", (void *) &x1, x1.c_str());

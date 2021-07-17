@@ -111,6 +111,7 @@ std::function<void()> foo(unsigned int OD, blocked_ring_buf &rb) {
                 // std::this_thread::sleep_for(300ms);
                 std::this_thread::sleep_for(std::chrono::milliseconds{wait_time});
             }
+            UNUSED(OD);
         };
     }
 
@@ -121,12 +122,14 @@ std::function<void()> foo(unsigned int OD, blocked_ring_buf &rb) {
             if (ret.has_value()) {
                 std::string &str = ret.value();
                 hicc_debug("  - T%02d: got '%s' ok: rb.size=%u, rb.free=%u, rb.qty=%u", OD, str.c_str(), rb.capacity(), rb.free(), rb.qty());
+                UNUSED(str);
             } else
                 hicc_debug("  - T%02d: dequeue failed: rb.size=%u, rb.free=%u, rb.qty=%u", OD, rb.capacity(), rb.free(), rb.qty());
             std::this_thread::yield();
             // std::this_thread::sleep_for(300ms);
             std::this_thread::sleep_for(std::chrono::milliseconds{wait_time});
         }
+        UNUSED(OD);
     };
 }
 
@@ -150,6 +153,7 @@ void test_ringbuf() {
             if (ret.has_value()) {
                 std::string &str = ret.value();
                 hicc_debug("  - T%02d: got '%s' ok: rb.size=%u, rb.free=%u, rb.qty=%u", i, str.c_str(), rb.capacity(), rb.free(), rb.qty());
+                UNUSED(str);
             } else
                 hicc_debug("  - T%02d: dequeue failed: rb.size=%u, rb.free=%u, rb.qty=%u", i, rb.capacity(), rb.free(), rb.qty());
         }
