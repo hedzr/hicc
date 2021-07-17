@@ -154,7 +154,11 @@ inline void UNUSED([[maybe_unused]] Args &&...args) {
 #else
 #define DISABLE_UNUSED_WARNINGS    \
     _Pragma("GCC diagnostic push") \
-            _Pragma("GCC diagnostic ignored \"-Wunused -Wunused-label -Wunused-parameter -Wunused-variable -Wunused-value\"")
+            _Pragma("GCC diagnostic ignored \"-Wunused\"") \
+            _Pragma("GCC diagnostic ignored \"-Wunused-label\"") \
+            _Pragma("GCC diagnostic ignored \"-Wunused-parameter\"") \
+            _Pragma("GCC diagnostic ignored \"-Wunused-variable\"") \
+            _Pragma("GCC diagnostic ignored \"-Wunused-value\"")
 #define RESTORE_UNUSED_WARNINGS \
     _Pragma("GCC diagnostic pop")
 #endif

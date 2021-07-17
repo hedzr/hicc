@@ -80,11 +80,10 @@ namespace hicc::ringbuf {
         inline bool _full(size_t b, size_t f) const { return ((f + 1) & _Mask) == b; }
 
     public:
+        DISABLE_UNUSED_WARNINGS
         bool enqueue(T &&elem) {
             size_t b, f, nf;
-            DISABLE_UNUSED_WARNINGS
         _retry:
-            RESTORE_UNUSED_WARNINGS
             b = _b.load(std::memory_order_acquire), f = _f.load(std::memory_order_acquire);
             if (!_full(b, f)) {
                 nf = (f + 1) & _Mask;
@@ -109,9 +108,7 @@ namespace hicc::ringbuf {
         std::optional<T> dequeue() {
             size_t b, f, nb;
             std::optional<T> ret;
-            DISABLE_UNUSED_WARNINGS
         _retry:
-            RESTORE_UNUSED_WARNINGS
             b = _b.load(std::memory_order_acquire), f = _f.load(std::memory_order_acquire);
             if (!_empty(b, f)) {
                 nb = (b + 1) & _Mask;
@@ -133,7 +130,8 @@ namespace hicc::ringbuf {
             }
             return ret;
         }
-
+        RESTORE_UNUSED_WARNINGS
+        
     private:
         template<typename TI>
         inline TI next_pow2(TI v) {
