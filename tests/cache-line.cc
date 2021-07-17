@@ -106,7 +106,7 @@ int main() {
         std::thread th2{oneCacheLinerThread<1>};
         th1.join();
         th2.join();
-        oneCacheLiner_average += oneCacheLiner.x + oneCacheLiner.y;
+        oneCacheLiner_average += (int)(oneCacheLiner.x + oneCacheLiner.y);
     }
     std::cout << "Average time: " << (oneCacheLiner_average / max_runs / 2) << " ms\n\n";
 
@@ -116,7 +116,7 @@ int main() {
         std::thread th2{twoCacheLinerThread<1>};
         th1.join();
         th2.join();
-        twoCacheLiner_average += twoCacheLiner.x + twoCacheLiner.y;
+        twoCacheLiner_average += (int)(twoCacheLiner.x + twoCacheLiner.y);
     }
     std::cout << "Average time: " << (twoCacheLiner_average / max_runs / 2) << " ms\n\n";
 }
