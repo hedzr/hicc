@@ -11,6 +11,10 @@
 #include <filesystem>
 #include <string>
 
+#include <cstdio>
+#include <fstream>
+#include <iostream>
+
 
 namespace hicc::path {
 
@@ -61,7 +65,16 @@ namespace hicc::path {
 
 #endif
 
+#include <sys/stat.h>
+
 namespace hicc::path {
+
+#if defined(_WIN32)
+    typedef struct ::_stat stat;
+#else
+    // typedef struct stat stat;
+#endif
+
 
 #if defined(_WIN32)
 
@@ -162,7 +175,7 @@ namespace hicc::path {
     }
     // Join the paths...
     template<class A, class... Args,
-            std::enable_if_t<!std::is_same<A, std::filesystem::path>::value, int> = 0>
+             std::enable_if_t<!std::is_same<A, std::filesystem::path>::value, int> = 0>
     fs::path join(A const &arg, Args... args) {
         auto p = fs::path(arg);
         if constexpr (sizeof...(Args) > 0) {
@@ -252,13 +265,186 @@ namespace hicc::path {
         //return path.filename().c_str();
     }
 
-    inline bool ensure_directory(std::filesystem::path name) {
+} // namespace hicc::path
+
+
+namespace hicc::io {
+
+    inline std::ifstream open_file(std::filesystem::path const &name, std::ios_base::openmode mode = std::ios_base::in) {
+        std::ifstream ofs(name, mode);
+        return ofs;
+    }
+
+    inline std::ofstream open_file_for_write(std::filesystem::path const &name, std::ios_base::openmode mode = std::ios_base::out | std::ios_base::binary) {
+        std::ofstream ofs(name, mode);
+        return ofs;
+    }
+
+    inline std::ofstream create_file(std::filesystem::path const &name, std::ios_base::openmode mode = std::ios_base::out | std::ios_base::binary) {
+        std::ofstream ofs(name, mode);
+        return ofs;
+    }
+
+    inline bool delete_file(std::filesystem::path const &name) {
+        // unlink(name.c_str());
+        return std::remove(name.c_str()) == 0;
+    }
+    inline bool delete_file(char const *filename) {
+        return std::remove(filename) == 0;
+    }
+
+    inline void close_file(std::ofstream &&ofs) { ofs.close(); }
+    inline void close_file(std::ofstream &ofs) { ofs.close(); }
+    inline void close_file(std::ifstream &&ifs) { ifs.close(); }
+    inline void close_file(std::ifstream &ifs) { ifs.close(); }
+    inline void close_file(std::fstream &&fs) { fs.close(); }
+    inline void close_file(std::fstream &fs) { fs.close(); }
+
+    inline std::string read_file_content(std::ifstream &ifs) {
+        ifs.ignore(std::numeric_limits<std::streamsize>::max());
+        std::string data(ifs.gcount(), 0);
+        ifs.seekg(0);
+        ifs.read(data.data(), data.size());
+        return data;
+    }
+
+    /**
+     * @brief create a sparse file on disk, ready for linux, darwin, not test for windows.
+     * @param name 
+     * @param size 
+     * @return 
+     */
+    inline bool create_sparse_file(std::filesystem::path name, std::size_t size) {
+#ifdef _WIN32
+        // https://stackoverflow.com/questions/4011508/how-to-create-a-sparse-file-on-ntfs
+        
+        // Use CreateFile as you would normally - Create file with whatever flags
+        //and File Share attributes that works for you
+        DWORD dwTemp;
+
+        HANDLE hSparseFile = CreateFile(name.c_str(),
+                                        GENERIC_READ | GENERIC_WRITE,
+                                        FILE_SHARE_READ | FILE_SHARE_WRITE,
+                                        NULL,
+                                        CREATE_ALWAYS,
+                                        FILE_ATTRIBUTE_NORMAL,
+                                        NULL);
+
+        if (hSparseFile == INVALID_HANDLE_VALUE)
+            return false;
+
+        DeviceIoControl(hSparseFile,
+                        FSCTL_SET_SPARSE,
+                        NULL,
+                        0,
+                        NULL,
+                        0,
+                        &dwTemp,
+                        NULL);
+        
+        CloseHandle(hFile);
+        return true;
+#else
+        std::ofstream ofs(name, std::ios_base::out | std::ios_base::binary);
+        ofs.seekp(size - 1);
+        char ch = '\0';
+        ofs.write(&ch, 1);
+#endif
+        return true;
+    }
+} // namespace hicc::io
+
+namespace hicc::path {
+
+    // https://docs.microsoft.com/en-us/cpp/c-runtime-library/reference/stat-functions
+    // https://linux.die.net/man/2/stat
+    inline struct stat stat(std::filesystem::path const &name) {
+        struct stat st;
+#ifdef _WIN32
+        int result = _stat(name.c_str(), &st);
+#else
+        int result = ::stat(name.c_str(), &st);
+#endif
+        if (result != 0) {
+            // check errno
+            return st;
+        }
+        return st;
+    }
+
+    inline bool is_sparse_file(std::filesystem::path const &name) {
+#ifdef _WIN32
+        // https://www.codeproject.com/Articles/53000/Managing-Sparse-Files-on-Windows
+        
+        // Open the file for read
+        HANDLE hFile = CreateFile(name.c_str(),
+                                  GENERIC_READ,
+                                  FILE_SHARE_READ,
+                                  NULL,
+                                  OPEN_EXISTING,
+                                  FILE_ATTRIBUTE_NORMAL,
+                                  NULL);
+        if (hFile == INVALID_HANDLE_VALUE)
+            return false;
+
+        // Get file information
+        BY_HANDLE_FILE_INFORMATION bhfi;
+        GetFileInformationByHandle(hFile, &bhfi);
+        CloseHandle(hFile);
+
+        return (bhfi.dwFileAttributes & FILE_ATTRIBUTE_SPARSE_FILE);
+#else
+        struct stat st = stat(name);
+        return (st.st_blksize * st.st_blocks < st.st_size);
+#endif
+    }
+    /** create a directory if not exists */
+    inline bool ensure_directory(std::filesystem::path const &name) {
         return fs::create_directories(name);
     }
 
-    inline std::filesystem::path tmpname() {
-        auto name1 = fs::temp_directory_path();
-        auto p = path::join(name1, "logs", "stderr.txt");
+    /** create a file if not exists */
+    inline bool ensure_file(std::filesystem::path const &name) {
+        if (!file_exists(name)) {
+            io::close_file(io::create_file(name));
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @brief get a const path representation of an empty pathname.
+     * @return an implicit, static, global, empty, and const pathname.
+     */
+    inline std::filesystem::path const &empty_path() {
+        static std::filesystem::path p;
+        return p;
+    }
+
+    inline std::filesystem::path tmpname_for_stderr() {
+        auto p = fs::temp_directory_path();
+        p /= "logs";
+        p /= "stderr.txt";
+        ensure_directory(path::dirname(p));
+        return p;
+    }
+    inline std::filesystem::path tmpname(std::filesystem::path const &name = empty_path()) {
+        std::filesystem::path p = fs::temp_directory_path();
+        p /= (name.empty() ? "1.bin" : name);
+        ensure_directory(path::dirname(p));
+        return p;
+    }
+    /**
+     * @brief make a tmpname with name_template and an implicit number
+     * @param name_template should be "some_text_%d_some_text". note the "%d" is required.
+     * @return filename wrapped to std::filesystem::path
+     */
+    inline std::filesystem::path tmpname_autoincr(char const *name_template = nullptr) {
+        std::filesystem::path p = fs::temp_directory_path();
+        static int id = 0;
+        char buf[PATH_MAX];
+        sprintf(buf, name_template ? name_template : "_%05d", id++);
+        p /= buf;
         ensure_directory(path::dirname(p));
         return p;
     }

@@ -19,6 +19,9 @@
 #include <cstdint>
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
+#define WIN32_LEAN_AND_MEAN
+#define VC_EXTRALEAN
+// #define _CRT_SECURE_NO_WARNINGS
 #include <windows.h>
 #else
 #include <unistd.h>

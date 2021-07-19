@@ -203,7 +203,7 @@ namespace hicc::process {
                 setg((char *) this->output.data(), (char *) this->output.data(), (char *) (this->output.data() + this->output.size()));
 
 #else // try POSIX
-                tmpfile_stderr = path::tmpname();
+                tmpfile_stderr = path::tmpname_for_stderr();
                 std::array<char, 512> cmd;
                 std::sprintf(cmd.data(), "%s 2>%s", command, tmpfile_stderr.c_str());
                 // std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(command, "r"), pclose);
