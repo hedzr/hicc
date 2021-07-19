@@ -82,6 +82,7 @@ set(header_files
         ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hz-if.hh
         ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hz-ios.hh
         ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hz-log.hh
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hz-mmap.hh
         ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hz-os-io-redirect.hh
         ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hz-path.hh
         ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hz-pool.hh

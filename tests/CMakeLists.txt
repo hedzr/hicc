@@ -115,6 +115,8 @@ define_test_program(process process.cc)
 
 define_test_program(cache-line cache-line.cc)
 define_test_program(copy-elision copy-elision.cc)
+define_test_program(path path.cc)
+define_test_program(mmap mmap.cc)
 define_test_program(ringbuf ringbuf.cc)
 define_test_program(pool pool.cc native-handle.cc)
 
