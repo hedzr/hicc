@@ -21,6 +21,13 @@
 
 namespace hicc::mmap {
 
+#if defined(_WIN32)
+#define FILE_HANDLE HANDLE
+#else
+    typedef int FILE_HANDLE;
+    const FILE_HANDLE INVALID_HANDLE_VALUE = -1;
+#endif
+
     class mmaplib {
     public:
         mmaplib();
@@ -52,11 +59,11 @@ namespace hicc::mmap {
 #if defined(_WIN32)
             hFile_ = mm.hFile_;
             hMapping_ = mm.hMapping_;
-            mm.hFile_ = NULL;
+            mm.hFile_ = INVALID_HANDLE_VALUE;
             mm.hMapping_ = NULL;
 #else
             fd_ = mm.fd_;
-            mm.fd_ = 0;
+            mm.fd_ = INVALID_HANDLE_VALUE;
 #endif
             size_ = mm.size_;
             addr_ = mm.addr_;
@@ -65,6 +72,7 @@ namespace hicc::mmap {
 
     public:
         void connect(const char *path);
+        void connect(FILE_HANDLE fd);
         void close();
 
         bool is_open() const;
@@ -75,10 +83,10 @@ namespace hicc::mmap {
         void cleanup();
 
 #if defined(_WIN32)
-        HANDLE hFile_;
+        FILE_HANDLE hFile_;
         HANDLE hMapping_;
 #else
-        int fd_;
+        FILE_HANDLE fd_;
 #endif
         std::size_t size_;
         void *addr_;
@@ -91,10 +99,10 @@ namespace hicc::mmap {
 
     inline mmaplib::mmaplib()
 #if defined(_WIN32)
-        : hFile_(NULL)
+        : hFile_(INVALID_HANDLE_VALUE)
         , hMapping_(NULL)
 #else
-        : fd_(-1)
+        : fd_(INVALID_HANDLE_VALUE)
 #endif
         , size_(0)
         , addr_(MAP_FAILED) {
@@ -102,10 +110,10 @@ namespace hicc::mmap {
 
     inline mmaplib::mmaplib(const char *path)
 #if defined(_WIN32)
-        : hFile_(NULL)
+        : hFile_(INVALID_HANDLE_VALUE)
         , hMapping_(NULL)
 #else
-        : fd_(-1)
+        : fd_(INVALID_HANDLE_VALUE)
 #endif
         , size_(0)
         , addr_(MAP_FAILED) {
@@ -118,12 +126,19 @@ namespace hicc::mmap {
 #if defined(_WIN32)
         hFile_ = ::CreateFileA(path, GENERIC_READ, FILE_SHARE_READ, NULL,
                                OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-
-        if (hFile_ == INVALID_HANDLE_VALUE) {
+        connect(hFile_);
+#else
+        fd_ = open(path, O_RDONLY);
+        connect(fd_);
+#endif
+    }
+    inline void mmaplib::connect(FILE_HANDLE fd) {
+#if defined(_WIN32)
+        if (fd == INVALID_HANDLE_VALUE) {
             std::runtime_error("");
         }
 
-        size_ = ::GetFileSize(hFile_, NULL);
+        size_ = ::GetFileSize(fd, NULL);
 
         hMapping_ = ::CreateFileMapping(hFile_, NULL, PAGE_READONLY, 0, 0, NULL);
 
@@ -134,19 +149,18 @@ namespace hicc::mmap {
 
         addr_ = ::MapViewOfFile(hMapping_, FILE_MAP_READ, 0, 0, 0);
 #else
-        fd_ = open(path, O_RDONLY);
-        if (fd_ == -1) {
+        if (fd == -1) {
             std::runtime_error("");
         }
 
         struct stat sb;
-        if (fstat(fd_, &sb) == -1) {
+        if (fstat(fd, &sb) == -1) {
             cleanup();
             std::runtime_error("");
         }
         size_ = sb.st_size;
 
-        addr_ = ::mmap(NULL, size_, PROT_READ, MAP_PRIVATE, fd_, 0);
+        addr_ = ::mmap(NULL, size_, PROT_READ, MAP_PRIVATE, fd, 0);
 #endif
 
         if (addr_ == MAP_FAILED) {
@@ -187,15 +201,22 @@ namespace hicc::mmap {
             addr_ = MAP_FAILED;
         }
 
-        if (fd_ != -1) {
+        if (fd_ != INVALID_HANDLE_VALUE) {
             ::close(fd_);
-            fd_ = -1;
+            fd_ = INVALID_HANDLE_VALUE;
         }
 #endif
         size_ = 0;
     }
 
 
+    /**
+     * @brief wrapper of mmaplib with implicit file management.
+     * the corresponding file will be deleted automatically, as 'mmap' deconstructed.
+     * 
+     * If you looking for a wrapper with connecting to a explicit,
+     * external file and without file creating/destroying, use 'mmap_um'. 
+     */
     class mmap {
     public:
         mmap(std::size_t size) {
@@ -210,6 +231,7 @@ namespace hicc::mmap {
 
         bool is_open() const { return _mm.is_open(); }
         std::size_t size() const { return _mm.size(); }
+        std::size_t length() const { return _mm.size(); }
         const char *data() const { return _mm.data(); }
         std::filesystem::path const &underlying_filename() const { return _tmpname; }
 
@@ -218,6 +240,26 @@ namespace hicc::mmap {
         std::filesystem::path _tmpname;
     }; // class mmap
 
+    /**
+     * @brief wrapper of mmaplib without implicit file management
+     */
+    class mmap_um {
+    public:
+        mmap_um(int fd) {
+            _mm.connect(fd);
+        }
+        ~mmap_um() {
+            _mm.close();
+        }
+
+        bool is_open() const { return _mm.is_open(); }
+        std::size_t size() const { return _mm.size(); }
+        std::size_t length() const { return _mm.size(); }
+        const char *data() const { return _mm.data(); }
+
+    private:
+        mmaplib _mm;
+    }; // class mmap
 
 }; // namespace hicc::mmap
 
