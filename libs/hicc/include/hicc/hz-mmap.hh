@@ -268,9 +268,9 @@ namespace hicc::mmap {
 
     private:
         mmaplib _mm;
-    }; // class mmap
+    }; // class mmap_um
 
-}; // namespace hicc::mmap
+} // namespace hicc::mmap
 
 
 #endif //HICC_CXX_HZ_MMAP_HH

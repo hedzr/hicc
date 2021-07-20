@@ -39,7 +39,7 @@ namespace hicc::path {
 #include <Shlwapi.h>
 #include <io.h>
 #include <windows.h>
-
+#include <winioctl.h>  // for FSCTL_SET_SPARSE
 #define access _access_s
 #endif
 
