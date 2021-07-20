@@ -16,6 +16,7 @@
 #endif
 #include <stdexcept>
 
+#include "hz-defs.hh"
 #include "hz-path.hh"
 
 
@@ -28,191 +29,212 @@ namespace hicc::mmap {
     const FILE_HANDLE INVALID_HANDLE_VALUE = -1;
 #endif
 
-    class mmaplib {
-    public:
-        mmaplib();
-        ~mmaplib();
-        mmaplib(const char *path, bool writeable, bool shareable);
-        mmaplib(mmaplib const &mm) { __copy(mm); }
-        mmaplib(mmaplib &&mm) { __copy(mm); }
-        mmaplib &operator=(mmaplib const &o) {
-            __copy(o);
-            return (*this);
-        }
-        mmaplib &operator=(mmaplib &&o) {
-            __copy(o);
-            return (*this);
-        }
-
-    private:
-        void __copy(mmaplib const &mm) {
+    inline FILE_HANDLE open_file(const char *path, bool writeable = false, bool shareable = false) {
+        UNUSED(shareable);
 #if defined(_WIN32)
-            hFile_ = ::DuplicateHandle(mm.hFile_);
-            hMapping_ = ::DuplicateHandle(mm.hMapping_);
+        FILE_HANDLE hFile_ = ::CreateFileA(path, GENERIC_READ | (writeable ? GENERIC_WRITE : 0),
+                                           FILE_SHARE_READ | (writeable ? FILE_SHARE_WRITE : 0), NULL,
+                                           OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+        return hFile_;
 #else
-            fd_ = dup2(0, mm.fd_);
+        FILE_HANDLE fd_ = open(path, writeable ? O_RDWR : O_RDONLY);
+        return fd_;
 #endif
-            size_ = mm.size_;
-            addr_ = mm.addr_;
-        }
-        void __copy(mmaplib &&mm) {
+    }
+
+    namespace detail {
+
+        class mmaplib {
+        public:
+            mmaplib();
+            ~mmaplib();
+            mmaplib(const char *path, bool writeable, bool shareable);
+            mmaplib(mmaplib const &mm) { __copy(mm); }
+            mmaplib(mmaplib &&mm) { __copy(mm); }
+            mmaplib &operator=(mmaplib const &o) {
+                __copy(o);
+                return (*this);
+            }
+            mmaplib &operator=(mmaplib &&o) {
+                __copy(o);
+                return (*this);
+            }
+
+        private:
+            void __copy(mmaplib const &mm) {
 #if defined(_WIN32)
-            hFile_ = mm.hFile_;
-            hMapping_ = mm.hMapping_;
-            mm.hFile_ = INVALID_HANDLE_VALUE;
-            mm.hMapping_ = NULL;
+                hFile_ = ::DuplicateHandle(mm.hFile_);
+                hMapping_ = ::DuplicateHandle(mm.hMapping_);
 #else
-            fd_ = mm.fd_;
-            mm.fd_ = INVALID_HANDLE_VALUE;
+                fd_ = dup2(0, mm.fd_);
 #endif
-            size_ = mm.size_;
-            addr_ = mm.addr_;
-            mm.addr_ = nullptr;
-        }
+                size_ = mm.size_;
+                addr_ = mm.addr_;
+            }
+            void __copy(mmaplib &&mm) {
+#if defined(_WIN32)
+                hFile_ = mm.hFile_;
+                hMapping_ = mm.hMapping_;
+                mm.hFile_ = INVALID_HANDLE_VALUE;
+                mm.hMapping_ = NULL;
+#else
+                fd_ = mm.fd_;
+                mm.fd_ = INVALID_HANDLE_VALUE;
+#endif
+                size_ = mm.size_;
+                addr_ = mm.addr_;
+                mm.addr_ = nullptr;
+            }
 
-    public:
-        void connect(bool writeable, bool shareable, const char *path);
-        void connect(bool writeable, bool shareable, FILE_HANDLE fd);
-        void close();
+        public:
+            void connect(bool writeable, bool shareable, const char *path);
+            void connect(bool writeable, bool shareable, FILE_HANDLE fd);
+            void close();
 
-        bool is_open() const;
-        std::size_t size() const;
-        const char *data() const;
-        char *data();
+            bool is_open() const;
+            std::size_t size() const;
+            const char *data() const;
+            char *data();
 
-    private:
-        void cleanup();
+        private:
+            void cleanup();
 
 #if defined(_WIN32)
-        FILE_HANDLE hFile_;
-        HANDLE hMapping_;
+            FILE_HANDLE hFile_;
+            HANDLE hMapping_;
 #else
-        FILE_HANDLE fd_;
+            FILE_HANDLE fd_;
 #endif
-        std::size_t size_;
-        void *addr_;
-    };
+            std::size_t size_;
+            void *addr_;
+        };
 
 #if defined(_WIN32)
 #define MAP_FAILED NULL
 #endif
 
 
-    inline mmaplib::mmaplib()
+        inline mmaplib::mmaplib()
 #if defined(_WIN32)
-        : hFile_(INVALID_HANDLE_VALUE)
-        , hMapping_(NULL)
+            : hFile_(INVALID_HANDLE_VALUE)
+            , hMapping_(NULL)
 #else
-        : fd_(INVALID_HANDLE_VALUE)
+            : fd_(INVALID_HANDLE_VALUE)
 #endif
-        , size_(0)
-        , addr_(MAP_FAILED) {
-    }
-
-    inline mmaplib::mmaplib(const char *path, bool writeable, bool shareable)
-#if defined(_WIN32)
-        : hFile_(INVALID_HANDLE_VALUE)
-        , hMapping_(NULL)
-#else
-        : fd_(INVALID_HANDLE_VALUE)
-#endif
-        , size_(0)
-        , addr_(MAP_FAILED) {
-        connect(writeable, shareable, path);
-    }
-
-    inline mmaplib::~mmaplib() { cleanup(); }
-
-    inline void mmaplib::connect(bool writeable, bool shareable, const char *path) {
-#if defined(_WIN32)
-        hFile_ = ::CreateFileA(path, GENERIC_READ | (writeable ? GENERIC_WRITE : 0),
-                               FILE_SHARE_READ | (writeable ? FILE_SHARE_WRITE : 0), NULL,
-                               OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-        connect(writeable, shareable, hFile_);
-#else
-        fd_ = open(path, writeable ? O_RDWR : O_RDONLY);
-        connect(writeable, shareable, fd_);
-#endif
-    }
-    inline void mmaplib::connect(bool writeable, bool shareable, FILE_HANDLE fd) {
-#if defined(_WIN32)
-        if (fd == INVALID_HANDLE_VALUE) {
-            std::runtime_error("");
+            , size_(0)
+            , addr_(MAP_FAILED) {
         }
 
-        size_ = ::GetFileSize(fd, NULL);
+        inline mmaplib::mmaplib(const char *path, bool writeable, bool shareable)
+#if defined(_WIN32)
+            : hFile_(INVALID_HANDLE_VALUE)
+            , hMapping_(NULL)
+#else
+            : fd_(INVALID_HANDLE_VALUE)
+#endif
+            , size_(0)
+            , addr_(MAP_FAILED) {
+            connect(writeable, shareable, path);
+        }
 
-        hMapping_ = ::CreateFileMapping(hFile_, NULL, (writeable ? PAGE_READWRITE : PAGE_READONLY), 0, 0, NULL);
+        inline mmaplib::~mmaplib() { cleanup(); }
 
-        if (hMapping_ == NULL) {
+        inline void mmaplib::connect(bool writeable, bool shareable, const char *path) {
+            auto fd = open_file(path, writeable, shareable);
+            connect(writeable, shareable, fd);
+            // #if defined(_WIN32)
+            //             hFile_ = ::CreateFileA(path, GENERIC_READ | (writeable ? GENERIC_WRITE : 0),
+            //                                    FILE_SHARE_READ | (writeable ? FILE_SHARE_WRITE : 0), NULL,
+            //                                    OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+            //             connect(writeable, shareable, hFile_);
+            // #else
+            //             fd_ = open(path, writeable ? O_RDWR : O_RDONLY);
+            //             connect(writeable, shareable, fd_);
+            // #endif
+        }
+        inline void mmaplib::connect(bool writeable, bool shareable, FILE_HANDLE fd) {
+#if defined(_WIN32)
+            if (fd == INVALID_HANDLE_VALUE) {
+                std::runtime_error("");
+            }
+
+            hFile_ = fd;
+            size_ = ::GetFileSize(fd, NULL);
+
+            hMapping_ = ::CreateFileMapping(hFile_, NULL, (writeable ? PAGE_READWRITE : PAGE_READONLY), 0, 0, NULL);
+
+            if (hMapping_ == NULL) {
+                cleanup();
+                std::runtime_error("");
+            }
+
+            // https://docs.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-mapviewoffile
+            addr_ = ::MapViewOfFile(hMapping_, FILE_MAP_READ | (writeable ? FILE_MAP_WRITE : 0), 0, 0, 0);
+#else
+            if (fd == -1) {
+                std::runtime_error("");
+            }
+
+            fd_ = fd;
+            struct stat sb;
+            if (fstat(fd, &sb) == -1) {
+                cleanup();
+                std::runtime_error("");
+            }
+            size_ = sb.st_size;
+
+            // https://man7.org/linux/man-pages/man2/mmap.2.html
+            addr_ = ::mmap(NULL, size_, PROT_READ | (writeable ? PROT_WRITE : 0), shareable ? MAP_SHARED : MAP_PRIVATE, fd, 0);
+#endif
+
+            if (addr_ == MAP_FAILED) {
+                cleanup();
+                std::runtime_error("");
+            }
+        }
+
+        inline bool mmaplib::is_open() const { return fd_ != -1 && addr_ != MAP_FAILED; }
+
+        inline std::size_t mmaplib::size() const { return size_; }
+
+        inline const char *mmaplib::data() const { return (const char *) addr_; }
+        inline char *mmaplib::data() { return (char *) addr_; }
+
+        inline void mmaplib::close() {
             cleanup();
-            std::runtime_error("");
         }
 
-        // https://docs.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-mapviewoffile
-        addr_ = ::MapViewOfFile(hMapping_, FILE_MAP_READ | (writeable ? FILE_MAP_WRITE : 0), 0, 0, 0);
-#else
-        if (fd == -1) {
-            std::runtime_error("");
-        }
-
-        struct stat sb;
-        if (fstat(fd, &sb) == -1) {
-            cleanup();
-            std::runtime_error("");
-        }
-        size_ = sb.st_size;
-
-        // https://man7.org/linux/man-pages/man2/mmap.2.html
-        addr_ = ::mmap(NULL, size_, PROT_READ | (writeable ? PROT_WRITE : 0), shareable ? MAP_SHARED : MAP_PRIVATE, fd, 0);
-#endif
-
-        if (addr_ == MAP_FAILED) {
-            cleanup();
-            std::runtime_error("");
-        }
-    }
-
-    inline bool mmaplib::is_open() const { return fd_ != -1 && addr_ != MAP_FAILED; }
-
-    inline std::size_t mmaplib::size() const { return size_; }
-
-    inline const char *mmaplib::data() const { return (const char *) addr_; }
-    inline char *mmaplib::data() { return (char *) addr_; }
-
-    inline void mmaplib::close() {
-        cleanup();
-    }
-
-    inline void mmaplib::cleanup() {
+        inline void mmaplib::cleanup() {
 #if defined(_WIN32)
-        if (addr_) {
-            ::UnmapViewOfFile(addr_);
-            addr_ = MAP_FAILED;
-        }
+            if (addr_) {
+                ::UnmapViewOfFile(addr_);
+                addr_ = MAP_FAILED;
+            }
 
-        if (hMapping_) {
-            ::CloseHandle(hMapping_);
-            hMapping_ = NULL;
-        }
+            if (hMapping_) {
+                ::CloseHandle(hMapping_);
+                hMapping_ = NULL;
+            }
 
-        if (hFile_ != INVALID_HANDLE_VALUE) {
-            ::CloseHandle(hFile_);
-            hFile_ = INVALID_HANDLE_VALUE;
-        }
+            if (hFile_ != INVALID_HANDLE_VALUE) {
+                ::CloseHandle(hFile_);
+                hFile_ = INVALID_HANDLE_VALUE;
+            }
 #else
-        if (addr_ != MAP_FAILED) {
-            munmap(addr_, size_);
-            addr_ = MAP_FAILED;
+            if (addr_ != MAP_FAILED) {
+                munmap(addr_, size_);
+                addr_ = MAP_FAILED;
+            }
+
+            if (fd_ != INVALID_HANDLE_VALUE) {
+                ::close(fd_);
+                fd_ = INVALID_HANDLE_VALUE;
+            }
+#endif
+            size_ = 0;
         }
 
-        if (fd_ != INVALID_HANDLE_VALUE) {
-            ::close(fd_);
-            fd_ = INVALID_HANDLE_VALUE;
-        }
-#endif
-        size_ = 0;
-    }
+    } // namespace detail
 
 
     /**
@@ -243,7 +265,7 @@ namespace hicc::mmap {
         std::filesystem::path const &underlying_filename() const { return _tmpname; }
 
     private:
-        mmaplib _mm;
+        detail::mmaplib _mm;
         std::filesystem::path _tmpname;
     }; // class mmap
 
@@ -253,12 +275,8 @@ namespace hicc::mmap {
     template<bool writeable = false, bool shareable = false>
     class mmap_um {
     public:
-        mmap_um(int fd) {
-            _mm.connect(writeable, shareable, fd);
-        }
-        ~mmap_um() {
-            _mm.close();
-        }
+        mmap_um(int fd) { _mm.connect(writeable, shareable, fd); }
+        ~mmap_um() { _mm.close(); }
 
         bool is_open() const { return _mm.is_open(); }
         std::size_t size() const { return _mm.size(); }
@@ -267,7 +285,7 @@ namespace hicc::mmap {
         char *data() { return _mm.data(); }
 
     private:
-        mmaplib _mm;
+        detail::mmaplib _mm;
     }; // class mmap_um
 
 } // namespace hicc::mmap

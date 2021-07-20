@@ -270,7 +270,7 @@ namespace hicc::path {
 
 namespace hicc::io {
 
-    inline std::ifstream open_file(std::filesystem::path const &name, std::ios_base::openmode mode = std::ios_base::in) {
+    inline std::ifstream open_file(std::filesystem::path const &name, std::ios_base::openmode mode = std::ios_base::in | std::ios_base::binary) {
         std::ifstream ofs(name, mode);
         return ofs;
     }
