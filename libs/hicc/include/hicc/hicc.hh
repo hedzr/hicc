@@ -28,6 +28,7 @@
 #include "hz-process.hh"
 #include "hz-os-io-redirect.hh"
 
+#include "hz-mmap.hh"
 #include "hz-ringbuf.hh"
 #include "hz-pool.hh"
 

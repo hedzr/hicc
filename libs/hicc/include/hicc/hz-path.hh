@@ -416,6 +416,7 @@ namespace hicc::path {
         return (st.st_blksize * st.st_blocks < st.st_size);
 #endif
     }
+    
     /** create a directory if not exists */
     inline bool ensure_directory(std::filesystem::path const &name) {
         return fs::create_directories(name);
