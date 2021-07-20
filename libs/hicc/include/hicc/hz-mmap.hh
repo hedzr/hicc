@@ -63,8 +63,8 @@ namespace hicc::mmap {
         private:
             void __copy(mmaplib const &mm) {
 #if defined(_WIN32)
-                hFile_ = ::DuplicateHandle(mm.hFile_);
-                hMapping_ = ::DuplicateHandle(mm.hMapping_);
+                ::DuplicateHandle(GetCurrentProcess(), mm.hFile_, GetCurrentProcess(), &hFile_, 0, FALSE, DUPLICATE_SAME_ACCESS);
+                ::DuplicateHandle(GetCurrentProcess(), mm.hMapping_, GetCurrentProcess(), &hMapping_, 0, FALSE, DUPLICATE_SAME_ACCESS);
 #else
                 fd_ = dup2(0, mm.fd_);
 #endif
@@ -170,6 +170,7 @@ namespace hicc::mmap {
 
             // https://docs.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-mapviewoffile
             addr_ = ::MapViewOfFile(hMapping_, FILE_MAP_READ | (writeable ? FILE_MAP_WRITE : 0), 0, 0, 0);
+            UNUSED(shareable);
 #else
             if (fd == -1) {
                 std::runtime_error("");
@@ -193,7 +194,11 @@ namespace hicc::mmap {
             }
         }
 
-        inline bool mmaplib::is_open() const { return fd_ != -1 && addr_ != MAP_FAILED; }
+#if defined(_WIN32)
+        inline bool mmaplib::is_open() const { return hFile_ != INVALID_HANDLE_VALUE && addr_ != MAP_FAILED; }
+#else
+        inline bool mmaplib::is_open() const { return fd_ != INVALID_HANDLE_VALUE && addr_ != MAP_FAILED; }
+#endif
 
         inline std::size_t mmaplib::size() const { return size_; }
 
@@ -250,7 +255,7 @@ namespace hicc::mmap {
         mmap(std::size_t size) {
             _tmpname = path::tmpname_autoincr();
             io::create_sparse_file(_tmpname, size);
-            _mm.connect(writeable, shareable, _tmpname.c_str());
+            _mm.connect(writeable, shareable, path::to_filename(_tmpname));
         }
         ~mmap() {
             _mm.close();
@@ -275,7 +280,7 @@ namespace hicc::mmap {
     template<bool writeable = false, bool shareable = false>
     class mmap_um {
     public:
-        mmap_um(int fd) { _mm.connect(writeable, shareable, fd); }
+        mmap_um(FILE_HANDLE fd) { _mm.connect(writeable, shareable, fd); }
         ~mmap_um() { _mm.close(); }
 
         bool is_open() const { return _mm.is_open(); }

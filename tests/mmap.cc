@@ -20,7 +20,7 @@ void test_1() {
 #endif
 
     {
-        hicc::mmap::detail::mmaplib mm(tmpname.c_str(), false, false);
+        hicc::mmap::detail::mmaplib mm(hicc::path::to_filename(tmpname), false, false);
         std::cout << tmpname << ": " << mm.size() << " bytes" << '\n';
 
         const auto *ptr = mm.data();
@@ -87,8 +87,8 @@ void test_3() {
 
     // auto fs = hicc::io::open_file(tmpname);
     // hicc::mmap::mmap_um<true> mm(std::fd<char>(fs));
-    
-    auto fd = hicc::mmap::open_file(tmpname.c_str());
+
+    auto fd = hicc::mmap::open_file(hicc::path::to_filename(tmpname));
     hicc::mmap::mmap_um<true> mm(fd);
     if (mm.is_open()) {
 
