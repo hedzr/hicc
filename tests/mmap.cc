@@ -20,7 +20,7 @@ void test_1() {
 #endif
 
     {
-        hicc::mmap::mmaplib mm(tmpname.c_str());
+        hicc::mmap::mmaplib mm(tmpname.c_str(), false, false);
         std::cout << tmpname << ": " << mm.size() << " bytes" << '\n';
 
         const auto *ptr = mm.data();
@@ -36,15 +36,16 @@ void test_1() {
 }
 
 void test_2() {
-    hicc::mmap::mmap mm(1024 * 1024 * 1024);
+    hicc::mmap::mmap<true> mm(1024 * 1024 * 1024);
     if (mm.is_open()) {
 
         std::cout << mm.underlying_filename() << ": " << mm.size() << " bytes" << '\n';
         std::cout << std::boolalpha << "is_sparse: " << hicc::path::is_sparse_file(mm.underlying_filename()) << '\n';
 
-        const char *ptr = mm.data();
+        char *ptr = mm.data();
         ptr += 1024 * 1024 * 1024 - 16;
         for (int i = 0; i < 16; i++, ptr++) {
+            *ptr = (char) i;
             printf("%02x ", *ptr);
         }
 

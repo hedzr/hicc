@@ -32,7 +32,7 @@ namespace hicc::mmap {
     public:
         mmaplib();
         ~mmaplib();
-        mmaplib(const char *path);
+        mmaplib(const char *path, bool writeable, bool shareable);
         mmaplib(mmaplib const &mm) { __copy(mm); }
         mmaplib(mmaplib &&mm) { __copy(mm); }
         mmaplib &operator=(mmaplib const &o) {
@@ -71,13 +71,14 @@ namespace hicc::mmap {
         }
 
     public:
-        void connect(const char *path);
-        void connect(FILE_HANDLE fd);
+        void connect(bool writeable, bool shareable, const char *path);
+        void connect(bool writeable, bool shareable, FILE_HANDLE fd);
         void close();
 
         bool is_open() const;
         std::size_t size() const;
         const char *data() const;
+        char *data();
 
     private:
         void cleanup();
@@ -108,7 +109,7 @@ namespace hicc::mmap {
         , addr_(MAP_FAILED) {
     }
 
-    inline mmaplib::mmaplib(const char *path)
+    inline mmaplib::mmaplib(const char *path, bool writeable, bool shareable)
 #if defined(_WIN32)
         : hFile_(INVALID_HANDLE_VALUE)
         , hMapping_(NULL)
@@ -117,22 +118,23 @@ namespace hicc::mmap {
 #endif
         , size_(0)
         , addr_(MAP_FAILED) {
-        connect(path);
+        connect(writeable, shareable, path);
     }
 
     inline mmaplib::~mmaplib() { cleanup(); }
 
-    inline void mmaplib::connect(const char *path) {
+    inline void mmaplib::connect(bool writeable, bool shareable, const char *path) {
 #if defined(_WIN32)
-        hFile_ = ::CreateFileA(path, GENERIC_READ, FILE_SHARE_READ, NULL,
+        hFile_ = ::CreateFileA(path, GENERIC_READ | (writeable ? GENERIC_WRITE : 0),
+                               FILE_SHARE_READ | (writeable ? FILE_SHARE_WRITE : 0), NULL,
                                OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-        connect(hFile_);
+        connect(writeable, shareable, hFile_);
 #else
-        fd_ = open(path, O_RDONLY);
-        connect(fd_);
+        fd_ = open(path, writeable ? O_RDWR : O_RDONLY);
+        connect(writeable, shareable, fd_);
 #endif
     }
-    inline void mmaplib::connect(FILE_HANDLE fd) {
+    inline void mmaplib::connect(bool writeable, bool shareable, FILE_HANDLE fd) {
 #if defined(_WIN32)
         if (fd == INVALID_HANDLE_VALUE) {
             std::runtime_error("");
@@ -140,14 +142,15 @@ namespace hicc::mmap {
 
         size_ = ::GetFileSize(fd, NULL);
 
-        hMapping_ = ::CreateFileMapping(hFile_, NULL, PAGE_READONLY, 0, 0, NULL);
+        hMapping_ = ::CreateFileMapping(hFile_, NULL, (writeable ? PAGE_READWRITE : PAGE_READONLY), 0, 0, NULL);
 
         if (hMapping_ == NULL) {
             cleanup();
             std::runtime_error("");
         }
 
-        addr_ = ::MapViewOfFile(hMapping_, FILE_MAP_READ, 0, 0, 0);
+        // https://docs.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-mapviewoffile
+        addr_ = ::MapViewOfFile(hMapping_, FILE_MAP_READ | (writeable ? FILE_MAP_WRITE : 0), 0, 0, 0);
 #else
         if (fd == -1) {
             std::runtime_error("");
@@ -160,7 +163,8 @@ namespace hicc::mmap {
         }
         size_ = sb.st_size;
 
-        addr_ = ::mmap(NULL, size_, PROT_READ, MAP_PRIVATE, fd, 0);
+        // https://man7.org/linux/man-pages/man2/mmap.2.html
+        addr_ = ::mmap(NULL, size_, PROT_READ | (writeable ? PROT_WRITE : 0), shareable ? MAP_SHARED : MAP_PRIVATE, fd, 0);
 #endif
 
         if (addr_ == MAP_FAILED) {
@@ -174,6 +178,7 @@ namespace hicc::mmap {
     inline std::size_t mmaplib::size() const { return size_; }
 
     inline const char *mmaplib::data() const { return (const char *) addr_; }
+    inline char *mmaplib::data() { return (char *) addr_; }
 
     inline void mmaplib::close() {
         cleanup();
@@ -217,12 +222,13 @@ namespace hicc::mmap {
      * If you looking for a wrapper with connecting to a explicit,
      * external file and without file creating/destroying, use 'mmap_um'. 
      */
+    template<bool writeable = false, bool shareable = false>
     class mmap {
     public:
         mmap(std::size_t size) {
             _tmpname = path::tmpname_autoincr();
             io::create_sparse_file(_tmpname, size);
-            _mm.connect(_tmpname.c_str());
+            _mm.connect(writeable, shareable, _tmpname.c_str());
         }
         ~mmap() {
             _mm.close();
@@ -233,6 +239,7 @@ namespace hicc::mmap {
         std::size_t size() const { return _mm.size(); }
         std::size_t length() const { return _mm.size(); }
         const char *data() const { return _mm.data(); }
+        char *data() { return _mm.data(); }
         std::filesystem::path const &underlying_filename() const { return _tmpname; }
 
     private:
@@ -243,10 +250,11 @@ namespace hicc::mmap {
     /**
      * @brief wrapper of mmaplib without implicit file management
      */
+    template<bool writeable = false, bool shareable = false>
     class mmap_um {
     public:
         mmap_um(int fd) {
-            _mm.connect(fd);
+            _mm.connect(writeable, shareable, fd);
         }
         ~mmap_um() {
             _mm.close();
@@ -256,6 +264,7 @@ namespace hicc::mmap {
         std::size_t size() const { return _mm.size(); }
         std::size_t length() const { return _mm.size(); }
         const char *data() const { return _mm.data(); }
+        char *data() { return _mm.data(); }
 
     private:
         mmaplib _mm;
