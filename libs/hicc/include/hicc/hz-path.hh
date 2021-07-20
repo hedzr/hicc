@@ -361,7 +361,6 @@ namespace hicc::io {
 
         std::filesystem::resize_file(name, size);
 
-        UNUSED(size);
         return true;
 #else
         std::ofstream ofs(name, std::ios_base::out | std::ios_base::binary);
