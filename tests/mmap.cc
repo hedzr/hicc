@@ -4,6 +4,7 @@
 
 #include "hicc/hz-mmap.hh"
 #include "hicc/hz-path.hh"
+#include "hicc/hz-pool.hh"
 
 void test_1() {
     auto tmpname = hicc::path::tmpname_autoincr();
@@ -105,8 +106,122 @@ void test_3() {
     }
 }
 
+#if !defined(_WIN32)
+
+const char *fname = "/tmp/test-setter-1";
+const int BUF_SIZE = 100;
+
+void test_watcher() {
+    char *mapped;
+    // printf("begin of watcher\n");
+
+    int fd;
+    struct stat sb;
+    if ((fd = open(fname, O_RDWR)) < 0) {
+        perror("open");
+    }
+
+    if ((fstat(fd, &sb)) == -1) {
+        perror("fstat");
+    }
+
+    // printf("#%d: file size = %llu\n", fd, sb.st_size);
+
+    if ((mapped = (char *) mmap(NULL, sb.st_size, PROT_READ, MAP_SHARED, fd, 0)) == (void *) -1) {
+        perror("mmap, watcher");
+    }
+
+    using namespace std::literals::chrono_literals;
+    std::this_thread::yield();
+    
+    int tries = 0;
+    while (tries++ < 7) {
+        printf("%s\n", mapped);
+        std::this_thread::yield();
+        std::this_thread::sleep_for(2s); // sleep(2);
+    }
+
+    close(fd);
+
+    printf("end of watcher\n");
+}
+
+void test_setter() {
+    char *mapped;
+    // printf("begin of setter\n");
+
+    int fd;
+    struct stat sb;
+    if ((fd = open(fname, O_RDWR)) < 0) {
+        perror("open");
+    }
+
+    if ((fstat(fd, &sb)) == -1) {
+        perror("fstat");
+    }
+
+    // printf("#%d: file size = %llu\n", fd, sb.st_size);
+
+    if ((mapped = (char *) mmap(NULL, sb.st_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0)) == (void *) -1) {
+        perror("mmap, setter");
+    }
+    
+    std::this_thread::yield();
+
+    printf("setter: -\n");
+    for (int i = 0; i < 40; i++) {
+        mapped[i] = '-';
+    }
+
+    using namespace std::literals::chrono_literals;
+    std::this_thread::yield();
+    std::this_thread::sleep_for(2s); // sleep(2);
+
+    printf("setter: 9\n");
+    mapped[20] = '9';
+
+    close(fd);
+
+    printf("end of setter\n");
+}
+
+void test_setter_and_watch() {
+    int fd;
+    
+    if ((fd = open(fname, O_RDWR | O_CREAT)) < 0) {
+        perror("open");
+    }
+
+    char buf[BUF_SIZE + 1];
+    buf[BUF_SIZE] = 0;
+    for (int i = 0; i < BUF_SIZE; i++) {
+        buf[i] = '#';
+    }
+
+    write(fd, buf, BUF_SIZE + 1);
+
+    // lseek(fd, BUF_SIZE, SEEK_SET);
+    // write(fd, &fd, sizeof(fd));
+
+    close(fd);
+
+    hicc::pool::thread_pool pool(3);
+    pool.queue_task([]() { printf("end of empty runner\n"); });
+    pool.queue_task(test_watcher);
+    pool.queue_task(test_setter);
+    sleep(3);
+    pool.join();
+    
+    printf("end of controller\n");
+}
+
+#else
+void test_setter_and_watch() {}
+#endif
+
 int main() {
     test_1();
     test_2();
     test_3();
+    test_setter_and_watch();
 }
