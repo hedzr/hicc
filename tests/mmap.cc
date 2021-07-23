@@ -10,7 +10,7 @@ void test_1() {
     printf("--------- test 1\n");
 
     auto tmpname = hicc::path::tmpname_autoincr();
-    hicc::io::create_sparse_file(tmpname, 1024 * 1024 * 1024);
+    hicc::io::create_sparse_file(tmpname, 7 * 1024 * 1024);
 
 #if 0
     {
@@ -27,7 +27,7 @@ void test_1() {
         std::cout << tmpname << ": " << mm.size() << " bytes" << '\n';
 
         const auto *ptr = mm.data();
-        ptr += 1024 * 1024 * 1024 - 16;
+        ptr += 7 * 1024 * 1024 - 16;
         for (int i = 0; i < 16; i++, ptr++) {
             printf("%02x ", *ptr);
         }
@@ -41,14 +41,14 @@ void test_1() {
 void test_2() {
     printf("--------- test 2\n");
 
-    hicc::mmap::mmap<true> mm(1024 * 1024 * 1024);
+    hicc::mmap::mmap<true> mm(7 * 1024 * 1024);
     if (mm.is_open()) {
 
         std::cout << mm.underlying_filename() << ": " << mm.size() << " bytes" << '\n';
         std::cout << std::boolalpha << "is_sparse: " << hicc::path::is_sparse_file(mm.underlying_filename()) << '\n';
 
         char *ptr = mm.data();
-        ptr += 1024 * 1024 * 1024 - 16;
+        ptr += 7 * 1024 * 1024 - 16;
         for (int i = 0; i < 16; i++, ptr++) {
             *ptr = (char) i;
             printf("%02x ", *ptr);
@@ -90,7 +90,7 @@ void test_3() {
     printf("--------- test 3\n");
 
     auto tmpname = hicc::path::tmpname_autoincr();
-    hicc::io::create_sparse_file(tmpname, 1024 * 1024 * 1024);
+    hicc::io::create_sparse_file(tmpname, 7 * 1024 * 1024);
 
     // auto fs = hicc::io::open_file(tmpname);
     // hicc::mmap::mmap_um<true> mm(std::fd<char>(fs));
@@ -103,7 +103,7 @@ void test_3() {
         std::cout << std::boolalpha << "is_sparse: " << hicc::path::is_sparse_file(tmpname) << '\n';
 
         char *ptr = mm.data();
-        ptr += 1024 * 1024 * 1024 - 16;
+        ptr += 7 * 1024 * 1024 - 16;
         for (int i = 0; i < 16; i++, ptr++) {
             printf("%02x ", *ptr);
         }
@@ -114,7 +114,7 @@ void test_3() {
 
 #if !defined(_WIN32)
 
-void errexit(const char* msg) {
+void errexit(const char *msg) {
     printf("%s\n", msg);
     exit(-1);
 }
@@ -136,7 +136,7 @@ void test_watcher() {
         errexit("mmap, watcher: fstat");
     }
 
-    printf("#%d: file size = %llu\n", fd, sb.st_size);
+    printf("#%d: file size = %lu\n", fd, sb.st_size);
 
     if ((mapped = (char *) mmap(NULL, sb.st_size, PROT_READ, MAP_SHARED, fd, 0)) == (void *) -1) {
         errexit("mmap, watcher");
@@ -171,7 +171,7 @@ void test_setter() {
         errexit("mmap, setter: fstat");
     }
 
-    printf("#%d: file size = %llu\n", fd, sb.st_size);
+    printf("#%d: file size = %lu\n", fd, sb.st_size);
 
     if ((mapped = (char *) mmap(NULL, sb.st_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0)) == (void *) -1) {
         errexit("mmap, setter");
@@ -212,7 +212,10 @@ void test_setter_and_watch() {
         buf[i] = '#';
     }
 
-    write(fd, buf, BUF_SIZE + 1);
+    auto nw = write(fd, buf, BUF_SIZE + 1);
+    if (nw < 0) {
+        errexit("write");
+    }
 
     // lseek(fd, BUF_SIZE, SEEK_SET);
     // write(fd, &fd, sizeof(fd));
@@ -220,7 +223,7 @@ void test_setter_and_watch() {
     close(fd);
 
     printf("begin of controller\n");
-    
+
     hicc::pool::thread_pool pool(3);
     printf("pool ready\n");
     pool.queue_task([]() { printf("end of empty runner\n"); });
