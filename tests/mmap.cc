@@ -7,6 +7,8 @@
 #include "hicc/hz-pool.hh"
 
 void test_1() {
+    printf("--------- test 1\n");
+
     auto tmpname = hicc::path::tmpname_autoincr();
     hicc::io::create_sparse_file(tmpname, 1024 * 1024 * 1024);
 
@@ -37,6 +39,8 @@ void test_1() {
 }
 
 void test_2() {
+    printf("--------- test 2\n");
+
     hicc::mmap::mmap<true> mm(1024 * 1024 * 1024);
     if (mm.is_open()) {
 
@@ -83,6 +87,8 @@ namespace std _GLIBCXX_VISIBILITY(default) {
 #endif // 0
 
 void test_3() {
+    printf("--------- test 3\n");
+
     auto tmpname = hicc::path::tmpname_autoincr();
     hicc::io::create_sparse_file(tmpname, 1024 * 1024 * 1024);
 
@@ -108,7 +114,12 @@ void test_3() {
 
 #if !defined(_WIN32)
 
-const char *fname = "/tmp/test-setter-1";
+void errexit(const char* msg) {
+    printf("%s\n", msg);
+    exit(-1);
+}
+
+std::filesystem::path fname = "/tmp/test-setter-1";
 const int BUF_SIZE = 100;
 
 void test_watcher() {
@@ -117,25 +128,25 @@ void test_watcher() {
 
     int fd;
     struct stat sb;
-    if ((fd = open(fname, O_RDWR)) < 0) {
-        perror("open");
+    if ((fd = open(hicc::path::to_filename(fname), O_RDONLY)) < 0) {
+        errexit("mmap, watcher: open");
     }
 
     if ((fstat(fd, &sb)) == -1) {
-        perror("fstat");
+        errexit("mmap, watcher: fstat");
     }
 
-    // printf("#%d: file size = %llu\n", fd, sb.st_size);
+    printf("#%d: file size = %llu\n", fd, sb.st_size);
 
     if ((mapped = (char *) mmap(NULL, sb.st_size, PROT_READ, MAP_SHARED, fd, 0)) == (void *) -1) {
-        perror("mmap, watcher");
+        errexit("mmap, watcher");
     }
 
     using namespace std::literals::chrono_literals;
     std::this_thread::yield();
-    
+
     int tries = 0;
-    while (tries++ < 7) {
+    while (tries++ < 3) {
         printf("%s\n", mapped);
         std::this_thread::yield();
         std::this_thread::sleep_for(2s); // sleep(2);
@@ -152,20 +163,20 @@ void test_setter() {
 
     int fd;
     struct stat sb;
-    if ((fd = open(fname, O_RDWR)) < 0) {
-        perror("open");
+    if ((fd = open(hicc::path::to_filename(fname), O_RDWR)) < 0) {
+        errexit("mmap, setter: open");
     }
 
     if ((fstat(fd, &sb)) == -1) {
-        perror("fstat");
+        errexit("mmap, setter: fstat");
     }
 
-    // printf("#%d: file size = %llu\n", fd, sb.st_size);
+    printf("#%d: file size = %llu\n", fd, sb.st_size);
 
     if ((mapped = (char *) mmap(NULL, sb.st_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0)) == (void *) -1) {
-        perror("mmap, setter");
+        errexit("mmap, setter");
     }
-    
+
     std::this_thread::yield();
 
     printf("setter: -\n");
@@ -186,10 +197,13 @@ void test_setter() {
 }
 
 void test_setter_and_watch() {
+    printf("--------- test setter & watcher\n");
+
+    fname = hicc::path::tmpname_autoincr();
     int fd;
-    
-    if ((fd = open(fname, O_RDWR | O_CREAT)) < 0) {
-        perror("open");
+    if ((fd = open(hicc::path::to_filename(fname), O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR)) < 0) {
+        printf("create failed (%d): %s\n", errno, hicc::path::to_filename(fname));
+        errexit("open+create");
     }
 
     char buf[BUF_SIZE + 1];
@@ -205,13 +219,17 @@ void test_setter_and_watch() {
 
     close(fd);
 
+    printf("begin of controller\n");
+    
     hicc::pool::thread_pool pool(3);
+    printf("pool ready\n");
     pool.queue_task([]() { printf("end of empty runner\n"); });
     pool.queue_task(test_watcher);
     pool.queue_task(test_setter);
-    sleep(3);
+    // sleep(3);
+    std::this_thread::yield();
     pool.join();
-    
+
     printf("end of controller\n");
 }
 
