@@ -172,8 +172,8 @@ namespace hicc::pool {
      */
     class thread_pool {
     public:
-        thread_pool(std::size_t n = 1)
-            : _cv_started(n) { start_thread(n); }
+        thread_pool(std::size_t n = 1u)
+            : _cv_started((int)n) { start_thread(n); }
         thread_pool(thread_pool &&) = delete;
         thread_pool &operator=(thread_pool &&) = delete;
         ~thread_pool() { join(); }
