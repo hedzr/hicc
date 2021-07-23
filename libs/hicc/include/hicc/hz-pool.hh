@@ -84,15 +84,16 @@ namespace hicc::pool {
     public:
         conditional_wait_for_int(int max_value_ = 1)
             : conditional_wait([this]() { return _wait(); }, [this]() { _set(); })
+            , var(0)
             , max_value(max_value_) {}
         ~conditional_wait_for_int() { release(); }
         conditional_wait_for_int(conditional_wait_for_int &&) = delete;
         conditional_wait_for_int &operator=(conditional_wait_for_int &&) = delete;
 
     private:
-        bool _wait() const { return var >= max_value; }
-        void _set() { var++; }
-        void release() {
+        inline bool _wait() const { return var >= max_value; }
+        inline void _set() { var++; }
+        inline void release() {
             //
         }
     };
