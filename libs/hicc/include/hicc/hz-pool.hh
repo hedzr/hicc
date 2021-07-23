@@ -105,14 +105,14 @@ namespace hicc::pool {
         using lock = std::unique_lock<std::mutex>;
         void emplace_back(T &&t) {
             {
-                lock l(_m);
+                lock l_(_m);
                 _data.emplace_back(std::move(t));
             }
             _cv.notify_one();
         }
         void push_back(T const &t) {
             {
-                lock l(_m);
+                lock l_(_m);
                 _data.push_back(t);
             }
             _cv.notify_one();
@@ -127,8 +127,8 @@ namespace hicc::pool {
 
         inline std::optional<T> pop_front() {
             std::optional<T> ret;
-            lock l(_m);
-            _cv.wait(l, [this] { return _abort || !_data.empty(); });
+            lock l_(_m);
+            _cv.wait(l_, [this] { return _abort || !_data.empty(); });
             if (_abort) return ret; // std::nullopt;
 
             ret.emplace(std::move(_data.back()));
@@ -147,7 +147,7 @@ namespace hicc::pool {
 
         void clear() {
             {
-                lock l(_m);
+                lock l_(_m);
                 _abort = true;
                 _data.clear();
             }

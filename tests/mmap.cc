@@ -136,7 +136,7 @@ void test_watcher() {
         errexit("mmap, watcher: fstat");
     }
 
-    printf("#%d: file size = %lu\n", fd, sb.st_size);
+    printf("#%d: file size = %lu\n", fd, (unsigned long)sb.st_size);
 
     if ((mapped = (char *) mmap(NULL, sb.st_size, PROT_READ, MAP_SHARED, fd, 0)) == (void *) -1) {
         errexit("mmap, watcher");
@@ -171,7 +171,7 @@ void test_setter() {
         errexit("mmap, setter: fstat");
     }
 
-    printf("#%d: file size = %lu\n", fd, sb.st_size);
+    printf("#%d: file size = %lu\n", fd, (unsigned long)sb.st_size);
 
     if ((mapped = (char *) mmap(NULL, sb.st_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0)) == (void *) -1) {
         errexit("mmap, setter");
