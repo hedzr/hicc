@@ -221,10 +221,10 @@ void test_thread() {
 }
 
 void test_pool() {
-    hicc::pool::thread_pool threads(10);
+    hicc::pool::thread_pool threads(5);
     hicc::pool::threaded_message_queue<std::string> messages;
 
-    constexpr std::size_t message_count = 100;
+    constexpr std::size_t message_count = 50;
     for (std::size_t i = 0; i < message_count; ++i) {
         threads.queue_task([i, &messages] {
             std::stringstream ss;
@@ -249,13 +249,13 @@ void test_pool() {
 }
 
 int main() {
-    {
-        unsigned int n = std::thread::hardware_concurrency();
-        std::cout << n << " concurrent _threads are supported.\n";
-    }
+    // {
+    //     unsigned int n = std::thread::hardware_concurrency();
+    //     std::cout << n << " concurrent _threads are supported.\n";
+    // }
 
-    extern void test_native_handle();
-    test_native_handle();
+    // extern void test_native_handle();
+    // test_native_handle();
 
     test_thread();
 
@@ -263,8 +263,8 @@ int main() {
 
     test_mq();
 
-    test_cv();
-
-    test_cv_0();
-    test_cv_1();
+    // test_cv();
+    //
+    // test_cv_0();
+    // test_cv_1();
 }

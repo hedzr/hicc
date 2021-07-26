@@ -51,9 +51,14 @@ namespace oliver {
     // .zero   56
 
     void test_vv1() {
-        printf("%c, %lu\n", vv1.a, (long)vv1._f);
+        printf("%c, %lu\n", vv1.a, (long) vv1._f);
     }
 
+    class A {
+    protected:
+        virtual void do_something() = 0;
+    };
+    
 } // namespace oliver
 RESTORE_ALIGN_WARNINGS
 
@@ -166,10 +171,11 @@ void test_ringbuf() {
         // enqueue/dequeue test
 
         // tiny_pool tp1;
-        hicc::pool::thread_pool threads(std::thread::hardware_concurrency());
+        unsigned int n = 5; // std::thread::hardware_concurrency()
+        hicc::pool::thread_pool threads(n);
         hicc::pool::threaded_message_queue<std::string> messages;
         blocked_ring_buf rb(7);
-        for (unsigned int ti = 0; ti < std::thread::hardware_concurrency(); ti++) {
+        for (unsigned int ti = 0; ti < n; ti++) {
             // std::thread t(foo(ti, rb));
             // t.detach();
             threads.queue_task(foo(ti, rb));
@@ -178,7 +184,7 @@ void test_ringbuf() {
         // hicc_debug("waiting...");
         threads.join();
     }
-    
+
     printf("__ END2\n");
 }
 
@@ -191,7 +197,7 @@ int main() {
         unsigned int n = std::thread::hardware_concurrency();
         std::cout << n << " concurrent _threads are supported.\n";
     }
-    
+
     // test_mq();
 
     test_tiny_pool();
