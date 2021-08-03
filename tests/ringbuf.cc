@@ -58,7 +58,7 @@ namespace oliver {
     protected:
         virtual void do_something() = 0;
     };
-    
+
 } // namespace oliver
 RESTORE_ALIGN_WARNINGS
 
@@ -189,14 +189,14 @@ void test_ringbuf() {
 }
 
 int main() {
-    std::cout << "cache_line: " << hicc::cross::cache_line_size() << '\n';
-    std::cout << "hardware_constructive_interference_size: " << hicc::cross::hardware_constructive_interference_size << '\n';
-    std::cout << "hardware_destructive_interference_size: " << hicc::cross::hardware_destructive_interference_size << '\n';
-    std::cout << "sizeof(std::max_align_t): " << sizeof(std::max_align_t) << '\n';
-    {
-        unsigned int n = std::thread::hardware_concurrency();
-        std::cout << n << " concurrent _threads are supported.\n";
-    }
+    // std::cout << "cache_line: " << hicc::cross::cache_line_size() << '\n';
+    // std::cout << "hardware_constructive_interference_size: " << hicc::cross::hardware_constructive_interference_size << '\n';
+    // std::cout << "hardware_destructive_interference_size: " << hicc::cross::hardware_destructive_interference_size << '\n';
+    // std::cout << "sizeof(std::max_align_t): " << sizeof(std::max_align_t) << '\n';
+    // {
+    //     unsigned int n = std::thread::hardware_concurrency();
+    //     std::cout << n << " concurrent _threads are supported.\n";
+    // }
 
     // test_mq();
 

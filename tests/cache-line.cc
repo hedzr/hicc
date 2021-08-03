@@ -85,6 +85,15 @@ int main() {
 #else
                  "is not defined\n";
 #endif
+    {
+        unsigned int n = std::thread::hardware_concurrency();
+        std::cout << "std::thread::hardware_concurrency(): " << n << " concurrent _threads are supported.\n";
+    }
+
+    std::cout << "cache_line: " << hicc::cross::cache_line_size() << '\n';
+    std::cout << "hardware_constructive_interference_size: " << hicc::cross::hardware_constructive_interference_size << '\n';
+    std::cout << "hardware_destructive_interference_size: " << hicc::cross::hardware_destructive_interference_size << '\n';
+    std::cout << "sizeof(std::max_align_t): " << sizeof(std::max_align_t) << '\n';
 
     std::cout
             << "hardware_destructive_interference_size == "
@@ -106,7 +115,7 @@ int main() {
         std::thread th2{oneCacheLinerThread<1>};
         th1.join();
         th2.join();
-        oneCacheLiner_average += (int)(oneCacheLiner.x + oneCacheLiner.y);
+        oneCacheLiner_average += (int) (oneCacheLiner.x + oneCacheLiner.y);
     }
     std::cout << "Average time: " << (oneCacheLiner_average / max_runs / 2) << " ms\n\n";
 
@@ -116,7 +125,7 @@ int main() {
         std::thread th2{twoCacheLinerThread<1>};
         th1.join();
         th2.join();
-        twoCacheLiner_average += (int)(twoCacheLiner.x + twoCacheLiner.y);
+        twoCacheLiner_average += (int) (twoCacheLiner.x + twoCacheLiner.y);
     }
     std::cout << "Average time: " << (twoCacheLiner_average / max_runs / 2) << " ms\n\n";
 }
