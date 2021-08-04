@@ -99,6 +99,59 @@ namespace hicc::pool {
     };
 
 
+    /**
+     * @brief helper class for shutdown a sleep loop gracefully.
+     * 
+     * @details Sample:
+     * @code{c++}
+     * class X {
+     *     std::thread _t;
+     *     hicc::pool::timer_killer _tk;
+     *     static void runner(timer *_this) {
+     *         using namespace std::literals::chrono_literals;
+     *         auto d = 10ns;
+     *         while (!_this->_tk.wait_for(d)) {
+     *             // std::this_thread::sleep_for(d);
+     *             std::this_thread::yield();
+     *         }
+     *         hicc_trace("timer::runner ended.");
+     *     }
+     *     void start(){ _t.detach(); }
+     *   public:
+     *     X(): _t(std::thread(runner, this)) { start(); }
+     *     ~X(){ stop(); }
+     *     void stop() {  _tk.kill(); }
+     * };
+     * @endcode
+     */
+    class timer_killer {
+        bool _terminate = false;
+        mutable std::condition_variable _cv;
+        mutable std::mutex _m;
+
+        timer_killer(timer_killer &&) = delete;
+        timer_killer(timer_killer const &) = delete;
+        timer_killer &operator=(timer_killer &&) = delete;
+        timer_killer &operator=(timer_killer const &) = delete;
+
+    public:
+        timer_killer() = default;
+        // returns false if killed:
+        template<class R, class P>
+        bool wait_for(std::chrono::duration<R, P> const &time) const {
+            std::unique_lock<std::mutex> lock(_m);
+            return !_cv.wait_for(lock, time, [&] { return _terminate; });
+        }
+        void kill() {
+            std::unique_lock<std::mutex> lock(_m);
+            if (!_terminate) {
+                _terminate = true; // should be modified inside mutex lock
+                _cv.notify_all();  // it is safe, and *sometimes* optimal, to do this outside the lock}
+            }
+        }
+    };
+
+
     template<class T>
     class threaded_message_queue {
     public:
@@ -173,7 +226,7 @@ namespace hicc::pool {
     class thread_pool {
     public:
         thread_pool(std::size_t n = 1u)
-            : _cv_started((int)n) { start_thread(n); }
+            : _cv_started((int) n) { start_thread(n); }
         thread_pool(thread_pool &&) = delete;
         thread_pool &operator=(thread_pool &&) = delete;
         ~thread_pool() { join(); }

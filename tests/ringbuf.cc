@@ -97,7 +97,7 @@ std::function<void()> foo(unsigned int OD, blocked_ring_buf &rb) {
 
     using namespace std::chrono_literals;
     std::default_random_engine engine{std::random_device{}()};
-    std::uniform_int_distribution<int64_t> dist{10, 300};
+    std::uniform_int_distribution<int64_t> dist{3, 100};
     int64_t wait_time = dist(engine);
 
     if ((OD & 1) == 0) {

@@ -13,9 +13,12 @@ namespace test {
     Lock l;
     int locked_counter;
 
+    const int READER_MAX = 200;
+    const int WRITER_MAX = 300;
+    
     void reader(int i) {
         int c = 0;
-        while (c++ < 200) {
+        while (c++ < READER_MAX) {
             {
                 ReadLock rl(l);
                 printf("    #%d: %d\n", i, locked_counter);
@@ -23,14 +26,14 @@ namespace test {
 
             using namespace std::literals::chrono_literals;
             // std::this_thread::yield();
-            std::this_thread::sleep_for(30ms);
+            std::this_thread::sleep_for(10ms);
         }
         printf("    #%d: end of reader, %d\n", i, locked_counter);
     }
 
     void writer() {
         int c = 0;
-        while (c++ < 500) {
+        while (c++ < WRITER_MAX) {
             {
                 WriteLock wl(l);
                 //Do writer stuff
@@ -40,7 +43,7 @@ namespace test {
             // printf("[W]: %d\n", locked_counter);
             using namespace std::literals::chrono_literals;
             // std::this_thread::yield();
-            std::this_thread::sleep_for(10ms);
+            std::this_thread::sleep_for(3ms);
         }
         printf("[W] end of writer: %d\n", locked_counter);
     }

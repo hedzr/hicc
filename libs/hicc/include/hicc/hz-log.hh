@@ -181,5 +181,6 @@ namespace hicc::log {
 template<typename... Args>
 inline void hicc_verbose_debug([[maybe_unused]] Args &&...args) { (void) (sizeof...(args)); }
 #endif
+#define hicc_trace hicc_verbose_debug
 
 #endif //HICC_CXX_HZ_LOG_HH

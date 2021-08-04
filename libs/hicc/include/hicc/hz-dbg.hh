@@ -13,7 +13,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <typeinfo>
+#include <vector>
+#include <string>
 
+#include "hz-defs.hh"
 
 #ifndef OS_WIN
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
