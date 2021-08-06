@@ -5,10 +5,9 @@
 #include "hicc/hz-mmap.hh"
 #include "hicc/hz-path.hh"
 #include "hicc/hz-pool.hh"
+#include "hicc/hz-x-test.hh"
 
 void test_1() {
-    printf("--------- test 1\n");
-
     auto tmpname = hicc::path::tmpname_autoincr();
     hicc::io::create_sparse_file(tmpname, 7 * 1024 * 1024);
 
@@ -39,8 +38,6 @@ void test_1() {
 }
 
 void test_2() {
-    printf("--------- test 2\n");
-
     hicc::mmap::mmap<true> mm(7 * 1024 * 1024);
     if (mm.is_open()) {
 
@@ -87,8 +84,6 @@ namespace std _GLIBCXX_VISIBILITY(default) {
 #endif // 0
 
 void test_3() {
-    printf("--------- test 3\n");
-
     auto tmpname = hicc::path::tmpname_autoincr();
     hicc::io::create_sparse_file(tmpname, 7 * 1024 * 1024);
 
@@ -124,8 +119,6 @@ const int BUF_SIZE = 100;
 
 void test_watcher() {
     char *mapped;
-    // printf("begin of watcher\n");
-
     int fd;
     struct stat sb;
     if ((fd = open(hicc::path::to_filename(fname), O_RDONLY)) < 0) {
@@ -153,13 +146,10 @@ void test_watcher() {
     }
 
     close(fd);
-
-    printf("end of watcher\n");
 }
 
 void test_setter() {
     char *mapped;
-    // printf("begin of setter\n");
 
     int fd;
     struct stat sb;
@@ -192,13 +182,9 @@ void test_setter() {
     mapped[20] = '9';
 
     close(fd);
-
-    printf("end of setter\n");
 }
 
 void test_setter_and_watch() {
-    printf("--------- test setter & watcher\n");
-
     fname = hicc::path::tmpname_autoincr();
     int fd;
     if ((fd = open(hicc::path::to_filename(fname), O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR)) < 0) {
@@ -232,8 +218,6 @@ void test_setter_and_watch() {
     // sleep(3);
     std::this_thread::yield();
     pool.join();
-
-    printf("end of controller\n");
 }
 
 #else
@@ -241,8 +225,8 @@ void test_setter_and_watch() {}
 #endif
 
 int main() {
-    test_1();
-    test_2();
-    test_3();
-    test_setter_and_watch();
+    HICC_TEST_FOR(test_1);
+    HICC_TEST_FOR(test_2);
+    HICC_TEST_FOR(test_3);
+    HICC_TEST_FOR(test_setter_and_watch);
 }

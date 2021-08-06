@@ -3,6 +3,7 @@
 //
 
 #include "hicc/hz-priority-queue.hh"
+#include "hicc/hz-x-test.hh"
 
 void test_pq() {
     std::list<int> vi;
@@ -82,5 +83,5 @@ void test_pq() {
 }
 
 int main() {
-    test_pq();
+    HICC_TEST_FOR(test_pq);
 }

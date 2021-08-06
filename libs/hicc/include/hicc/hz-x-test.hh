@@ -38,10 +38,10 @@ namespace hicc::test {
 
     private:
         void before(const char *fname) {
-            printf("--- %s BEGIN\n", fname);
+            printf("--- BEGIN OF %-40s ----------------------\n", fname);
         }
         void after(const char *fname) {
-            printf("--- %s END\n\n", fname);
+            printf("--- END OF %-42s ----------------------\n\n", fname);
         }
     }; // class wrapper
 

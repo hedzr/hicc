@@ -22,6 +22,7 @@
 
 #include "hicc/hz-pool.hh"
 #include "hicc/hz-ringbuf.hh"
+#include <hicc/hz-x-test.hh>
 
 DISABLE_ALIGN_WARNINGS
 namespace oliver {
@@ -200,7 +201,7 @@ int main() {
 
     // test_mq();
 
-    test_tiny_pool();
+    HICC_TEST_FOR(test_tiny_pool);
 
-    test_ringbuf();
+    HICC_TEST_FOR(test_ringbuf);
 }

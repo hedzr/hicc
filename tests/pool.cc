@@ -13,6 +13,7 @@
 #include "hicc/hz-log.hh"
 #include "hicc/hz-pool.hh"
 #include "hicc/hz-x-class.hh"
+#include "hicc/hz-x-test.hh"
 
 class L {
 public:
@@ -97,8 +98,6 @@ void test_cv_0() {
         auto &t = (*it);
         t.join();
     }
-    
-    printf("> test_cv_0: ended.\n\n");
 }
 
 std::condition_variable cvpc;
@@ -148,8 +147,6 @@ void test_cv_1() {
         auto &t = (*it);
         t.join();
     }
-    
-    printf("> test_cv_1: ended.\n\n");
 }
 
 void test_cv() {
@@ -192,8 +189,6 @@ void test_cv() {
         }
         std::cout << "end of cv test" << '\n';
     }
-    
-    printf("> test_cv: ended.\n\n");
 }
 
 void test_mq() {
@@ -207,8 +202,6 @@ void test_mq() {
         hicc_debug("vv (%p): '%s'", (void *) &vv, vv.value().c_str());
     }
     hicc_debug("x1 (%p): '%s'", (void *) &x1, x1.c_str());
-    
-    printf("> test_mq: ended.\n\n");
 }
 
 void foo() {
@@ -230,8 +223,6 @@ void test_thread_basics() {
 }
 
 void test_pool() {
-    printf("> test_pool: begining...\n");
-    
     hicc::pool::thread_pool threads(5);
     hicc::pool::threaded_message_queue<std::string> messages;
 
@@ -257,8 +248,6 @@ void test_pool() {
     }
 
     threads.join();
-    
-    printf("> test_pool: ended.\n\n");
 }
 
 int main() {
@@ -270,15 +259,15 @@ int main() {
     // extern void test_native_handle();
     // test_native_handle();
 
-    test_thread_basics();
+    HICC_TEST_FOR(test_thread_basics);
 
-    test_cv();
+    HICC_TEST_FOR(test_cv);
 
-    test_cv_0();
-    test_cv_1();
+    HICC_TEST_FOR(test_cv_0);
+    HICC_TEST_FOR(test_cv_1);
     
-    test_pool();
+    HICC_TEST_FOR(test_pool);
 
-    test_mq();
+    HICC_TEST_FOR(test_mq);
 
 }

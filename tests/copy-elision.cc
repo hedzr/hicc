@@ -13,6 +13,7 @@
 
 // #include "hicc/hz-pool.hh"
 #include "hicc/hz-x-class.hh"
+#include "hicc/hz-x-test.hh"
 
 std::vector<std::string> vec;
 
@@ -68,6 +69,6 @@ void test_fz() {
 
 
 int main() {
-    test_ff();
-    test_fz();
+    HICC_TEST_FOR(test_ff);
+    HICC_TEST_FOR(test_fz);
 }

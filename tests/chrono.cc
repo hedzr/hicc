@@ -4,6 +4,7 @@
 
 #include "hicc/hz-chrono.hh"
 #include "hicc/hz-process.hh"
+#include "hicc/hz-x-test.hh"
 
 void test_c_style(struct timeval &tv) {
     char fmt[64];
@@ -172,12 +173,14 @@ void test_format_duration() {
 }
 
 int main() {
-    test_time_now();
-    test_format_duration();
+    HICC_TEST_FOR(test_time_now);
+    HICC_TEST_FOR(test_format_duration);
 
-    struct timespec ts;
-    clock_getres(CLOCK_REALTIME, &ts);
-    std::cout << ts.tv_sec << ',' << ts.tv_nsec << '\n';
-    clock_getres(CLOCK_MONOTONIC, &ts);
-    std::cout << ts.tv_sec << ',' << ts.tv_nsec << '\n';
+    {
+        struct timespec ts;
+        clock_getres(CLOCK_REALTIME, &ts);
+        std::cout << ts.tv_sec << ',' << ts.tv_nsec << '\n';
+        clock_getres(CLOCK_MONOTONIC, &ts);
+        std::cout << ts.tv_sec << ',' << ts.tv_nsec << '\n';
+    }
 }

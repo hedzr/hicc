@@ -6,25 +6,26 @@
 #include "hicc/hz-os-io-redirect.hh"
 #include "hicc/hz-path.hh"
 #include "hicc/hz-process.hh"
+#include <hicc/hz-x-test.hh>
 
 #include <fstream>
 #include <iostream>
 
 void test_stdout_capture() {
     hicc::process::exec ex("ls -la /tmp/");
-    
+
     std::cout << "stdout:" << '\n';
     std::cout << ex;
     std::cout.flush();
     // std::cout.good();
-    
+
     std::cout << '\n';
     std::cout << "done!" << '\n';
     std::cout << '\n';
     std::cout << '\n';
     std::cout.flush();
 }
-    
+
 void test_stderr_capture() {
     {
         hicc::process::exec ex("ls -la /unknown");
@@ -66,6 +67,7 @@ int main() {
               << "\n";
     std::clog << "world"
               << "\n";
-    test_stdout_capture();
-    test_stderr_capture();
+    
+    HICC_TEST_FOR(test_stdout_capture);
+    HICC_TEST_FOR(test_stderr_capture);
 }
