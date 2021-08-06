@@ -24,9 +24,9 @@
 #include "hz-log.hh"
 
 #include "hz-btree.hh"
+#include "hz-os-io-redirect.hh"
 #include "hz-priority-queue.hh"
 #include "hz-process.hh"
-#include "hz-os-io-redirect.hh"
 
 #include "hz-mmap.hh"
 #include "hz-ringbuf.hh"
@@ -43,6 +43,10 @@ namespace hicc {
 
 #if defined(__cpp_exceptions)
 #include "hz-if.hh"
+#endif
+
+#if defined(HICC_CXX_UNIT_TEST) && HICC_CXX_UNIT_TEST == 1
+#include "hz-x-test.hh"
 #endif
 
 

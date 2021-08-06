@@ -35,13 +35,13 @@ struct InkPen {
     }
 
     void WriteImplementation() {
-        std::cout << "Writing using a inkpen" << std::endl;
+        std::cout << "Writing using a inkpen" << '\n';
     }
 };
 
 struct BoldPen {
     void Write() {
-        std::cout << "Writing using a boldpen" << std::endl;
+        std::cout << "Writing using a boldpen" << '\n';
     }
 };
 
@@ -97,6 +97,8 @@ void test_cv_0() {
         auto &t = (*it);
         t.join();
     }
+    
+    printf("> test_cv_0: ended.\n\n");
 }
 
 std::condition_variable cvpc;
@@ -146,7 +148,8 @@ void test_cv_1() {
         auto &t = (*it);
         t.join();
     }
-    printf("test_cv_1: ended.\n");
+    
+    printf("> test_cv_1: ended.\n\n");
 }
 
 void test_cv() {
@@ -162,8 +165,9 @@ void test_cv() {
         });
         std::cout << "wait for cv" << '\n';
         cv.wait();
-        std::cout << "end of cv test" << '\n';
+        std::cout << "end of cv test, join ..." << '\n';
         t.join();
+        std::cout << "end of cv test" << '\n';
     }
     {
         std::vector<std::thread> waits;
@@ -181,12 +185,15 @@ void test_cv() {
         std::cout << "wait for cv" << '\n';
         cv.wait(); // waiting for all threads ended.
         
-        std::cout << "end of cv test" << '\n';
+        std::cout << "end of cv test, join ..." << '\n';
         for (auto it = waits.begin(); it != waits.end(); it++) {
             auto &t = (*it);
             t.join();
         }
+        std::cout << "end of cv test" << '\n';
     }
+    
+    printf("> test_cv: ended.\n\n");
 }
 
 void test_mq() {
@@ -200,52 +207,58 @@ void test_mq() {
         hicc_debug("vv (%p): '%s'", (void *) &vv, vv.value().c_str());
     }
     hicc_debug("x1 (%p): '%s'", (void *) &x1, x1.c_str());
+    
+    printf("> test_mq: ended.\n\n");
 }
 
 void foo() {
     std::this_thread::sleep_for(std::chrono::seconds(1));
 }
 
-void test_thread() {
+void test_thread_basics() {
     std::thread t;
-    std::cout << "before starting, joinable: " << std::boolalpha << t.joinable()
+    std::cout << "- before starting, joinable: " << std::boolalpha << t.joinable()
               << '\n';
 
     t = std::thread(foo);
-    std::cout << "after starting, joinable: " << t.joinable() << ", id: " << t.get_id()
+    std::cout << "- after starting, joinable: " << t.joinable() << ", id: " << t.get_id()
               << '\n';
 
     t.join();
-    std::cout << "after joining, joinable: " << t.joinable()
+    std::cout << "- after joining, joinable: " << t.joinable()
               << '\n';
 }
 
 void test_pool() {
+    printf("> test_pool: begining...\n");
+    
     hicc::pool::thread_pool threads(5);
     hicc::pool::threaded_message_queue<std::string> messages;
 
-    constexpr std::size_t message_count = 50;
+    constexpr std::size_t message_count = 16;
     for (std::size_t i = 0; i < message_count; ++i) {
         threads.queue_task([i, &messages] {
             std::stringstream ss;
             ss << "Thread " << i << " completed";
             using namespace std::literals;
             // std::this_thread::sleep_for(i * 1ms);
-            messages.push_back(ss.str());
+            messages.emplace_back(ss.str());
+            hicc_debug("%s", ss.str().c_str());
         });
     }
 
     std::cout << "_tasks queued\n";
     std::size_t messages_read = 0;
     while (auto msg = messages.pop_front()) {
-        std::cout << *msg << std::endl;
+        std::cout << *msg << '\n';
         ++messages_read;
         if (messages_read == message_count)
             break;
     }
 
     threads.join();
-    std::cout << "pool ended." << '\n';
+    
+    printf("> test_pool: ended.\n\n");
 }
 
 int main() {
@@ -257,14 +270,15 @@ int main() {
     // extern void test_native_handle();
     // test_native_handle();
 
-    test_thread();
+    test_thread_basics();
 
+    test_cv();
+
+    test_cv_0();
+    test_cv_1();
+    
     test_pool();
 
     test_mq();
 
-    // test_cv();
-    //
-    // test_cv_0();
-    // test_cv_1();
 }

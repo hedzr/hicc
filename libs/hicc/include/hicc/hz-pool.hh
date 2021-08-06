@@ -23,18 +23,21 @@
 
 namespace hicc::pool {
 
-    template<typename Pred = std::function<bool()>, typename Setter = std::function<void()>>
+    template<typename T, typename Pred = std::function<bool()>, typename Setter = std::function<void()>>
     class conditional_wait {
         std::condition_variable cv;
         std::mutex m;
         Pred p;
         Setter s;
 
+    protected:
+        T _var;
+
     public:
-        conditional_wait(Pred &&p_, Setter &&s_)
+        explicit conditional_wait(Pred &&p_, Setter &&s_)
             : p(std::move(p_))
             , s(std::move(s_)) {}
-        ~conditional_wait() {}
+        virtual ~conditional_wait() { clear(); }
         conditional_wait(conditional_wait &&) = delete;
         conditional_wait &operator=(conditional_wait &&) = delete;
 
@@ -57,45 +60,46 @@ namespace hicc::pool {
             }
             cv.notify_all();
         }
+        void clear() { _release(); }
+        T const &val() const { return _value(); }
+        T &val() { return _value(); }
+
+    protected:
+        virtual T const &_value() const { return _var; }
+        virtual T &_value() { return _var; }
+        virtual void _release() {}
     };
 
-    class conditional_wait_for_bool : public conditional_wait<> {
-        bool var;
-
+    class conditional_wait_for_bool : public conditional_wait<bool> {
     public:
         conditional_wait_for_bool()
             : conditional_wait([this]() { return _wait(); }, [this]() { _set(); }) {}
-        ~conditional_wait_for_bool() { release(); }
+        virtual ~conditional_wait_for_bool() = default;
         conditional_wait_for_bool(conditional_wait_for_bool &&) = delete;
         conditional_wait_for_bool &operator=(conditional_wait_for_bool &&) = delete;
 
-    private:
-        bool _wait() const { return var; }
-        void _set() { var = true; }
-        void release() {
-            //
-        }
+    protected:
+        bool _wait() const { return _var; }
+        void _set() { _var = true; }
     };
 
-    class conditional_wait_for_int : public conditional_wait<> {
-        int var;
-        int max_value;
-
+    class conditional_wait_for_int : public conditional_wait<int> {
     public:
         conditional_wait_for_int(int max_value_ = 1)
             : conditional_wait([this]() { return _wait(); }, [this]() { _set(); })
-            , var(0)
-            , max_value(max_value_) {}
-        ~conditional_wait_for_int() { release(); }
+            , _max_value(max_value_) {}
+        virtual ~conditional_wait_for_int() = default;
         conditional_wait_for_int(conditional_wait_for_int &&) = delete;
         conditional_wait_for_int &operator=(conditional_wait_for_int &&) = delete;
 
+        inline int max_val() const { return _max_value; }
+
+    protected:
+        inline bool _wait() const { return _var >= _max_value; }
+        inline void _set() { _var++; }
+
     private:
-        inline bool _wait() const { return var >= max_value; }
-        inline void _set() { var++; }
-        inline void release() {
-            //
-        }
+        int _max_value;
     };
 
 
@@ -110,7 +114,7 @@ namespace hicc::pool {
      *     static void runner(timer *_this) {
      *         using namespace std::literals::chrono_literals;
      *         auto d = 10ns;
-     *         while (!_this->_tk.wait_for(d)) {
+     *         while (_this->_tk.wait_for(d)) {
      *             // std::this_thread::sleep_for(d);
      *             std::this_thread::yield();
      *         }
@@ -142,12 +146,20 @@ namespace hicc::pool {
             std::unique_lock<std::mutex> lock(_m);
             return !_cv.wait_for(lock, time, [&] { return _terminate; });
         }
-        void kill() {
+        bool terminated() const {
             std::unique_lock<std::mutex> lock(_m);
-            if (!_terminate) {
-                _terminate = true; // should be modified inside mutex lock
-                _cv.notify_all();  // it is safe, and *sometimes* optimal, to do this outside the lock}
+            return _terminate;
+        }
+        void kill() {
+            bool go{false};
+            {
+                std::unique_lock<std::mutex> lock(_m);
+                if (!_terminate) {
+                    go = _terminate = true; // should be modified inside mutex lock
+                }
             }
+            if (go)
+                _cv.notify_all(); // it is safe, and *sometimes* optimal, to do this outside the lock}
         }
     };
 
@@ -163,13 +175,13 @@ namespace hicc::pool {
             }
             _cv.notify_one();
         }
-        void push_back(T const &t) {
-            {
-                lock l_(_m);
-                _data.push_back(t);
-            }
-            _cv.notify_one();
-        }
+        // void push_back(T const &t) {
+        //     {
+        //         lock l_(_m);
+        //         _data.push_back(t);
+        //     }
+        //     _cv.notify_one();
+        // }
         // void push_back_bad(T t) {
         //     {
         //         lock l(_m);
@@ -180,12 +192,15 @@ namespace hicc::pool {
 
         inline std::optional<T> pop_front() {
             std::optional<T> ret;
-            lock l_(_m);
-            _cv.wait(l_, [this] { return _abort || !_data.empty(); });
-            if (_abort) return ret; // std::nullopt;
-
-            ret.emplace(std::move(_data.back()));
-            _data.pop_back();
+            {
+                lock l_(_m);
+                _cv.wait(l_, [this] { return _abort || !_data.empty(); });
+                if (_abort) {
+                    return ret; // std::nullopt;
+                }
+                ret.emplace(std::move(_data.back()));
+                _data.pop_back();
+            }
             return ret;
         }
         // inline std::optional<T> pop_front_bad() {
@@ -208,11 +223,13 @@ namespace hicc::pool {
         }
         ~threaded_message_queue() { clear(); }
 
+        bool empty() const { return _data.empty(); }
+
     private:
         std::mutex _m;
-        std::deque<T> _data;
         std::condition_variable _cv;
         bool _abort;
+        mutable std::deque<T> _data;
     }; // class threaded_message_queue
 
     /**
@@ -225,8 +242,8 @@ namespace hicc::pool {
      */
     class thread_pool {
     public:
-        thread_pool(std::size_t n = 1u)
-            : _cv_started((int) n) { start_thread(n); }
+        thread_pool(int n = 1u)
+            : _cv_started((int) (n > 0 ? n : std::thread::hardware_concurrency())) { start_thread((n > 0 ? n : std::thread::hardware_concurrency())); }
         thread_pool(thread_pool &&) = delete;
         thread_pool &operator=(thread_pool &&) = delete;
         ~thread_pool() { join(); }
@@ -234,7 +251,17 @@ namespace hicc::pool {
     public:
         template<class F, class R = std::result_of_t<F &()>>
         std::future<R> queue_task(F &&task) {
-            std::packaged_task<R()> p(std::move(task));
+            auto p = std::packaged_task<R()>(std::forward<F>(task));
+            // std::packaged_task<R()> p(std::move(task));
+            auto r = p.get_future();
+            // _tasks.push_back(std::move(p));
+            _tasks.emplace_back(std::move(p));
+            return r;
+        }
+        template<class F, class R = std::result_of_t<F &()>>
+        std::future<R> queue_task(F const &task) {
+            auto p = std::packaged_task<R()>(std::forward<F>(task));
+            // std::packaged_task<R()> p(std::move(task));
             auto r = p.get_future();
             // _tasks.push_back(std::move(p));
             _tasks.emplace_back(std::move(p));
@@ -281,11 +308,13 @@ namespace hicc::pool {
         }
 
     private:
-        std::vector<std::future<void>> _threads;                   // fixed, running pool
-        threaded_message_queue<std::packaged_task<void()>> _tasks; // the futures
+        std::vector<std::future<void>> _threads; // fixed, running pool
+
         std::atomic<std::size_t> _active;
         conditional_wait_for_int _cv_started;
-    }; // class thread_pool
+
+        mutable threaded_message_queue<std::packaged_task<void()>> _tasks; // the futures
+    };                                                                     // class thread_pool
 
 } // namespace hicc::pool
 

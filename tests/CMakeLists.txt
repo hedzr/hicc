@@ -35,7 +35,7 @@ endif ()
 #endfunction()
 #do_stuff(A B C D E)
 
-find_package (Threads REQUIRED)
+find_package(Threads REQUIRED)
 
 function(define_test_program name)
     #set(src_list )
@@ -78,7 +78,10 @@ function(define_test_program name)
             target_link_options(${PROJECT_NAME}-${name} PRIVATE -fsanitize=address)
         endif ()
     endif ()
-
+    
+    target_compile_options(${PROJECT_NAME}-${name} PRIVATE
+            -DHICC_CXX_UNIT_TEST=1
+            )
 
     if (${ENABLE_AUTOMATE_TESTS})
         get_property(tmp GLOBAL PROPERTY UNIT_TEST_TARGETS)
@@ -105,6 +108,8 @@ endfunction()
 
 define_test_program(sso-1 sso-1.cc)
 define_test_program(sso-2 sso-2.cc)
+
+define_test_program(chrono chrono.cc)
 
 define_test_program(priority-queue priority-queue.cc)
 

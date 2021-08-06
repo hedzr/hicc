@@ -153,15 +153,15 @@ inline void UNUSED([[maybe_unused]] Args &&...args) {
 #define DISABLE_UNUSED_WARNINGS \
     __pragma(warning(push))     \
             __pragma(warning(disable : 4100 4101 4102))
-#define RESTORE_UNUSED_WARNINGS __pragma(warning(pop)) 
+#define RESTORE_UNUSED_WARNINGS __pragma(warning(pop))
 #else
-#define DISABLE_UNUSED_WARNINGS    \
-    _Pragma("GCC diagnostic push") \
-            _Pragma("GCC diagnostic ignored \"-Wunused\"") \
-            _Pragma("GCC diagnostic ignored \"-Wunused-label\"") \
-            _Pragma("GCC diagnostic ignored \"-Wunused-parameter\"") \
-            _Pragma("GCC diagnostic ignored \"-Wunused-variable\"") \
-            _Pragma("GCC diagnostic ignored \"-Wunused-value\"")
+#define DISABLE_UNUSED_WARNINGS                                                             \
+    _Pragma("GCC diagnostic push")                                                          \
+            _Pragma("GCC diagnostic ignored \"-Wunused\"")                                  \
+                    _Pragma("GCC diagnostic ignored \"-Wunused-label\"")                    \
+                            _Pragma("GCC diagnostic ignored \"-Wunused-parameter\"")        \
+                                    _Pragma("GCC diagnostic ignored \"-Wunused-variable\"") \
+                                            _Pragma("GCC diagnostic ignored \"-Wunused-value\"")
 #define RESTORE_UNUSED_WARNINGS \
     _Pragma("GCC diagnostic pop")
 #endif
@@ -170,13 +170,97 @@ inline void UNUSED([[maybe_unused]] Args &&...args) {
 #ifndef DISABLE_ALIGN_WARNINGS // structure was padded due to alignment specifier
 #if defined(_MSC_VER)
 #define DISABLE_ALIGN_WARNINGS \
-    __pragma(warning(push))     \
+    __pragma(warning(push))    \
             __pragma(warning(disable : 4324))
-#define RESTORE_ALIGN_WARNINGS __pragma(warning(pop)) 
+#define RESTORE_ALIGN_WARNINGS __pragma(warning(pop))
 #else
 #define DISABLE_ALIGN_WARNINGS
 #define RESTORE_ALIGN_WARNINGS
 #endif
+#endif
+
+
+//
+
+
+#ifndef CLAZZ_NON_COPYABLE
+#define CLAZZ_NON_COPYABLE(clz)           \
+    clz(const clz &) = delete;            \
+    clz(clz &&) noexcept = delete;        \
+    clz &operator=(const clz &) = delete; \
+    clz &operator=(clz &&) noexcept = delete
+#endif
+
+
+//
+
+
+#ifndef HAS_STRING_VIEW
+#if __cplusplus >= 201703 || (defined(_MSVC_LANG) && _MSVC_LANG >= 201703L)
+#define HAS_STRING_VIEW 1
+#else
+#define HAS_STRING_VIEW 0
+#endif
+#endif // HAS_STRING_VIEW
+
+#ifndef HAS_UNCAUGHT_EXCEPTIONS
+#if __cplusplus >= 201703 || (defined(_MSVC_LANG) && _MSVC_LANG >= 201703L)
+#define HAS_UNCAUGHT_EXCEPTIONS 1
+#else
+#define HAS_UNCAUGHT_EXCEPTIONS 0
+#endif
+#endif // HAS_UNCAUGHT_EXCEPTIONS
+
+#ifndef HAS_VOID_T
+#if __cplusplus >= 201703 || (defined(_MSVC_LANG) && _MSVC_LANG >= 201703L)
+#define HAS_VOID_T 1
+#else
+#define HAS_VOID_T 0
+#endif
+#endif // HAS_VOID_T
+
+#ifndef ONLY_C_LOCALE
+#define ONLY_C_LOCALE 0
+#endif
+
+#if defined(_MSC_VER) && (!defined(__clang__) || (_MSC_VER < 1910))
+// MSVC
+#ifndef _SILENCE_CXX17_UNCAUGHT_EXCEPTION_DEPRECATION_WARNING
+#define _SILENCE_CXX17_UNCAUGHT_EXCEPTION_DEPRECATION_WARNING
+#endif
+#if _MSC_VER < 1910
+//   before VS2017
+#define CONSTDATA const
+#define CONSTCD11
+#define CONSTCD14
+#define NOEXCEPT _NOEXCEPT
+#else
+//   VS2017 and later
+#define CONSTDATA constexpr const
+#define CONSTCD11 constexpr
+#define CONSTCD14 constexpr
+#define NOEXCEPT noexcept
+#endif
+
+#elif defined(__SUNPRO_CC) && __SUNPRO_CC <= 0x5150
+// Oracle Developer Studio 12.6 and earlier
+#define CONSTDATA constexpr const
+#define CONSTCD11 constexpr
+#define CONSTCD14
+#define NOEXCEPT noexcept
+
+#elif __cplusplus >= 201402
+// C++14
+#define CONSTDATA constexpr const
+#define CONSTCD11 constexpr
+#define CONSTCD14 constexpr
+#define NOEXCEPT noexcept
+#else
+// C++11
+#define CONSTDATA constexpr const
+#define CONSTCD11 constexpr
+#define CONSTCD14
+#define NOEXCEPT noexcept
 #endif
 
 

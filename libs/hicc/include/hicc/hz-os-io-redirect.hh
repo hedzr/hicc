@@ -35,7 +35,7 @@ namespace hicc::os {
         virtual ~pipe_stdin_to() {
             std::cin.rdbuf(stream_buffer_cin);
             std::cout.rdbuf(stream_buffer_cout);
-            // std::cout << "This line is written to screen" << std::endl;
+            // std::cout << "This line is written to screen" << '\n';
         }
     };
 

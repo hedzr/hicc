@@ -191,7 +191,7 @@ namespace hicc::process {
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
                 // _rc = std::system(command); // execute the UNIX command "ls -l >test.txt"
                 //                            //std::cout << std::ifstream("test.txt").rdbuf();
-                //                            // std::cout << "Exit code: " << WEXITSTATUS(_rc) << std::endl;
+                //                            // std::cout << "Exit code: " << WEXITSTATUS(_rc) << '\n';
                 std::string str_out, str_err;
                 uint32_t rc;
                 _rc = system_and_capture(command, ".", str_out, str_err, rc);
@@ -244,12 +244,12 @@ namespace hicc::process {
     /**
      * @brief execute a shell command and capture the stdout, stderr and return code.
      * @details For example:
-     * 
-     *             hicc::process::exec dot("dot aa.dot -T png -o aa.png -v");
-     *             std::cout &lt;&lt; dot;                     // for stdout
-     *             std::cout &lt;&lt; ex.stderr_stream();      // for stderr & stdlog
-     *             std::cout &lt;&lt; "executed: rec-code = " &lt;&lt; ex.ret_code() &lt;&lt; '\n';
-     * 
+     * @code{c++}
+     *   hicc::process::exec dot("dot aa.dot -T png -o aa.png -v");
+     *   std::cout &lt;&lt; dot;                     // for stdout
+     *   std::cout &lt;&lt; ex.stderr_stream();      // for stderr & stdlog
+     *   std::cout &lt;&lt; "executed: rec-code = " &lt;&lt; ex.ret_code() &lt;&lt; '\n';
+     * @endcode
      * NOTE that it's not fully completed in Windows, more testing and coding needed.
      */
     class exec : public std::istream {

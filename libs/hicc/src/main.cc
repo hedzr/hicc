@@ -12,7 +12,7 @@ void fatal_exit(const std::string &msg) {
 
 int main() {
     std::string s1("a string", 2, 3);
-    std::cout << "Hello, World!" << s1 << std::endl;
+    std::cout << "Hello, World!" << s1 << '\n';
 
     hicc_debug("yes");
     
