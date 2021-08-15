@@ -29,8 +29,9 @@
 #include "hz-process.hh"
 
 #include "hz-mmap.hh"
-#include "hz-ringbuf.hh"
 #include "hz-pool.hh"
+#include "hz-ringbuf.hh"
+#include "hz-ticker.hh"
 
 #include "hz-util.hh"
 

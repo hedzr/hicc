@@ -123,6 +123,7 @@ define_test_program(mmap mmap.cc)
 define_test_program(read-write-lock read-write-lock.cc)
 define_test_program(ringbuf ringbuf.cc)
 define_test_program(pool pool.cc native-handle.cc)
+define_test_program(ticker ticker.cc)
 
 #define_test_program(any-1 any_1.cc)
 #define_test_program(visit-any
