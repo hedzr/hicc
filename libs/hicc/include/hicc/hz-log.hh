@@ -138,6 +138,12 @@ namespace hicc::log {
     // Logger log;
 } // namespace hicc::log
 
+#if defined(_MSC_VER)
+#define hicc_print(...) hicc::log::holder(__FILE__, __LINE__, __FUNCSIG__)(__VA_ARGS__)
+#else
+#define hicc_print(...) hicc::log::holder(__FILE__, __LINE__, __PRETTY_FUNCTION__)(__VA_ARGS__)
+#endif
+
 #if defined(_DEBUG)
 #if defined(_MSC_VER)
 #define hicc_debug(...) hicc::log::holder(__FILE__, __LINE__, __FUNCSIG__)(__VA_ARGS__)
