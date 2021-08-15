@@ -114,14 +114,14 @@ void errexit(const char *msg) {
     exit(-1);
 }
 
-std::filesystem::path fname = "/tmp/test-setter-1";
+std::filesystem::path filename = "/tmp/test-setter-1";
 const int BUF_SIZE = 100;
 
 void test_watcher() {
     char *mapped;
     int fd;
     struct stat sb;
-    if ((fd = open(hicc::path::to_filename(fname), O_RDONLY)) < 0) {
+    if ((fd = open(hicc::path::to_filename(filename), O_RDONLY)) < 0) {
         errexit("mmap, watcher: open");
     }
 
@@ -153,7 +153,7 @@ void test_setter() {
 
     int fd;
     struct stat sb;
-    if ((fd = open(hicc::path::to_filename(fname), O_RDWR)) < 0) {
+    if ((fd = open(hicc::path::to_filename(filename), O_RDWR)) < 0) {
         errexit("mmap, setter: open");
     }
 
@@ -185,10 +185,10 @@ void test_setter() {
 }
 
 void test_setter_and_watch() {
-    fname = hicc::path::tmpname_autoincr();
+    filename = hicc::path::tmpname_autoincr();
     int fd;
-    if ((fd = open(hicc::path::to_filename(fname), O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR)) < 0) {
-        printf("create failed (%d): %s\n", errno, hicc::path::to_filename(fname));
+    if ((fd = open(hicc::path::to_filename(filename), O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR)) < 0) {
+        printf("create failed (%d): %s\n", errno, hicc::path::to_filename(filename));
         errexit("open+create");
     }
 

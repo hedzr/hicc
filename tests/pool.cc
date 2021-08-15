@@ -2,6 +2,9 @@
 // Created by Hedzr Yeh on 2021/7/13.
 //
 
+#define HICC_TEST_THREAD_POOL_DBGOUT 1
+#define HICC_ENABLE_THREAD_POOL_READY_SIGNAL 1
+
 #include <chrono>
 #include <cstring>
 #include <iostream>
@@ -15,6 +18,8 @@
 #include "hicc/hz-x-class.hh"
 #include "hicc/hz-x-test.hh"
 
+hicc::debug::X x_global_var;
+
 class L {
 public:
     L() {}
@@ -27,6 +32,7 @@ void test_basic_lockable() {
     {
         L l;
         std::lock_guard<L> lk(l);
+        std::cout << x_global_var.c_str() << '\n';
     }
 }
 
@@ -117,7 +123,7 @@ void test_cv_1() {
                 }
                 cvpc.notify_one();
 
-                std::this_thread::yield();
+                // std::this_thread::yield();
             }
             // printf("#%d: ended.\n", i);
         });
@@ -234,7 +240,8 @@ void test_pool() {
             using namespace std::literals;
             // std::this_thread::sleep_for(i * 1ms);
             messages.emplace_back(ss.str());
-            hicc_debug("%s", ss.str().c_str());
+            hicc_print("%s", ss.str().c_str());
+            std::this_thread::yield();
         });
     }
 
@@ -248,6 +255,7 @@ void test_pool() {
     }
 
     threads.join();
+    std::cout << "_tasks ended\n";
 }
 
 int main() {
@@ -264,7 +272,7 @@ int main() {
     HICC_TEST_FOR(test_cv);
 
     HICC_TEST_FOR(test_cv_0);
-    HICC_TEST_FOR(test_cv_1);
+    // HICC_TEST_FOR(test_cv_1);
     
     HICC_TEST_FOR(test_pool);
 
