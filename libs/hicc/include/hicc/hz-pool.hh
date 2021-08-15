@@ -5,6 +5,10 @@
 #ifndef HICC_CXX_POOL_HH
 #define HICC_CXX_POOL_HH
 
+#if !defined(HICC_ENABLE_THREAD_POOL_READY_SIGNAL)
+#define HICC_ENABLE_THREAD_POOL_READY_SIGNAL 1
+#endif
+
 #include <atomic>
 #include <condition_variable>
 #include <future>
@@ -20,45 +24,58 @@
 
 #include "hz-defs.hh"
 #include "hz-ringbuf.hh"
+#include "hz-log.hh"
+
+#if HICC_TEST_THREAD_POOL_DBGOUT
+#define pool_debug hicc_print
+#else
+#define pool_debug hicc_trace
+#endif
 
 namespace hicc::pool {
 
     template<typename T, typename Pred = std::function<bool()>, typename Setter = std::function<void()>>
     class conditional_wait {
-        std::condition_variable cv;
-        std::mutex m;
-        Pred p;
-        Setter s;
+        Pred _p{};
+        Setter _s{};
 
     protected:
-        T _var;
+        std::condition_variable _cv{};
+        std::mutex _m{};
+        T _var{};
 
     public:
         explicit conditional_wait(Pred &&p_, Setter &&s_)
-            : p(std::move(p_))
-            , s(std::move(s_)) {}
+            : _p(std::move(p_))
+            , _s(std::move(s_)) {}
         virtual ~conditional_wait() { clear(); }
-        conditional_wait(conditional_wait &&) = delete;
-        conditional_wait &operator=(conditional_wait &&) = delete;
+        // conditional_wait(conditional_wait &&) = delete;
+        // conditional_wait &operator=(conditional_wait &&) = delete;
+        CLAZZ_NON_COPYABLE(conditional_wait);
 
     public:
         void wait() {
-            std::unique_lock<std::mutex> lk(m);
-            cv.wait(lk, p);
+            std::unique_lock<std::mutex> lk(_m);
+            _cv.wait(lk, _p);
+        }
+        template<class R, class P>
+        bool wait_for(std::chrono::duration<R, P> const &time) {
+            std::unique_lock<std::mutex> lk(_m);
+            return !_cv.wait_for(lk, time, _p);
         }
         void set() {
             {
-                std::unique_lock<std::mutex> lk(m);
-                s();
+                std::unique_lock<std::mutex> lk(_m);
+                _s();
             }
-            cv.notify_one();
+            _cv.notify_one();
         }
         void set_for_all() {
             {
-                std::unique_lock<std::mutex> lk(m);
-                s();
+                std::unique_lock<std::mutex> lk(_m);
+                _s();
             }
-            cv.notify_all();
+            _cv.notify_all();
         }
         void clear() { _release(); }
         T const &val() const { return _value(); }
@@ -81,6 +98,9 @@ namespace hicc::pool {
     protected:
         bool _wait() const { return _var; }
         void _set() { _var = true; }
+
+    public:
+        void kill() { set_for_all(); }
     };
 
     class conditional_wait_for_int : public conditional_wait<int> {
@@ -128,63 +148,62 @@ namespace hicc::pool {
      * };
      * @endcode
      */
-    class timer_killer {
-        bool _terminate = false;
-        mutable std::condition_variable _cv;
-        mutable std::mutex _m;
+    class timer_killer : public conditional_wait_for_bool {
+        // bool _terminate = false;
+        // mutable std::condition_variable _cv{};
+        // mutable std::mutex _m{};
 
-        timer_killer(timer_killer &&) = delete;
-        timer_killer(timer_killer const &) = delete;
-        timer_killer &operator=(timer_killer &&) = delete;
-        timer_killer &operator=(timer_killer const &) = delete;
+        CLAZZ_NON_COPYABLE(timer_killer);
+        // timer_killer(timer_killer &&) = delete;
+        // timer_killer(timer_killer const &) = delete;
+        // timer_killer &operator=(timer_killer &&) = delete;
+        // timer_killer &operator=(timer_killer const &) = delete;
 
     public:
         timer_killer() = default;
+        virtual ~timer_killer() = default;
         // returns false if killed:
-        template<class R, class P>
-        bool wait_for(std::chrono::duration<R, P> const &time) const {
-            std::unique_lock<std::mutex> lock(_m);
-            return !_cv.wait_for(lock, time, [&] { return _terminate; });
-        }
-        bool terminated() const {
-            std::unique_lock<std::mutex> lock(_m);
-            return _terminate;
-        }
-        void kill() {
-            bool go{false};
-            {
-                std::unique_lock<std::mutex> lock(_m);
-                if (!_terminate) {
-                    go = _terminate = true; // should be modified inside mutex lock
-                }
-            }
-            if (go)
-                _cv.notify_all(); // it is safe, and *sometimes* optimal, to do this outside the lock}
-        }
+        // template<class R, class P>
+        // bool wait_for(std::chrono::duration<R, P> const &time) const {
+        //     std::unique_lock<std::mutex> lock(_m);
+        //     return !_cv.wait_for(lock, time, [&] { return _terminate; });
+        // }
+        bool terminated() { return val(); }
+        // void kill() {
+        //     bool go{false};
+        //     {
+        //         std::unique_lock<std::mutex> lock(_m);
+        //         if (!_terminate) {
+        //             go = _terminate = true; // should be modified inside mutex lock
+        //         }
+        //     }
+        //     if (go)
+        //         _cv.notify_all(); // it is safe, and *sometimes* optimal, to do this outside the lock}
+        // }
     };
 
 
-    template<class T>
+    template<class T, class Coll = std::deque<T>>
     class threaded_message_queue {
     public:
-        using lock = std::unique_lock<std::mutex>;
+        using locker = std::unique_lock<std::mutex>;
         void emplace_back(T &&t) {
             {
-                lock l_(_m);
+                locker l_(_m);
                 _data.emplace_back(std::move(t));
             }
             _cv.notify_one();
         }
         // void push_back(T const &t) {
         //     {
-        //         lock l_(_m);
+        //         locker l_(_m);
         //         _data.push_back(t);
         //     }
         //     _cv.notify_one();
         // }
         // void push_back_bad(T t) {
         //     {
-        //         lock l(_m);
+        //         locker l(_m);
         //         _data.push_back(std::move(t));
         //     }
         //     _cv.notify_one();
@@ -193,18 +212,21 @@ namespace hicc::pool {
         inline std::optional<T> pop_front() {
             std::optional<T> ret;
             {
-                lock l_(_m);
+                locker l_(_m);
                 _cv.wait(l_, [this] { return _abort || !_data.empty(); });
                 if (_abort) {
+                    pool_debug("pop_front, aborting");
                     return ret; // std::nullopt;
                 }
+                pool_debug("pop_front, wake up and got task");
                 ret.emplace(std::move(_data.back()));
                 _data.pop_back();
             }
+            std::this_thread::yield();
             return ret;
         }
         // inline std::optional<T> pop_front_bad() {
-        //     lock l(_m);
+        //     locker l(_m);
         //     _cv.wait(l, [this] { return _abort || !_data.empty(); });
         //     if (_abort) return {}; // std::nullopt;
         //
@@ -215,7 +237,7 @@ namespace hicc::pool {
 
         void clear() {
             {
-                lock l_(_m);
+                locker l_(_m);
                 _abort = true;
                 _data.clear();
             }
@@ -226,10 +248,10 @@ namespace hicc::pool {
         bool empty() const { return _data.empty(); }
 
     private:
-        std::mutex _m;
-        std::condition_variable _cv;
-        bool _abort;
-        mutable std::deque<T> _data;
+        std::condition_variable _cv{};
+        std::mutex _m{};
+        mutable Coll _data{};
+        bool _abort = false;
     }; // class threaded_message_queue
 
     /**
@@ -243,9 +265,15 @@ namespace hicc::pool {
     class thread_pool {
     public:
         thread_pool(int n = 1u)
-            : _cv_started((int) (n > 0 ? n : std::thread::hardware_concurrency())) { start_thread((n > 0 ? n : std::thread::hardware_concurrency())); }
-        thread_pool(thread_pool &&) = delete;
-        thread_pool &operator=(thread_pool &&) = delete;
+#if HICC_ENABLE_THREAD_POOL_READY_SIGNAL
+            : _cv_started((int) (n > 0 ? n : std::thread::hardware_concurrency()))
+#endif
+        {
+            start_thread((n > 0 ? n : std::thread::hardware_concurrency()));
+        }
+        // thread_pool(thread_pool &&) = delete;
+        // thread_pool &operator=(thread_pool &&) = delete;
+        CLAZZ_NON_COPYABLE(thread_pool);
         ~thread_pool() { join(); }
 
     public:
@@ -256,6 +284,8 @@ namespace hicc::pool {
             auto r = p.get_future();
             // _tasks.push_back(std::move(p));
             _tasks.emplace_back(std::move(p));
+            pool_debug("queue_task.");
+            std::this_thread::yield();
             return r;
         }
         template<class F, class R = std::result_of_t<F &()>>
@@ -265,6 +295,8 @@ namespace hicc::pool {
             auto r = p.get_future();
             // _tasks.push_back(std::move(p));
             _tasks.emplace_back(std::move(p));
+            pool_debug("queue_task (copy).");
+            std::this_thread::yield();
             return r;
         }
         void join() { clear_threads(); }
@@ -289,9 +321,20 @@ namespace hicc::pool {
             while (n-- > 0) {
                 _threads.push_back(
                         std::async(std::launch::async,
-                                   [this] {
+                                   [this
+#if HICC_TEST_THREAD_POOL_DBGOUT
+                                    ,
+                                    n
+#endif
+                ] {
+#if HICC_ENABLE_THREAD_POOL_READY_SIGNAL
                                        _cv_started.set();
+#endif
+#if HICC_TEST_THREAD_POOL_DBGOUT
+                                       pool_debug("  . pool.n = %lu..", n);
+#endif
                                        while (auto task = _tasks.pop_front()) {
+                                           pool_debug("got_task.");
                                            ++_active;
                                            try {
                                                (*task)();
@@ -303,18 +346,25 @@ namespace hicc::pool {
                                        }
                                    }));
             }
-
+#if HICC_ENABLE_THREAD_POOL_READY_SIGNAL
             _cv_started.wait();
+#endif
+#if HICC_ENABLE_THREAD_POOL_READY_SIGNAL
+            pool_debug("  . pool.started (cv.get = %d)..", _cv_started.val());
+#else
+            pool_debug("  . pool.started..");
+#endif
         }
 
     private:
-        std::vector<std::future<void>> _threads; // fixed, running pool
+        std::vector<std::future<void>> _threads{};                           // fixed, running pool
+        mutable threaded_message_queue<std::packaged_task<void()>> _tasks{}; // the futures
 
-        std::atomic<std::size_t> _active;
-        conditional_wait_for_int _cv_started;
-
-        mutable threaded_message_queue<std::packaged_task<void()>> _tasks; // the futures
-    };                                                                     // class thread_pool
+        std::atomic<std::size_t> _active{0};
+#if HICC_ENABLE_THREAD_POOL_READY_SIGNAL
+        conditional_wait_for_int _cv_started{};
+#endif
+    }; // class thread_pool
 
 } // namespace hicc::pool
 
