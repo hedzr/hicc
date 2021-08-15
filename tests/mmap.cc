@@ -22,7 +22,7 @@ void test_1() {
 #endif
 
     {
-        hicc::mmap::detail::mmaplib mm(hicc::path::to_filename(tmpname), false, false);
+        hicc::mmap::detail::mmaplib mm(hicc::path::to_filename_h(tmpname).c_str(), false, false);
         std::cout << tmpname << ": " << mm.size() << " bytes" << '\n';
 
         const auto *ptr = mm.data();
@@ -90,7 +90,7 @@ void test_3() {
     // auto fs = hicc::io::open_file(tmpname);
     // hicc::mmap::mmap_um<true> mm(std::fd<char>(fs));
 
-    auto fd = hicc::mmap::open_file(hicc::path::to_filename(tmpname));
+    auto fd = hicc::mmap::open_file(hicc::path::to_filename_h(tmpname).c_str());
     hicc::mmap::mmap_um<true> mm(fd);
     if (mm.is_open()) {
 
@@ -121,7 +121,7 @@ void test_watcher() {
     char *mapped;
     int fd;
     struct stat sb;
-    if ((fd = open(hicc::path::to_filename(filename), O_RDONLY)) < 0) {
+    if ((fd = open(hicc::path::to_filename_h(filename).c_str(), O_RDONLY)) < 0) {
         errexit("mmap, watcher: open");
     }
 
@@ -153,7 +153,7 @@ void test_setter() {
 
     int fd;
     struct stat sb;
-    if ((fd = open(hicc::path::to_filename(filename), O_RDWR)) < 0) {
+    if ((fd = open(hicc::path::to_filename_h(filename).c_str(), O_RDWR)) < 0) {
         errexit("mmap, setter: open");
     }
 
@@ -187,8 +187,8 @@ void test_setter() {
 void test_setter_and_watch() {
     filename = hicc::path::tmpname_autoincr();
     int fd;
-    if ((fd = open(hicc::path::to_filename(filename), O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR)) < 0) {
-        printf("create failed (%d): %s\n", errno, hicc::path::to_filename(filename));
+    if ((fd = open(hicc::path::to_filename_h(filename).c_str(), O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR)) < 0) {
+        printf("create failed (%d): %s\n", errno, hicc::path::to_filename_h(filename).c_str());
         errexit("open+create");
     }
 

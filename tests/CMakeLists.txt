@@ -63,10 +63,12 @@ function(define_test_program name)
     #            CXX_EXTENSIONS OFF
     #            )
     if (MSVC)
-        target_compile_options(${PROJECT_NAME}-${name} PRIVATE /W4 /WX /utf-8)
+        target_compile_options(${PROJECT_NAME}-${name} PRIVATE /W4 /WX /utf-8
+                /DHICC_CXX_UNIT_TEST=1)
     else ()
         target_compile_options(${PROJECT_NAME}-${name} PRIVATE
                 -pedantic -Wall -Wextra -Wshadow -Werror -pthread
+                -DHICC_CXX_UNIT_TEST=1
                 )
         if (DEBUG)
             target_compile_options(${PROJECT_NAME}-${name} PRIVATE
@@ -78,10 +80,6 @@ function(define_test_program name)
             target_link_options(${PROJECT_NAME}-${name} PRIVATE -fsanitize=address)
         endif ()
     endif ()
-    
-    target_compile_options(${PROJECT_NAME}-${name} PRIVATE
-            -DHICC_CXX_UNIT_TEST=1
-            )
 
     if (${ENABLE_AUTOMATE_TESTS})
         get_property(tmp GLOBAL PROPERTY UNIT_TEST_TARGETS)

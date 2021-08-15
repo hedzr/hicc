@@ -277,6 +277,14 @@ namespace hicc::path {
 #endif
     }
 
+    inline std::string to_filename_h(std::filesystem::path const &path) {
+#if defined(_WIN32)
+        return path.u8string();
+#else
+        return path;
+#endif
+    }
+
 } // namespace hicc::path
 
 
@@ -360,8 +368,6 @@ namespace hicc::io {
         CloseHandle(hSparseFile);
 
         std::filesystem::resize_file(name, size);
-
-        return true;
 #else
         std::ofstream ofs(name, std::ios_base::out | std::ios_base::binary);
         ofs.seekp(size - 1);

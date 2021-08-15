@@ -7,6 +7,20 @@
 #include "hicc/hz-x-test.hh"
 
 void test_c_style(struct timeval &tv) {
+#ifdef _WIN32
+    // char fmt[64];
+    // char buf[256];
+    // time_t rawtime;
+    // struct tm * timeinfo;
+    // time (&rawtime);
+    // timeinfo = localtime (&rawtime);
+    // strftime(fmt, sizeof(fmt), "%H:%M:%S.%%06u", tm);
+    // strftime (buf, sizeof(buf), "Timestamp = %A, %d/%m/%Y %T\0", timeinfo);
+    // printf("%s\n", buf);
+    // snprintf(buf, sizeof(buf), fmt, tv.tv_usec);
+    // printf("%s\n", buf);
+    UNUSED(tv);
+#else
     char fmt[64];
     char buf[64];
     struct tm *tm;
@@ -14,6 +28,7 @@ void test_c_style(struct timeval &tv) {
     strftime(fmt, sizeof(fmt), "%H:%M:%S.%%06u", tm);
     snprintf(buf, sizeof(buf), fmt, tv.tv_usec);
     printf("%s\n", buf);
+#endif
 }
 
 void test_cpp_style(std::chrono::system_clock::time_point &now, std::tm &now_tm) {
@@ -24,7 +39,7 @@ void test_cpp_style(std::chrono::system_clock::time_point &now, std::tm &now_tm)
         auto now_ms = time_point_cast<milliseconds>(now);
 
         auto value = now_ms.time_since_epoch();
-        long duration = value.count();
+        long duration = (long) value.count();
 
         milliseconds dur(duration);
 
@@ -111,9 +126,9 @@ void test_cpp_style(std::chrono::system_clock::time_point &now, std::tm &now_tm)
     // std::cout << "date command: " << date_cmd << '\n';
 
     using iom = hicc::chrono::iom;
-    std::cout << iom::gmt << iom::ns << "time_point (ns): os << " << now << '\n';
-    std::cout << iom::gmt << iom::us << "time_point (us): os << " << now << '\n';
-    std::cout << iom::gmt << iom::ms << "time_point (ms): os << " << now << '\n';
+    std::cout << iom::fmtflags::gmt << iom::fmtflags::ns << "time_point (ns): os << " << now << '\n';
+    std::cout << iom::fmtflags::gmt << iom::fmtflags::us << "time_point (us): os << " << now << '\n';
+    std::cout << iom::fmtflags::gmt << iom::fmtflags::ms << "time_point (ms): os << " << now << '\n';
     std::cout << "std::tm:    os << " << now_tm << '\n';
 
     // {
@@ -141,8 +156,8 @@ void test_time_now() {
     test_cpp_style(now);
 
     using iom = hicc::chrono::iom;
-    std::cout << iom::local << iom::ns << "time_point (clock): " << now1 << '\n';
-    std::cout << iom::local << iom::us << "time_point (clock): " << now1 << '\n';
+    std::cout << iom::fmtflags::local << iom::fmtflags::ns << "time_point (clock): " << now1 << '\n';
+    std::cout << iom::fmtflags::local << iom::fmtflags::us << "time_point (clock): " << now1 << '\n';
     std::cout << 1 << '\n'
               << '\n';
 }
@@ -176,6 +191,7 @@ int main() {
     HICC_TEST_FOR(test_time_now);
     HICC_TEST_FOR(test_format_duration);
 
+#ifndef _WIN32
     {
         struct timespec ts;
         clock_getres(CLOCK_REALTIME, &ts);
@@ -183,4 +199,5 @@ int main() {
         clock_getres(CLOCK_MONOTONIC, &ts);
         std::cout << ts.tv_sec << ',' << ts.tv_nsec << '\n';
     }
+#endif
 }

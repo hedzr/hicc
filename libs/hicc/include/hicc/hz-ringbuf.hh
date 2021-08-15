@@ -103,7 +103,9 @@ namespace hicc::ringbuf {
 #endif
                 goto _retry;
             }
+#if !OS_WIN
             return false;
+#endif
         }
         std::optional<T> dequeue() {
             size_t b, f, nb;
@@ -128,7 +130,9 @@ namespace hicc::ringbuf {
 #endif
                 goto _retry;
             }
+#if !OS_WIN
             return ret;
+#endif
         }
         RESTORE_UNUSED_WARNINGS
 
