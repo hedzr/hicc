@@ -18,21 +18,35 @@
 
 namespace hicc::test {
 
+    /**
+     * @brief wrapper will wrap a test function to add pre-/post-process on it.
+     * @tparam _Callable 
+     * @tparam _Args 
+     * @see HICC_TEST_FOR
+     * @note To use wrapper class, see also HICC_TEST_FOR(func) macro.
+     * In your test app, it'll be quoted as:
+     * @code{c++}
+     * void test_func_1(){ ... }
+     * int main(){
+     *   HICC_TEST_FOR(test_func_1);
+     * }
+     * @endcode
+     */
     template<typename _Callable, typename... _Args>
     class wrapper {
     public:
-        explicit wrapper(const char *fname, _Callable &&f, _Args &&...args) {
-            // auto fname = debug::type_name<decltype(f)>();
+        explicit wrapper(const char *_fname_, _Callable &&f, _Args &&...args) {
+            // auto filename = debug::type_name<decltype(f)>();
             auto bound = std::bind(std::forward<_Callable>(f), std::forward<_Args>(args)...);
             chrono::high_res_duration hrd;
-            before(fname);
+            before(_fname_);
             try {
                 bound();
             } catch (...) {
-                after(fname);
+                after(_fname_);
                 throw;
             }
-            after(fname);
+            after(_fname_);
         }
         ~wrapper() = default;
 
@@ -51,6 +65,16 @@ namespace hicc::test {
         return w;
     }
 
+    /**
+     * @brief HICC_TEST_FOR will wrap a test function to add pre-/post-process on it.
+     * @details In your test app, it'll be quoted as:
+     * @code{c++}
+     * void test_func_1(){ ... }
+     * int main(){
+     *   HICC_TEST_FOR(test_func_1);
+     * }
+     * @endcode
+     */
 #define HICC_TEST_FOR(f) hicc::test::bind(#f, f)
 
     namespace detail {
