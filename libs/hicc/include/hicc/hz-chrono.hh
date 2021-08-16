@@ -395,10 +395,12 @@ namespace hicc::chrono {
     template<typename... _Args>
     inline bool try_parse_by(std::tm &tm, std::string const &source_string, _Args const &...formats) {
         // if (sizeof...(_Args) > 0) {
+        std::tm tm_local_copy = tm;
         for (auto &format : {"%Y-%m-%d %H:%M:%S", formats...}) {
             std::stringstream ss(source_string);
             if (!(ss >> std::get_time(&tm, format)).fail())
                 return true;
+            tm = tm_local_copy;
         }
         // }
         return false;
@@ -464,12 +466,14 @@ namespace hicc::chrono {
     /**
      * @brief like std::ios, iom provides a set of flags for tuning the output as stream formatting.
      * 
-     * For Example:
+     * @detail For Example:
      * @code{c++}
      * using iom = hicc::chrono::iom;
      * std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
-     * std::cout << iom::gmt << iom::ns << "time_point: os << " << now << iom::clear << '\n';
+     * std::cout << iom::local << iom::ns << "time_point: os << " << now << iom::clear << '\n';
      * @endcode
+     * 
+     * @note iom is not thread-safe.
      */
     class iom {
     public:
@@ -479,8 +483,9 @@ namespace hicc::chrono {
             us = 0x0002,
             ns = 0x0003,
             mask_extra_fields = 0x000f,
-            gmt = 0x0010,
-            local = 0x0020,
+            gmt = 0x1000,
+            local = 0x2000,
+            gmt_or_local = 0x4000,
             clear = 0x0000,
         };
         // typedef u_int32_t fmtflags;
@@ -503,8 +508,8 @@ namespace hicc::chrono {
             return (fmtflags) ((unsigned int) _flags & (unsigned int) v) == v;
         }
         static fmtflags flags() { return _flags; }
-        static void reset() { _flags = static_cast<fmtflags>((unsigned int) fmtflags::gmt | (unsigned int) fmtflags::us); }
-        static void set_flags(fmtflags v) {
+        static void reset() { _flags = static_cast<fmtflags>((unsigned int) fmtflags::gmt_or_local | (unsigned int) fmtflags::us); }
+        static void set_flags(fmtflags v, bool on = true) {
             if (v == fmtflags::clear) {
                 reset();
                 return;
@@ -514,15 +519,50 @@ namespace hicc::chrono {
                 _flags = (fmtflags) ((unsigned int) _flags | (unsigned int) (v));
                 return;
             }
-            _flags = (fmtflags) ((unsigned int) _flags | (unsigned int) (v));
+
+            if (on)
+                _flags = (fmtflags) ((unsigned int) _flags | (unsigned int) (v));
+            else
+                _flags = (fmtflags) ((unsigned int) _flags & ~(unsigned int) (v));
+
+            if (v == fmtflags::gmt)
+                set_flags(fmtflags::gmt_or_local, true);
+            else if (v == fmtflags::local)
+                set_flags(fmtflags::gmt_or_local, false);
         }
+        /**
+         * @brief `saver` is a RAII class to simplify the save/restore of iom flags.
+         * 
+         * @par For example:
+         * 
+         * @code{c++}
+         * {
+         *     using iom_ = hicc::chrono::iom;
+         *     iom_::saver _iom_saver{}; // save point for 'iom'
+         *     iom_::set_flags(iom_::fmtflags::gmt_or_local, false);
+         *     std::stringstream ss;
+         *     hicc::chrono::serialize_time_point(ss, time, format);
+         *     // restore point for 'iom' after _iom_saver dtor().
+         * }
+         * @endcode
+         */
+        class saver {
+            fmtflags _flags;
+
+        public:
+            saver() { _flags = iom::flags(); }
+            ~saver() { iom::set_as(_flags); }
+        };
+
+    private:
+        static void set_as(fmtflags v) { _flags = v; }
 
     private:
         static fmtflags _flags; // 0:ms, 1:us, 2:ns
         // static int gmt_or_local; //0:gmt, 1:local
     };
 
-    inline iom::fmtflags iom::_flags = static_cast<fmtflags>((unsigned int) iom::fmtflags::gmt | (unsigned int) iom::fmtflags::us);
+    inline iom::fmtflags iom::_flags = static_cast<fmtflags>((unsigned int) iom::fmtflags::gmt_or_local | (unsigned int) iom::fmtflags::us);
 
 } // namespace hicc::chrono
 
@@ -548,12 +588,12 @@ namespace hicc::chrono {
         // using tp = std::chrono::time_point<_Clock, _Duration>;
         std::time_t tt = std::chrono::system_clock::to_time_t(_now);
         std::tm *tm;
-        if (iom_::has(iom_::fmtflags::gmt))
-            tm = std::gmtime(&tt); //GMT (UTC)
-        else if (iom_::has(iom_::fmtflags::local))
+        if (iom_::has(iom_::fmtflags::gmt_or_local))
+            tm = std::gmtime(&tt);    //GMT (UTC)
+        else                          // if (iom_::has(iom_::fmtflags::local))
             tm = std::localtime(&tt); //Locale time-zone, usually UTC by default.
-        else
-            tm = std::gmtime(&tt); //GMT (UTC)
+        // else
+        //     tm = std::gmtime(&tt); //GMT (UTC)
 
         if (iom_::has(iom_::fmtflags::ns)) {
             auto _nsec = in_nsec();
@@ -581,12 +621,12 @@ namespace hicc::chrono {
         // using tp = std::chrono::time_point<_Clock, _Duration>;
         std::time_t tt = std::chrono::system_clock::to_time_t(time);
         std::tm *tm;
-        if (iom_::has(iom_::fmtflags::gmt))
-            tm = std::gmtime(&tt); //GMT (UTC)
-        else if (iom_::has(iom_::fmtflags::local))
+        if (iom_::has(iom_::fmtflags::gmt_or_local))
+            tm = std::gmtime(&tt);    //GMT (UTC)
+        else                          // if (iom_::has(iom_::fmtflags::local))
             tm = std::localtime(&tt); //Locale time-zone, usually UTC by default.
-        else
-            tm = std::gmtime(&tt); //GMT (UTC)
+        // else
+        //     tm = std::gmtime(&tt); //GMT (UTC)
 
         std::size_t ms = time_point_get_ms(time);
         if (iom_::has(iom_::fmtflags::ns)) {
@@ -620,6 +660,15 @@ namespace hicc::chrono {
     }
     template<class _Clock, class _Duration = typename _Clock::duration>
     inline std::string format_time_point(std::chrono::time_point<_Clock, _Duration> const &time, const char *format = "%Y-%m-%d %H:%M:%S") {
+        std::stringstream ss;
+        serialize_time_point(ss, time, format);
+        return ss.str();
+    }
+    template<class _Clock, class _Duration = typename _Clock::duration>
+    inline std::string format_time_point_to_local(std::chrono::time_point<_Clock, _Duration> const &time, const char *format = "%Y-%m-%d %H:%M:%S") {
+        using iom_ = hicc::chrono::iom;
+        iom_::saver _iom_saver{};
+        iom_::set_flags(iom_::fmtflags::gmt_or_local, false);
         std::stringstream ss;
         serialize_time_point(ss, time, format);
         return ss.str();

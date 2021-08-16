@@ -189,11 +189,14 @@ void test_format_duration() {
     }
 }
 
-void test_try_parse_any() {
+void test_try_parse_by() {
     using Clock = std::chrono::system_clock;
-    std::tm tm = hicc::chrono::time_point_2_tm(Clock::now());
 
-    for (auto &time_str : {"1937-1-29 3:59:59"}) {
+    for (auto &time_str : {
+                 "11:01:37",
+                 "1937-1-29 3:59:59",
+         }) {
+        std::tm tm = hicc::chrono::time_point_2_tm(Clock::now());
         typename Clock::time_point tp;
         if (hicc::chrono::try_parse_by(tm, time_str, "%H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y/%m/%d %H:%M:%S")) {
             tp = hicc::chrono::tm_2_time_point(&tm);
@@ -202,13 +205,13 @@ void test_try_parse_any() {
                        // _twl.size(), hit, loop,
                        // hicc::chrono::format_duration(d).c_str(),
                        // hicc::chrono::format_time_point(tp).c_str(),
-                       hicc::chrono::format_time_point(tp).c_str());
+                       hicc::chrono::format_time_point_to_local(tp).c_str());
         }
     }
 }
 
 int main() {
-    HICC_TEST_FOR(test_try_parse_any);
+    HICC_TEST_FOR(test_try_parse_by);
     HICC_TEST_FOR(test_time_now);
     HICC_TEST_FOR(test_format_duration);
 
