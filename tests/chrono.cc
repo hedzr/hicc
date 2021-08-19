@@ -8,6 +8,10 @@
 
 #include "hicc/hz-log.hh"
 
+void foo1() {
+    hicc_print("foo1 hit.");
+}
+
 void test_c_style(struct timeval &tv) {
 #ifdef _WIN32
     // char fmt[64];
@@ -210,11 +214,95 @@ void test_try_parse_by() {
     }
 }
 
+void test_last_day_at_this_month() {
+    namespace chr = hicc::chrono;
+    using clock = std::chrono::system_clock;
+    using time_point = clock::time_point;
+    using namespace std::literals::chrono_literals;
+
+    struct testcase {
+        const char *desc;
+        int offset;
+        time_point now, expected;
+    };
+#define NOW_CASE(now_str, expected_str, desc, ofs) \
+testcase { desc, ofs, chr::parse_datetime(now_str), chr::parse_datetime(expected_str) }
+
+    for (auto t : {
+        // Month .. Year
+        NOW_CASE("2021-08-05", "2021-08-29", "day -3", 3),
+        NOW_CASE("2021-08-05", "2021-08-22", "day -10", 10),
+        NOW_CASE("2021-08-05", "2021-08-17", "day -15", 15),
+        NOW_CASE("2021-08-05", "2021-08-07", "day -25", 25),
+
+        }) {
+        auto now = t.now;
+        std::tm tm = chr::time_point_2_tm(now);
+        tm = chr::last_day_at_this_month(tm, t.offset, 1);
+        auto pt = chr::tm_2_time_point(tm);
+        hicc_print("%40s: %s -> %s", t.desc, chr::format_time_point_to_local(now).c_str(), chr::format_time_point_to_local(pt).c_str());
+
+        auto tmp = t.expected;
+        if (!chr::duration_is_zero(tmp)) {
+            if (chr::compare_date_part(pt, tmp) != 0) {
+                hicc_print("%40s: ERROR: expecting %s but got %s", " ", chr::format_time_point_to_local(tmp).c_str(), chr::format_time_point_to_local(pt).c_str());
+                exit(-1);
+            }
+        }
+    }
+
+#undef NOW_CASE
+}
+
+void test_last_day_at_this_year() {
+    namespace chr = hicc::chrono;
+    using clock = std::chrono::system_clock;
+    using time_point = clock::time_point;
+    using namespace std::literals::chrono_literals;
+
+    struct testcase {
+        const char *desc;
+        int offset;
+        time_point now, expected;
+    };
+#define NOW_CASE(now_str, expected_str, desc, ofs) \
+testcase { desc, ofs, chr::parse_datetime(now_str), chr::parse_datetime(expected_str) }
+
+    for (auto t : {
+        // Month .. Year
+        NOW_CASE("2021-08-05", "2021-12-29", "day -3", 3),
+        NOW_CASE("2021-08-05", "2021-12-22", "day -10", 10),
+        NOW_CASE("2021-08-05", "2021-12-17", "day -15", 15),
+        NOW_CASE("2021-08-05", "2021-12-07", "day -25", 25),
+        NOW_CASE("2021-08-05", "2021-1-1", "day -365", 365),
+
+        }) {
+        auto now = t.now;
+        std::tm tm = chr::time_point_2_tm(now);
+        tm = chr::last_day_at_this_year(tm, t.offset);
+        auto pt = chr::tm_2_time_point(tm);
+        hicc_print("%40s: %s -> %s", t.desc, chr::format_time_point_to_local(now).c_str(), chr::format_time_point_to_local(pt).c_str());
+
+        auto tmp = t.expected;
+        if (!chr::duration_is_zero(tmp)) {
+            if (chr::compare_date_part(pt, tmp) != 0) {
+                hicc_print("%40s: ERROR: expecting %s but got %s", " ", chr::format_time_point_to_local(tmp).c_str(), chr::format_time_point_to_local(pt).c_str());
+                exit(-1);
+            }
+        }
+    }
+
+#undef NOW_CASE
+}
+
 int main() {
     HICC_TEST_FOR(test_try_parse_by);
     HICC_TEST_FOR(test_time_now);
     HICC_TEST_FOR(test_format_duration);
 
+    HICC_TEST_FOR(test_last_day_at_this_year);
+    HICC_TEST_FOR(test_last_day_at_this_month);
+    
 #ifndef _WIN32
     {
         struct timespec ts;
