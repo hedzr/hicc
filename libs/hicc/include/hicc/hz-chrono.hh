@@ -556,7 +556,9 @@ namespace hicc::chrono {
     inline std::ostream &serialize_time_point(std::ostream &os, std::chrono::time_point<_Clock, _Duration> const &time, const char *format = "%Y-%m-%d %H:%M:%S") {
         using iom_ = hicc::chrono::iom;
         // using tp = std::chrono::time_point<_Clock, _Duration>;
-        std::time_t tt = std::chrono::system_clock::to_time_t(time);
+        std::time_t tt = _Clock::to_time_t(time);
+        if (tt == -1)
+            return os;
         std::tm *tm;
         if (iom_::has(iom_::fmtflags::gmt_or_local))
             tm = std::gmtime(&tt);    //GMT (UTC)

@@ -197,8 +197,12 @@ void test_try_parse_by() {
     using Clock = std::chrono::system_clock;
 
     for (auto &time_str : {
-                 "11:01:37",
-                 "1937-1-29 3:59:59",
+             "11:01:37",
+#if OS_WIN
+                     "1973-1-29 3:59:59", // MSVC: time point before 1970-1-1 is invalid
+#else
+                        "1937-1-29 3:59:59",
+#endif
          }) {
         std::tm tm = hicc::chrono::time_point_2_tm(Clock::now());
         typename Clock::time_point tp;
@@ -226,16 +230,16 @@ void test_last_day_at_this_month() {
         time_point now, expected;
     };
 #define NOW_CASE(now_str, expected_str, desc, ofs) \
-testcase { desc, ofs, chr::parse_datetime(now_str), chr::parse_datetime(expected_str) }
+    testcase { desc, ofs, chr::parse_datetime(now_str), chr::parse_datetime(expected_str) }
 
     for (auto t : {
-        // Month .. Year
-        NOW_CASE("2021-08-05", "2021-08-29", "day -3", 3),
-        NOW_CASE("2021-08-05", "2021-08-22", "day -10", 10),
-        NOW_CASE("2021-08-05", "2021-08-17", "day -15", 15),
-        NOW_CASE("2021-08-05", "2021-08-07", "day -25", 25),
+                 // Month .. Year
+                 NOW_CASE("2021-08-05", "2021-08-29", "day -3", 3),
+                 NOW_CASE("2021-08-05", "2021-08-22", "day -10", 10),
+                 NOW_CASE("2021-08-05", "2021-08-17", "day -15", 15),
+                 NOW_CASE("2021-08-05", "2021-08-07", "day -25", 25),
 
-        }) {
+         }) {
         auto now = t.now;
         std::tm tm = chr::time_point_2_tm(now);
         tm = chr::last_day_at_this_month(tm, t.offset, 1);
@@ -266,17 +270,17 @@ void test_last_day_at_this_year() {
         time_point now, expected;
     };
 #define NOW_CASE(now_str, expected_str, desc, ofs) \
-testcase { desc, ofs, chr::parse_datetime(now_str), chr::parse_datetime(expected_str) }
+    testcase { desc, ofs, chr::parse_datetime(now_str), chr::parse_datetime(expected_str) }
 
     for (auto t : {
-        // Month .. Year
-        NOW_CASE("2021-08-05", "2021-12-29", "day -3", 3),
-        NOW_CASE("2021-08-05", "2021-12-22", "day -10", 10),
-        NOW_CASE("2021-08-05", "2021-12-17", "day -15", 15),
-        NOW_CASE("2021-08-05", "2021-12-07", "day -25", 25),
-        NOW_CASE("2021-08-05", "2021-1-1", "day -365", 365),
+                 // Month .. Year
+                 NOW_CASE("2021-08-05", "2021-12-29", "day -3", 3),
+                 NOW_CASE("2021-08-05", "2021-12-22", "day -10", 10),
+                 NOW_CASE("2021-08-05", "2021-12-17", "day -15", 15),
+                 NOW_CASE("2021-08-05", "2021-12-07", "day -25", 25),
+                 NOW_CASE("2021-08-05", "2021-1-1", "day -365", 365),
 
-        }) {
+         }) {
         auto now = t.now;
         std::tm tm = chr::time_point_2_tm(now);
         tm = chr::last_day_at_this_year(tm, t.offset);
@@ -302,7 +306,7 @@ int main() {
 
     HICC_TEST_FOR(test_last_day_at_this_year);
     HICC_TEST_FOR(test_last_day_at_this_month);
-    
+
 #ifndef _WIN32
     {
         struct timespec ts;
