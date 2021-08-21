@@ -883,5 +883,4 @@ namespace hicc::cross {
 
 } // namespace hicc::cross
 
-
 #endif //HICC_CXX_HZ_DEFS_HH
