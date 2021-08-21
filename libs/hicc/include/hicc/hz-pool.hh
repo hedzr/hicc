@@ -26,8 +26,8 @@
 #include <vector>
 
 #include "hz-defs.hh"
-#include "hz-ringbuf.hh"
 #include "hz-log.hh"
+#include "hz-ringbuf.hh"
 
 #if HICC_TEST_THREAD_POOL_DBGOUT
 #define pool_debug hicc_print
@@ -35,6 +35,7 @@
 #define pool_debug hicc_trace
 #endif
 
+// conditional_wait, ...
 namespace hicc::pool {
 
     /**
@@ -209,6 +210,10 @@ namespace hicc::pool {
         // }
     };
 
+} // namespace hicc::pool
+
+// threaded_message_queue, thread_pool
+namespace hicc::pool {
 
     template<class T, class Coll = std::deque<T>>
     class threaded_message_queue {
