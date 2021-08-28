@@ -16,6 +16,7 @@
 
 #include <any>
 #include <array>
+#include <sstream>
 #include <string>
 #include <variant>
 #include <vector>
@@ -810,5 +811,15 @@ namespace hicc::text {
 
 } // namespace hicc::text
 
+namespace hicc {
+
+    template<typename T>
+    inline std::string to_string(T const &t) {
+        std::stringstream ss;
+        ss << t;
+        return ss.str();
+    }
+
+} // namespace hicc
 
 #endif //HICC_CXX_HZ_STRING_HH
