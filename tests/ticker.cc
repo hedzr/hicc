@@ -207,7 +207,7 @@ void test_timer() {
         auto now = hicc::chrono::now();
         printf("  - start at: %s\n", hicc::chrono::format_time_point(now).c_str());
     }
-    t.after(100ms, [&count]() {
+    t.after(1us, [&count]() {
         auto now = hicc::chrono::now();
         // std::time_t ct = std::time(0);
         // char *cc = ctime(&ct);
@@ -232,7 +232,7 @@ void test_ticker() {
         auto now = hicc::chrono::now();
         printf("  - start at: %s\n", hicc::chrono::format_time_point(now).c_str());
     }
-    t.every(300ms, [&count]() {
+    t.every(1us, [&count]() {
         auto now = hicc::chrono::now();
         // std::time_t ct = std::time(0);
         // char *cc = ctime(&ct);
@@ -241,10 +241,24 @@ void test_ticker() {
     });
 
     count.wait();
-    // while (count < 3) {
-    //     std::this_thread::yield();
-    // }
-    // std::this_thread::sleep_for(1s);
+}
+
+void test_ticker_interval() {
+    using namespace std::literals::chrono_literals;
+
+    hicc::pool::conditional_wait_for_int count2{4};
+    hicc::chrono::ticker t;
+    {
+        auto now = hicc::chrono::now();
+        printf("  - start at: %s\n", hicc::chrono::format_time_point(now).c_str());
+    }
+    t.interval(200ms, [&count2]() {
+        auto now = hicc::chrono::now();
+        printf("  - interval [%02d]: %s\n", count2.val(), hicc::chrono::format_time_point(now).c_str());
+        count2.set();
+    });
+
+    count2.wait();
     t.clear();
 }
 
@@ -253,13 +267,14 @@ int main() {
 
     HICC_TEST_FOR(test_periodical_job);
 
-#if 0
+#if 1
     HICC_TEST_FOR(test_type_name);
 
     HICC_TEST_FOR(test_thread_basics);
 
     HICC_TEST_FOR(test_timer);
     HICC_TEST_FOR(test_ticker);
+    HICC_TEST_FOR(test_ticker_interval);
 
     // using namespace std::literals::chrono_literals;
     // std::this_thread::sleep_for(200ns);

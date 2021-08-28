@@ -42,16 +42,19 @@ namespace hicc::chrono {
         Clock::time_point next_time_point() const { return next_time_point(Clock::now()); }
         virtual Clock::time_point next_time_point(Clock::time_point const now) const = 0;
 
-        void launch_to(pool::thread_pool &p, std::function<void(timer_job &tj)> const &post_job = nullptr) {
+        void launch_to(pool::thread_pool &p, std::function<void(timer_job *tj)> const &post_job = nullptr) {
             launch_fn_to_pool(_f, p, post_job);
         }
 
+        std::size_t hits() const { return _hit; }
+        void operator()() { _f(); }
+
     private:
-        void launch_fn_to_pool(std::function<void()> const &fn, pool::thread_pool &pool, std::function<void(timer_job &tj)> const &post_job = nullptr) {
-            pool.queue_task([fn, post_job, this]() {
+        void launch_fn_to_pool(std::function<void()> const &fn, pool::thread_pool &pool, std::function<void(timer_job *tj)> const &post_job = nullptr) {
+            pool.queue_task([&]() {
                 fn();
                 if (post_job)
-                    post_job(*this);
+                    post_job(this);
             });
 #if defined(_DEBUG) || HICC_TEST_THREAD_POOL_DBGOUT
             if ((_hit % 10) == 0)
@@ -571,6 +574,7 @@ namespace hicc::chrono {
                         (*itp).second.swap(jobs);
                         picked = (*itp).first;
 
+                        // erase all expired jobs
                         _twl.erase(_twl.begin(), itp);
 
                         if (itn != _twl.end()) {
@@ -593,11 +597,11 @@ namespace hicc::chrono {
 
                 // launch the jobs
                 for (auto it = jobs.begin(); it != jobs.end(); ++it) {
-                    auto &j = (*it);
+                    std::shared_ptr<Job> &j = (*it);
                     if (j->_interval) {
                         // hicc_debug("[runner] job starting, _interval");
-                        j->launch_to(_pool, [&j, this](timer_job &tj) {
-                            add_task(tj.next_time_point(), std::move(j));
+                        j->launch_to(_pool, [&](timer_job *tj) {
+                            add_task(tj->next_time_point(), std::move(j));
                         });
                     } else if (j->_recur) {
                         // hicc_debug("[runner] job starting, _recur");
