@@ -10,6 +10,7 @@
 #include <variant>
 
 #include <list>
+#include <map>
 #include <vector>
 
 #include <algorithm>
@@ -60,6 +61,59 @@ namespace std {
 
 
 namespace hicc::util {
+
+    /**
+     * @brief 
+     * @tparam C
+     * @code{c++}
+     * template<class T>
+     * class baz{
+     * };
+     * 
+     * using ret = hicc::util::get_template_type_t<baz>::type;
+     */
+    template<typename C>
+    struct get_template_type_t;
+    template<template<typename> class C, typename T>
+    struct get_template_type_t<C<T>> {
+        using type = T;
+    };
+
+    /**
+     * @brief 
+     * @code{c++}
+     * int foo(int a, int b, int c, int d) {
+     *     return 1;
+     * }
+     * 
+     * auto bar = [](){ return 1; };
+     * 
+     * struct baz_ 
+     * { 
+     *     double operator()(){ return 0; } 
+     * } baz;
+     * 
+     * using ReturnTypeOfFoo = return_type_of_t<decltype(foo)>;
+     * using ReturnTypeOfBar = return_type_of_t<decltype(bar)>;
+     * using ReturnTypeOfBaz = return_type_of_t<decltype(baz)>;
+     * @endcode
+     */
+    template<typename Callable>
+    using return_type_of_t =
+            typename decltype(std::function{std::declval<Callable>()})::result_type;
+
+    /**
+     * @brief 
+     * @tparam R 
+     * @tparam Args 
+     * @return
+     * @code{c++}
+     * using ReturnTypeOfFoo = decltype(return_type_of(foo));
+     * @endcode
+     */
+    template<typename R, typename... Args>
+    R return_type_of(R (*)(Args...));
+
 
     //
 #if 0
@@ -205,7 +259,6 @@ namespace hicc::util {
 
 } // namespace hicc::util
 
-
 namespace hicc::util {
 
     template<typename T>
@@ -264,6 +317,48 @@ namespace hicc::util {
 
 } // namespace hicc::util
 
+namespace hicc::util::factory {
+
+    template<typename product_base, typename... products>
+    class factory final {
+    public:
+        CLAZZ_NON_COPYABLE(factory);
+        template<typename T>
+        struct clz_name_t {
+            std::string_view id = debug::type_name<T>();
+            T data;
+        };
+        using named_products = std::tuple<clz_name_t<products>...>;
+
+        template<typename... Args>
+        static std::unique_ptr<product_base> create_unique_ptr(const std::string_view &id, Args &&...args) {
+            std::unique_ptr<product_base> result{};
+
+            std::apply([](auto &&...it) {
+                ((static_check<decltype(it.data)>()), ...);
+            },
+                       named_products{});
+
+            std::apply([&](auto &&...it) {
+                ((it.id == id ? result = std::make_unique<decltype(it.data)>(args...) : result), ...);
+            },
+                       named_products{});
+            return result;
+        }
+        template<typename... Args>
+        static product_base *create(const std::string_view &id, Args &&...args) {
+            return create_unique_ptr(id, args...).release();
+        }
+
+    private:
+        template<typename product>
+        static void static_check() {
+            static_assert(std::is_base_of<product_base, product>::value, "all products must inherit from product_base");
+        }
+    }; // class factory
+
+} // namespace hicc::util::factory
+
 namespace hicc::util {
 
     /**
@@ -288,11 +383,11 @@ namespace hicc::util {
     class defer final {
     public:
         defer(T &c, _D const &fn = nullptr)
-                : _c(c)
-                , _fn(fn) {}
+            : _c(c)
+            , _fn(fn) {}
         defer(_D const &fn, T &c = T{})
-                : _c(c)
-                , _fn(fn) {}
+            : _c(c)
+            , _fn(fn) {}
         ~defer() {
             _c.close();
             if (_fn) { _fn(); }
@@ -315,7 +410,7 @@ namespace hicc::util {
     class defer<bool> final {
     public:
         defer(std::function<void()> const &fn, bool = false)
-                : _fn(fn) {}
+            : _fn(fn) {}
         ~defer() {
             if (_fn) { _fn(); }
         }
@@ -335,7 +430,7 @@ namespace hicc::util {
 
 } //namespace hicc::util
 
-template <class T>
+template<class T>
 inline bool compare_vector_values(std::vector<T> const &v1, std::vector<T> const &v2) {
     bool not_ok = false;
     if (v1.size() == v2.size()) {

@@ -109,20 +109,25 @@ define_test_program(sso-2 sso-2.cc)
 
 define_test_program(chrono chrono.cc)
 
+define_test_program(factory factory.cc)  # factory
+
 define_test_program(priority-queue priority-queue.cc)
 
 define_test_program(btree btree.cc)
 define_test_program(bt0 bt0.cc)
 
-define_test_program(process process.cc)
-
 define_test_program(cache-line cache-line.cc)
 define_test_program(copy-elision copy-elision.cc)
 define_test_program(path path.cc)
 define_test_program(mmap mmap.cc)
+
 define_test_program(read-write-lock read-write-lock.cc)
 define_test_program(ringbuf ringbuf.cc)
+
+define_test_program(piper piper.cc)
 define_test_program(pool pool.cc native-handle.cc)
+define_test_program(process process.cc)
+
 define_test_program(ticker ticker.cc)
 
 #define_test_program(any-1 any_1.cc)
