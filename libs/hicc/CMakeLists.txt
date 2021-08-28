@@ -85,6 +85,7 @@ set(header_files
         ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hz-mmap.hh
         ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hz-os-io-redirect.hh
         ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hz-path.hh
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hz-pipeable.hh
         ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hz-pool.hh
         ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hz-priority-queue.hh
         ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hz-process.hh
