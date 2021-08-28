@@ -74,6 +74,7 @@ namespace hicc::dp::factory::classical {
         float x, y;
 
     public:
+        explicit Trunk(double x_, double y_) { x = (float)x_, y = (float)y_; }
         explicit Trunk(float x_, float y_) { x = x_, y = y_; }
         ~Trunk() = default;
         friend class classical_factory_method;
@@ -85,6 +86,7 @@ namespace hicc::dp::factory::classical {
         float x, y;
 
     public:
+        explicit Ship(double x_, double y_) { x = (float)x_, y = (float)y_; }
         explicit Ship(float x_, float y_) { x = x_, y = y_; }
         ~Ship() = default;
         friend class classical_factory_method;
