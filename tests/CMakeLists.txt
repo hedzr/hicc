@@ -109,6 +109,7 @@ define_test_program(sso-2 sso-2.cc)
 
 define_test_program(chrono chrono.cc)
 
+define_test_program(typename typename.cc)  # factory
 define_test_program(factory factory.cc)  # factory
 
 define_test_program(priority-queue priority-queue.cc)
