@@ -3,8 +3,10 @@
 //
 
 #include "hicc/hz-defs.hh"
-#include "hicc/hz-log.hh"
 #include "hicc/hz-pipeable.hh"
+
+#include "hicc/hz-dbg.hh"
+#include "hicc/hz-log.hh"
 #include "hicc/hz-x-test.hh"
 
 #include <iostream>
@@ -119,7 +121,7 @@ void test_piped() {
     {
         auto add = piped([](int x, int y) { return x + y; });
         auto mul = piped([](int x, int y) -> int { return x * y; });
-        int y1= 5 | add(2) | mul(5) | add(1);
+        int y1 = 5 | add(2) | mul(5) | add(1);
         hicc_print("    y1 = %d", y1);
 
         int y2 = 5 | add(2) | piped([](int x, int y) { return x * y; })(5) | piped([](int x) { return x + 1; })();
@@ -127,6 +129,7 @@ void test_piped() {
         hicc_print("    y2 = %d", y2);
     }
 }
+
 
 int main() {
 

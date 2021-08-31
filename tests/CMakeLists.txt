@@ -72,7 +72,7 @@ function(define_test_program name)
                 )
         if (DEBUG)
             target_compile_options(${PROJECT_NAME}-${name} PRIVATE
-                    -fsanitize=address
+                    -fsanitize=address -fno-omit-frame-pointer
                     # address(AddressSanitizer), leak(LeakSanitizer), thread(ThreadSanitizer), undefined(UndefinedBehaviorSanitizer), memory(MemorySanitizer) 
                     # [additional_options]: -fno-omit-frame-pointer, fsanitize-recover/fno-sanitize-recover, -fsanitize-blacklist, etc.
                     # [-g] [-OX]
@@ -109,8 +109,9 @@ define_test_program(sso-2 sso-2.cc)
 
 define_test_program(chrono chrono.cc)
 
-define_test_program(typename typename.cc)  # factory
-define_test_program(factory factory.cc)  # factory
+define_test_program(typename typename.cc)  # typename
+define_test_program(factory factory.cc)    # factory
+define_test_program(awesome-enum awesome-enum.cc)
 
 define_test_program(priority-queue priority-queue.cc)
 
