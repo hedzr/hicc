@@ -77,6 +77,7 @@ set(header_files
         ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hicc.hh
         ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hz-btree.hh
         ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hz-chrono.hh
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hz-common.hh
         ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hz-dbg.hh
         ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hz-defs.hh
         ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/hz-if.hh
