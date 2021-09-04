@@ -21,6 +21,8 @@
 #include <functional>
 
 #include "hz-defs.hh"
+
+#include "hz-common.hh"
 #include "hz-log.hh"
 #include "hz-pool.hh"
 
@@ -51,7 +53,7 @@ namespace hicc::chrono {
 
     private:
         void launch_fn_to_pool(std::function<void()> const &fn, pool::thread_pool &pool, std::function<void(timer_job *tj)> const &post_job = nullptr) {
-            pool.queue_task([&]() {
+            pool.queue_task([=]() {
                 fn();
                 if (post_job)
                     post_job(this);
@@ -75,74 +77,76 @@ namespace hicc::chrono {
 
     namespace detail {
 
+        template<typename Clock = Clock, bool GMT = false>
         class in_job : public timer_job {
         public:
             explicit in_job(std::function<void()> &&f)
                 : timer_job(std::move(f)) {}
             virtual ~in_job() {}
 
+            using time_point = typename Clock::time_point;
             // dummy time_point because it's not used
-            Clock::time_point next_time_point(Clock::time_point const) const override { return Clock::time_point(Clock::duration(0)); }
+            typename Clock::time_point next_time_point(time_point const) const override { return time_point{typename Clock::duration(0)}; }
         };
 
+        template<typename Clock = Clock, bool GMT = false>
         class every_job : public timer_job {
         public:
-            explicit every_job(Clock::duration d, std::function<void()> &&f, bool interval = false)
+            explicit every_job(typename Clock::duration d, std::function<void()> &&f, bool interval = false)
                 : timer_job(std::move(f), true, interval)
                 , dur(d) {}
             virtual ~every_job() {}
 
-            Clock::time_point next_time_point(Clock::time_point const now) const override {
+            typename Clock::time_point next_time_point(typename Clock::time_point const now) const override {
 #if defined(_DEBUG) || HICC_TEST_THREAD_POOL_DBGOUT
                 auto nxt = now + dur;
-                pool_debug("         %s -> %s", chrono::format_time_point(now).c_str(), chrono::format_time_point(nxt).c_str());
+                pool_debug("         %s -> %s", format_time_point(now).c_str(), format_time_point(nxt).c_str());
                 return nxt;
 #else
                 return now + dur;
 #endif
             };
 
-            Clock::duration dur;
+            typename Clock::duration dur;
         };
 
     } // namespace detail
 
-    enum class anchors {
-        Nothing,
+    AWESOME_MAKE_ENUM(anchors,
+                      Nothing,
 
-        Month,       // 'offset' (1..31, -1..-31) day every month; with 'ordinal' times
-        TwoMonth,    // 'offset' day every two month
-        Quarter,     // 'offset' quarter day every quarter
-        FourMonth,   //
-        FiveMonth,   //
-        SixMonth,    // 'offset' day every half a year
-        SevenMonth,  //
-        EightMonth,  // eight
-        NineMonth,   //
-        TenMonth,    // ten
-        ElevenMonth, //
-        Year,        // 'offset' day every year, this month; with 'ordinal' times
+                      Month,       // 'offset' (1..31, -1..-31) day every month; with 'ordinal' times
+                      TwoMonth,    // 'offset' day every two month
+                      Quarter,     // 'offset' quarter day every quarter
+                      FourMonth,   //
+                      FiveMonth,   //
+                      SixMonth,    // 'offset' day every half a year
+                      SevenMonth,  //
+                      EightMonth,  // eight
+                      NineMonth,   //
+                      TenMonth,    // ten
+                      ElevenMonth, //
+                      Year,        // 'offset' day every year, this month; with 'ordinal' times
 
-        FirstThirdOfMonth,  // 'offset' (0..9, -1..-10) day 在每一个上旬; // with 'ordinal' times
-        MiddleThirdOfMonth, // 'offset' (0..9, -1..-10) day 在每一个中旬; // with 'ordinal' times
-        LastThirdOfMonth,   // 'offset' (0..9, -1..-10) day 在每一个下旬; // with 'ordinal' times
+                      FirstThirdOfMonth,  // 'offset' (0..9, -1..-10) day 在每一个上旬; // with 'ordinal' times
+                      MiddleThirdOfMonth, // 'offset' (0..9, -1..-10) day 在每一个中旬; // with 'ordinal' times
+                      LastThirdOfMonth,   // 'offset' (0..9, -1..-10) day 在每一个下旬; // with 'ordinal' times
 
-        DayInYear,   // 'offset' (0-365) day every one year
-        WeekInMonth, // 'offset' (0..5)  week every one month
-        WeekInYear,  // 'offset' (0..51) week every one year
-        Week,        // 'offset' (0..6)  day every one week
+                      DayInYear,   // 'offset' (0-365) day every one year
+                      WeekInMonth, // 'offset' (0..5)  week every one month
+                      WeekInYear,  // 'offset' (0..51) week every one year
+                      Week,        // 'offset' (0..6)  day every one week
 
-        Dummy00000 = 1000,
-        // Hour,
-        // Minute,
-        // Second,
-        // Millisecond,
-        // Microsecond,
-        // Nanosecond,
+                      Dummy00000 = 1000,
+                      // Hour,
+                      // Minute,
+                      // Second,
+                      // Millisecond,
+                      // Microsecond,
+                      // Nanosecond,
 
-        Dummy00001 = 2000,
-        Dummy00009 = 9000,
-    };
+                      Dummy00001 = 2000,
+                      Dummy00009 = 9000)
 
     namespace detail {
 
@@ -404,8 +408,8 @@ namespace hicc::chrono {
                         //     break;
 
                     case anchors::Dummy00001:
-                        break;
                     case anchors::Dummy00009:
+                    case anchors::__COUNT:
                         break;
                 }
 
@@ -423,6 +427,52 @@ namespace hicc::chrono {
 
     } // namespace detail
 
+
+    //
+
+
+    template<typename Derived>
+    class base {
+    public:
+        base(base const &o) {
+            __copy(o);
+        }
+        base(base &&o) {
+            __copy(o);
+        }
+        virtual ~base() { clear(); }
+
+        using __D = Derived;
+        using _This = base<__D>;
+        struct __W : public __D { // timer<Derived, Clock, GMT, ConcreteJob> {
+            __W() = default;
+            ~__W() {}
+        };
+        static std::shared_ptr<base> create(std::function<void()> &&f = nullptr) {
+            util::defer<bool> defer_(f);
+            return std::make_shared<__W>();
+        }
+        // static timer get(std::function<void()> &&f = nullptr) {
+        //     util::defer<bool> defer_(f);
+        //     return timer{};
+        // }
+        static __D get(std::function<void()> &&f = nullptr) {
+            util::defer<bool> defer_(f);
+            __W w;
+            return std::move(w);
+        }
+
+        virtual void clear() {}
+
+    protected:
+        base() {}
+        // CLAZZ_NON_MOVEABLE(base);
+        void __copy(base const &) {
+            // __COPY(_f);
+        }
+    }; // class base
+
+
     /**
      * @brief timer provides the standard Timer interface.
      * @tparam Clock 
@@ -434,14 +484,17 @@ namespace hicc::chrono {
      * 
      * 
      */
-    template<typename Clock = Clock>
-    class timer {
+    template<typename DerivedT = std::nullopt_t, typename Clock = Clock, bool GMT = false, typename ConcreteJob = detail::in_job<Clock, GMT>>
+    class timer : public base<typename std::conditional<std::is_same_v<std::nullopt_t, DerivedT>, timer<DerivedT, Clock, GMT, ConcreteJob>, DerivedT>::type> {
         // public:
         //     class posix_ticker {
         //     public:
         //     }; // class posix_ticker
 
     public:
+        using _This = timer<DerivedT, Clock, GMT, ConcreteJob>;
+        using super = base<typename std::conditional<std::is_same_v<std::nullopt_t, DerivedT>, _This, DerivedT>::type>;
+        using base = super;
         using Job = timer_job;
         using _J = std::shared_ptr<Job>;
         using _C = Clock;
@@ -449,18 +502,35 @@ namespace hicc::chrono {
         using Jobs = std::vector<_J>;
         using TimingWheel = std::map<TP, Jobs>;
 
-    public:
+    protected:
         timer()
-            : _pool(-1) { start(); }
-        virtual ~timer() { clear(); }
-        CLAZZ_NON_COPYABLE(timer);
-        void clear() { stop(); }
+            : base{}
+            , _pool(-1) { start(); }
+        // CLAZZ_NON_MOVEABLE(timer);
+        void __copy(timer const &o) {
+            super::__copy(o);
+            __COPY(_tp);
+            __COPY(_f);
+            // __COPY(_tk);
+            __COPY(_twl);
+            __COPY(_pasts);
+            // __COPY(_l_twl);
+            // __COPY(_pool);
+            // __COPY(_started);
+            // __COPY(_ended);
+            __COPY(_larger_gap);
+            __COPY(_wastage);
+        }
 
-        // template<class _Rep, class _Period>
-        // timer &in(const std::chrono::duration<_Rep, _Period> &__d, std::function<void()> &&f) {
-        //     UNUSED(__d, f);
-        //     return (*this);
-        // }
+    public:
+        timer(timer const &o) {
+            __copy(o);
+        }
+        timer(timer &&o) {
+            __copy(o);
+        }
+        virtual ~timer() {}
+        void clear() { stop(); }
 
         /**
          * @brief run task in (one minute, five seconds, ...)
@@ -471,26 +541,18 @@ namespace hicc::chrono {
          * @param args 
          * @return 
          */
-        template<typename _Callable, typename... _Args>
-        timer &in(const typename Clock::time_point time, _Callable &&f, _Args &&...args) {
-            UNUSED(time, f);
-            std::shared_ptr<Job> t = std::make_shared<detail::in_job>(
-                    std::bind(std::forward<_Callable>(f), std::forward<_Args>(args)...));
-            add_task(time, std::move(t));
-            return (*this);
+        typename super::__D &in(const typename Clock::time_point time) {
+            _tp = time;
+            return static_cast<typename super::__D &>(*this);
         }
-        template<typename _Callable, typename... _Args>
-        timer &in(const typename Clock::duration time, _Callable &&f, _Args &&...args) {
-            in(Clock::now() + time, std::forward<_Callable>(f), std::forward<_Args>(args)...);
-            return (*this);
+        typename super::__D &in(const typename Clock::duration time) {
+            _tp = Clock::now() + time;
+            return static_cast<typename super::__D &>(*this);
         }
-        template<typename _Callable, typename... _Args>
-        timer &after(const typename Clock::time_point time, _Callable &&f, _Args &&...args) { return in(time, f, args...); }
-        template<typename _Callable, typename... _Args>
-        timer &after(const typename Clock::duration time, _Callable &&f, _Args &&...args) { return in(time, f, args...); }
-        template<typename _Callable, typename... _Args>
-        timer &at(const std::string &time, _Callable &&f, _Args &&...args) {
-            UNUSED(time, f);
+        typename super::__D &after(const typename Clock::time_point time) { return in(time); }
+        typename super::__D &after(const typename Clock::duration time) { return in(time); }
+        typename super::__D &at(const typename Clock::time_point time) { return in(time); }
+        typename super::__D &at(const std::string &time) {
             std::tm tm;
             // auto time_now = Clock::to_time_t(Clock::now());
             // std::tm tm = *std::localtime(&time_now);
@@ -506,8 +568,21 @@ namespace hicc::chrono {
                 throw std::runtime_error("Cannot parse time string: " + time);
             }
 
-            in(tp, std::forward<_Callable>(f), std::forward<_Args>(args)...);
-            return (*this);
+            return in(tp);
+        }
+
+        template<typename _Callable, typename... _Args>
+        typename super::__D &on(_Callable &&f, _Args &&...args) {
+            _f = std::bind(std::forward<_Callable>(f), std::forward<_Args>(args)...);
+            return static_cast<typename super::__D &>(*this);
+        }
+
+        // template<typename = std::enable_if_t<std::is_same<typename super::__D, _This>::value,int> =0>
+        void build() {
+            std::shared_ptr<Job> t = std::make_shared<ConcreteJob>(std::move(_f));
+            // auto next_time = t->next_time_point();
+            // hicc_debug("next_time: %s", format_time_point(next_time).c_str());
+            add_task(_tp, std::move(t));
         }
 
     private:
@@ -613,10 +688,13 @@ namespace hicc::chrono {
                     }
                 }
 
+                // hold all past jobs to avoid heap-use-after-free sanitization
+                _pasts.emplace(picked, std::move(jobs));
+
                 for (auto &j : recurred_jobs) {
                     auto tp = j->next_time_point();
 #if defined(_DEBUG) || HICC_TEST_THREAD_POOL_DBGOUT
-                    auto dur = ((detail::every_job *) j.get())->dur;
+                    auto dur = ((detail::every_job<Clock, GMT> *) j.get())->dur;
                     auto size = add_task(tp, std::move(j));
                     if ((loop % 10) == 0)
                         pool_debug("[runner] [size: %u, hit: %u, loop: %u] _recur job/%d added: %s, dur = %s, d = %s",
@@ -677,10 +755,15 @@ namespace hicc::chrono {
             return size;
         }
 
+    protected:
+        typename Clock::time_point _tp{};
+        std::function<void()> _f{nullptr};
+
     private:
         // std::thread _t;
         pool::timer_killer _tk{}; // to shut down the sleep+loop in `runner` thread gracefully
         TimingWheel _twl{};
+        TimingWheel _pasts{};
         std::mutex _l_twl{};
         pool::thread_pool _pool;
         pool::conditional_wait_for_bool _started{}, _ended{};                   // runner thread terminated.
@@ -693,26 +776,49 @@ namespace hicc::chrono {
      * 
      * @par inspired by [https://github.com/Bosma/Scheduler](https://github.com/Bosma/Scheduler) and <https://github.com/jmettraux/rufus-scheduler>.
      */
-    template<typename Clock = Clock>
-    class ticker : public timer<Clock> {
+    template<typename DerivedT = std::nullopt_t, typename Clock = Clock, bool GMT = false, typename ConcreteJob = detail::every_job<Clock, GMT>>
+    class ticker : public timer<typename std::conditional<std::is_same_v<std::nullopt_t, DerivedT>, ticker<DerivedT, Clock, GMT, ConcreteJob>, DerivedT>::type, Clock, GMT, ConcreteJob> {
     public:
-        ticker() {}
-        ~ticker() {}
-        CLAZZ_NON_COPYABLE(ticker);
-        using super = timer<Clock>;
-
-        template<typename _Callable, typename... _Args>
-        ticker &every(const typename Clock::duration time, _Callable &&f, _Args &&...args) {
-            std::shared_ptr<typename super::Job> t = std::make_shared<detail::every_job>(time, std::bind(std::forward<_Callable>(f), std::forward<_Args>(args)...));
-            auto next_time = t->next_time_point();
-            super::add_task(next_time, std::move(t));
-            return (*this);
+        ticker(ticker const &o) {
+            __copy(o);
         }
-        template<typename _Callable, typename... _Args>
-        ticker &interval(const typename Clock::duration time, _Callable &&f, _Args &&...args) {
-            std::shared_ptr<typename super::Job> t = std::make_shared<detail::every_job>(time, std::bind(std::forward<_Callable>(f), std::forward<_Args>(args)...), true);
-            super::add_task(Clock::now(), std::move(t));
-            return (*this);
+        ticker(ticker &&o) {
+            __copy(o);
+        }
+        ~ticker() {}
+        using _This = ticker<DerivedT, Clock, GMT, ConcreteJob>;
+        using super = timer<typename std::conditional<std::is_same_v<std::nullopt_t, DerivedT>, _This, DerivedT>::type, Clock, GMT, ConcreteJob>;
+        using base = typename super::base;
+        // struct __W : public ticker<Clock, GMT, ConcreteJob> {
+        //     __W() = default;
+        // };
+        // static std::shared_ptr<ticker> get(std::function<void()> &&f = nullptr) {
+        //     util::defer<bool> defer_(f);
+        //     return std::make_shared<__W>();
+        // }
+        // static ticker get(std::function<void()> &&f = nullptr) {
+        //     util::defer<bool> defer_(f);
+        //     return ticker{};
+        // }
+
+        typename base::__D &every(const typename Clock::duration time) {
+            _dur = time, _interval = false;
+            return static_cast<typename base::__D &>(*this);
+        }
+        typename base::__D &interval(const typename Clock::duration time) {
+            _dur = time, _interval = true;
+            return static_cast<typename base::__D &>(*this);
+        }
+
+        void build() {
+            auto copy_fn = super::_f;
+            std::shared_ptr<typename super::Job> t = std::make_shared<ConcreteJob>(_dur, std::move(copy_fn));
+            auto next_time = t->next_time_point();
+            hicc_debug("next_time: %s", format_time_point(next_time).c_str());
+            if (_interval)
+                super::add_task(Clock::now(), std::move(t));
+            else
+                super::add_task(next_time, std::move(t));
         }
 
         // template<typename _Callable, typename... _Args>
@@ -721,8 +827,73 @@ namespace hicc::chrono {
         //     return (*this);
         // }
 
+    protected:
+        ticker() {}
+        // CLAZZ_NON_MOVEABLE(ticker);
+        void __copy(ticker const &o) {
+            super::__copy(o);
+            __COPY(_dur);
+            __COPY(_interval);
+        }
 
+        typename Clock::duration _dur;
+        bool _interval{false};
     }; // class ticker
+
+
+    template<typename DerivedT = std::nullopt_t, typename Clock = Clock, bool GMT = false, typename ConcreteJob = detail::periodical_job<Clock, GMT>>
+    class alarmer : public ticker<typename std::conditional<std::is_same_v<std::nullopt_t, DerivedT>, alarmer<DerivedT, Clock, GMT, ConcreteJob>, DerivedT>::type, Clock, GMT, ConcreteJob> {
+    public:
+        alarmer(alarmer const &o) {
+            __copy(o);
+        }
+        alarmer(alarmer &&o) {
+            __copy(o);
+        }
+        ~alarmer() {}
+        using _This = alarmer<DerivedT, Clock, GMT, ConcreteJob>;
+        using super = ticker<typename std::conditional<std::is_same_v<std::nullopt_t, DerivedT>, _This, DerivedT>::type, Clock, GMT, ConcreteJob>;
+        using base = typename super::base;
+
+        // struct __W : public alarmer<Clock> {
+        //     __W() = default;
+        // };
+        // static std::shared_ptr<alarmer> create() { return std::make_shared<__W>(); }
+        // static alarmer get(std::function<void()> &&f = nullptr) {
+        //     alarmer t{};
+        //     if (f) f();
+        //     return t;
+        // }
+
+        typename base::__D &every_month(int day_offset = 1, int how_many = 1, int repeat_times = 0) {
+            _anchor = anchors::Month;
+            _ordinal = how_many, _offset = day_offset, _times = repeat_times;
+            return static_cast<typename base::__D &>(*this);
+        }
+
+        void build() {
+            std::shared_ptr<typename super::Job> t = std::make_shared<ConcreteJob>(_anchor, _ordinal, _offset, _times, std::move(super::_f));
+            auto next_time = t->next_time_point();
+            hicc_debug("anchor: %d, count: %d, next_time: %s", _anchor, _ordinal, format_time_point(next_time).c_str());
+            super::add_task(next_time, std::move(t));
+        }
+
+    protected:
+        alarmer() {}
+        // CLAZZ_NON_MOVEABLE(alarmer);
+        void __copy(alarmer const &o) {
+            super::__copy(o);
+            __COPY(_anchor);
+            __COPY(_ordinal);
+            __COPY(_offset);
+            __COPY(_times);
+        }
+
+        anchors _anchor = anchors::Nothing;
+        int _ordinal{0};
+        int _offset{0};
+        int _times{0};
+    }; // class alarmer
 
 } // namespace hicc::chrono
 

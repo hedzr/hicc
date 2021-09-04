@@ -115,6 +115,17 @@ namespace hicc::pool {
         virtual void _release() {}
     };
 
+    template<typename CW>
+    class cw_setter {
+    public:
+        cw_setter(CW &cw)
+            : _cw(cw) {}
+        ~cw_setter() { _cw.set(); }
+
+    private:
+        CW &_cw;
+    };
+
     class conditional_wait_for_bool : public conditional_wait<bool> {
     public:
         conditional_wait_for_bool()
@@ -346,18 +357,20 @@ namespace hicc::pool {
         }
         void clear_threads() {
             _tasks.clear();
+            _future_ended.wait();
             _threads.clear();
         }
         void start_thread(std::size_t n = 1) {
             while (n-- > 0) {
                 _threads.push_back(
                         std::async(std::launch::async,
-                                   [this
+                                   [&
 #if HICC_TEST_THREAD_POOL_DBGOUT
                                     ,
                                     n
 #endif
                 ] {
+                            cw_setter cws(_future_ended);
 #if HICC_ENABLE_THREAD_POOL_READY_SIGNAL
                                        _cv_started.set();
 #endif
@@ -392,6 +405,7 @@ namespace hicc::pool {
 #if HICC_ENABLE_THREAD_POOL_READY_SIGNAL
         conditional_wait_for_int _cv_started{};
 #endif
+        conditional_wait_for_int _future_ended{};
     }; // class thread_pool
 
 } // namespace hicc::pool

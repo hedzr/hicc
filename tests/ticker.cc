@@ -198,7 +198,7 @@ void test_timer() {
     hicc::debug::X x_local_var;
 
     hicc::pool::conditional_wait_for_int count{1};
-    hicc::chrono::timer t;
+    auto t = hicc::chrono::timer<>::get();
 #if !HICC_ENABLE_THREAD_POOL_READY_SIGNAL
     std::this_thread::sleep_for(300ms);
 #endif
@@ -207,13 +207,15 @@ void test_timer() {
         auto now = hicc::chrono::now();
         printf("  - start at: %s\n", hicc::chrono::format_time_point(now).c_str());
     }
-    t.after(1us, [&count]() {
-        auto now = hicc::chrono::now();
-        // std::time_t ct = std::time(0);
-        // char *cc = ctime(&ct);
-        printf("  - after [%02d]: %s\n", count.val(), hicc::chrono::format_time_point(now).c_str());
-        count.set();
-    });
+    t.after(1us)
+            .on([&count] {
+                auto now = hicc::chrono::now();
+                hicc::pool::cw_setter cws(count);
+                // std::time_t ct = std::time(0);
+                // char *cc = ctime(&ct);
+                printf("  - after [%02d]: %s\n", count.val(), hicc::chrono::format_time_point(now).c_str());
+            })
+            .build();
 
     count.wait();
     // t.clear();
@@ -221,9 +223,10 @@ void test_timer() {
 
 void test_ticker() {
     using namespace std::literals::chrono_literals;
+    hicc::debug::X x_local_var;
 
     hicc::pool::conditional_wait_for_int count{16};
-    hicc::chrono::ticker t;
+    auto t = hicc::chrono::ticker<>::get();
 #if !HICC_ENABLE_THREAD_POOL_READY_SIGNAL
     std::this_thread::sleep_for(300ms);
 #endif
@@ -232,40 +235,57 @@ void test_ticker() {
         auto now = hicc::chrono::now();
         printf("  - start at: %s\n", hicc::chrono::format_time_point(now).c_str());
     }
-    t.every(1us, [&count]() {
-        auto now = hicc::chrono::now();
-        // std::time_t ct = std::time(0);
-        // char *cc = ctime(&ct);
-        printf("  - every [%02d]: %s\n", count.val(), hicc::chrono::format_time_point(now).c_str());
-        count.set();
-    });
+    t.every(1us)
+            .on([&count]() {
+                auto now = hicc::chrono::now();
+                hicc::pool::cw_setter cws(count);
+                printf("  - every [%02d]: %s\n", count.val(), hicc::chrono::format_time_point(now).c_str());
+            })
+            .build();
 
     count.wait();
+    // t.clear();
 }
 
 void test_ticker_interval() {
     using namespace std::literals::chrono_literals;
+    hicc::debug::X x_local_var;
 
     hicc::pool::conditional_wait_for_int count2{4};
-    hicc::chrono::ticker t;
-    {
+    hicc::chrono::ticker<>::super::get([] {
         auto now = hicc::chrono::now();
         printf("  - start at: %s\n", hicc::chrono::format_time_point(now).c_str());
-    }
-    t.interval(200ms, [&count2]() {
-        auto now = hicc::chrono::now();
-        printf("  - interval [%02d]: %s\n", count2.val(), hicc::chrono::format_time_point(now).c_str());
-        count2.set();
-    });
+    })
+            .interval(200ms)
+            .on([&count2] {
+                auto now = hicc::chrono::now();
+                hicc::pool::cw_setter cws(count2);
+                printf("  - interval [%02d]: %s\n", count2.val(), hicc::chrono::format_time_point(now).c_str());
+            })
+            .build();
 
     count2.wait();
-    t.clear();
+}
+
+void test_alarmer() {
+    using namespace std::literals::chrono_literals;
+    hicc::debug::X x_local_var;
+    hicc::pool::conditional_wait_for_int count2{4};
+    hicc::chrono::alarmer<>::super::get()
+            .every_month(3)
+            .on([&count2] {
+                auto now = hicc::chrono::now();
+                hicc::pool::cw_setter cws(count2);
+                printf("  - alarmer [%02d]: %s\n", count2.val(), hicc::chrono::format_time_point(now).c_str());
+            })
+            .build();
 }
 
 int main() {
     // test_thread();
 
     HICC_TEST_FOR(test_periodical_job);
+    HICC_TEST_FOR(test_alarmer);
 
 #if 1
     HICC_TEST_FOR(test_type_name);
