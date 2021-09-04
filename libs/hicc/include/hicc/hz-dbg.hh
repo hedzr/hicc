@@ -736,7 +736,10 @@ namespace hicc::debug {
 
     template<int signal_catching>
     inline SignalInstaller<signal_catching> *SignalInstaller<signal_catching>::_this{nullptr};
-
+    
+    template<int signal_catching>
+    using signal_installer = SignalInstaller<signal_catching>;
+    
 } // namespace hicc::debug
 #endif // !OS_WIN
 
