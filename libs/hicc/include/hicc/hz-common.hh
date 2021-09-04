@@ -7,6 +7,42 @@
 
 #include "hz-defs.hh"
 
+#include <memory>
+
+namespace std {
+
+    template<typename T>
+    inline unique_ptr<T> to_unique(T *ptr) {
+        return unique_ptr<T>(ptr);
+    }
+    template<typename T>
+    inline unique_ptr<T> to_unique(shared_ptr<T> &&ptr) {
+        auto p = ptr.get();
+        ptr.reset();
+        auto pnew = unique_ptr<T>(p);
+        return pnew;
+    }
+    template<typename T>
+    inline unique_ptr<T> to_unique(unique_ptr<T> &&ptr) {
+        auto p = ptr.get();
+        ptr.release();
+        auto pnew = unique_ptr<T>(p);
+        return pnew;
+    }
+    template<typename T>
+    inline shared_ptr<T> to_shared(T *ptr) {
+        return shared_ptr<T>(ptr);
+    }
+    template<typename T>
+    inline shared_ptr<T> to_shared(shared_ptr<T> const &ptr) {
+        return ptr;
+    }
+    template<typename T>
+    inline shared_ptr<T> to_shared(unique_ptr<T> &&ptr) {
+        return ptr;
+    }
+
+} // namespace std
 
 namespace hicc::util {
 
@@ -82,10 +118,12 @@ namespace hicc::util {
 
     template<typename T>
     inline T &singleton<T>::instance() {
-        static const std::unique_ptr<T> instance{new T{token{}}};
+        static std::unique_ptr<T> instance{new T{token{}}};
         return *instance;
     }
 
+    // template<typename T>
+    // using hus = hicc::util::singleton<T>;
 
     template<typename C, typename... Args>
     class singleton_with_optional_construction_args {
@@ -122,6 +160,8 @@ namespace hicc::util {
 #endif // defined(NEVER_USED)
 
 } // namespace hicc::util
+
+#define HICC_SINGLETON(t) hicc::util::singleton<t>
 
 namespace hicc::util {
 
