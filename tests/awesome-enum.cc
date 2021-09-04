@@ -8,10 +8,6 @@
 #include "hicc/hz-log.hh"
 #include "hicc/hz-x-test.hh"
 
-AWESOME_MAKE_ENUM(Week,
-                  Sunday, Monday,
-                  Tuesday, Wednesday, Thursday, Friday, Saturday);
-
 enum class Animal { DOG,
                     CAT = 100,
                     HORSE = 1000,
@@ -53,11 +49,16 @@ inline std::ostream &operator<<(std::ostream &os, Animal value) {
     return os;
 }
 
+AWESOME_MAKE_ENUM(Week,
+                  Sunday, Monday,
+                  Tuesday, Wednesday, Thursday, Friday, Saturday);
+
 void test_awesome_enum() {
     auto dog = Animal::DOG;
     std::cout << dog << '\n';
     std::cout << Animal::HORSE << '\n';
     std::cout << Animal::CAT << '\n';
+    
     std::cout << Week::Saturday << '\n';
 }
 
