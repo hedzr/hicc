@@ -40,20 +40,28 @@ namespace tmp1 {
         template<typename T>
         static std::unique_ptr<T> create() { return T::create_unique(); }
     };
+    
+    class MyVars: public hicc::util::singleton<MyVars> {
+    public:
+        explicit MyVars(typename hicc::util::singleton<MyVars>::token) {}
+        long var1;
+    };
 } // namespace tmp1
 
 void test_factory() {
     namespace fct = hicc::util::factory;
 
+    hicc_print("%ld\n", hicc::util::singleton<tmp1::MyVars>::instance().var1);
+    
     auto pp = tmp1::factory::create<tmp1::Point2D>();
     hicc_print("Point2D = %p", pp.get());
     // pp = tmp1::factory::create<tmp1::Point3D>();
     // hicc_print("Point2D = %p", pp.get());
 
     using shape_factory = fct::factory<tmp1::Point, tmp1::Point2D, tmp1::Point3D>;
-    auto *ptr = shape_factory::create("tmp1::Point2D");
+    auto *ptr = shape_factory::create_nacked_ptr("tmp1::Point2D");
     hicc_print("shape_factory: Point2D = %p, %s", ptr, ptr->name());
-    ptr = shape_factory::create("tmp1::Point3D");
+    ptr = shape_factory::create_nacked_ptr("tmp1::Point3D");
     hicc_print("shape_factory: Point3D = %p, %s", ptr, ptr->name());
 
     std::unique_ptr<tmp1::Point> smt = std::make_unique<tmp1::Point3D>();
