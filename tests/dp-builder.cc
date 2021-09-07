@@ -275,14 +275,52 @@ void test_builder_complex() {
 
 
 namespace hicc::dp::builder::meta {
+    class builder_base {
+    public:
+        builder_base &set_a() {
+            return (*this);
+        }
 
+        builder_base& on_set_b(){
+            return (*this);
+        }
+    };
+
+    template<typename derived_t, typename T>
+    class builder : public builder_base {
+    public:
+        derived_t &set_a() {
+            return *static_cast<derived_t *>(this);
+        }
+        derived_t &set_b() {
+            return *static_cast<derived_t *>(this);
+        }
+
+        std::unique_ptr<T> t{}; // the temporary object for builder constructing...
+
+        // ... more
+    };
+
+    template<typename T>
+    class jeep_builder : public builder<jeep_builder<T>, T> {
+    public:
+        jeep_builder &set_a() {
+            return *this;
+        }
+    };
 } // namespace hicc::dp::builder::meta
+
+void test_builder_meta() {
+    using namespace hicc::dp::builder::meta;
+    jeep_builder<int> b{};
+    b.set_a();
+}
 
 int main() {
 
     HICC_TEST_FOR(test_builder_basic);
     HICC_TEST_FOR(test_builder_complex);
-    // HICC_TEST_FOR(test_builder_meta);
+    HICC_TEST_FOR(test_builder_meta);
 
     return 0;
 }
