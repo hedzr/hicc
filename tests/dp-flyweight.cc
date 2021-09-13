@@ -178,8 +178,8 @@ namespace hicc::dp::flyweight::meta {
         std::string plates_;
 
         unique_state_impl(const std::string &owner, const std::string &plates)
-        : owner_(owner)
-        , plates_(plates) {
+            : owner_(owner)
+            , plates_(plates) {
         }
 
         friend std::ostream &operator<<(std::ostream &os, const unique_state_impl &us) {
@@ -225,7 +225,10 @@ namespace hicc::dp::flyweight::meta {
         }
     };
 
-    template<typename shared_t = shared_state_impl, typename unique_t = unique_state_impl, typename flyweight_t = flyweight<shared_t, unique_t>, typename hasher_t = std::hash<shared_t>>
+    template<typename shared_t = shared_state_impl,
+             typename unique_t = unique_state_impl,
+             typename flyweight_t = flyweight<shared_t, unique_t>,
+             typename hasher_t = std::hash<shared_t>>
     class flyweight_factory {
     public:
         flyweight_factory() {}
