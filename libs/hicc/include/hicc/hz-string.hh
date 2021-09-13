@@ -820,6 +820,25 @@ namespace hicc {
         return ss.str();
     }
 
+    template<typename T>
+    inline std::string to_string(std::unique_ptr<T> &t) {
+        std::stringstream ss;
+        ss << *t.get();
+        return ss.str();
+    }
+    template<typename T>
+    inline std::string to_string(std::shared_ptr<T> &t) {
+        std::stringstream ss;
+        ss << *t.get();
+        return ss.str();
+    }
+    template<typename T>
+    inline std::string to_string(std::weak_ptr<T> &t) {
+        std::stringstream ss;
+        ss << *t.get();
+        return ss.str();
+    }
+
 } // namespace hicc
 
 #endif //HICC_CXX_HZ_STRING_HH
