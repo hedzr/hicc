@@ -230,6 +230,34 @@ namespace hicc::util {
 
 namespace hicc::util {
 
+    struct base_visitor {
+        virtual ~base_visitor() {}
+    };
+    struct base_visitable {
+        virtual ~base_visitable() {}
+    };
+
+    template<typename Visited, typename ReturnType = void>
+    class visitor : public base_visitor {
+    public:
+        using return_t = ReturnType;
+        using visited_t = std::unique_ptr<Visited>;
+        virtual return_t visit(visited_t &visited) = 0;
+    };
+
+    template<typename Visited, typename ReturnType = void>
+    class visitable : public base_visitable {
+    public:
+        virtual ~visitable() {}
+        using return_t = ReturnType;
+        using visitor_t = visitor<Visited, return_t>;
+        virtual return_t accept(visitor_t &guest) = 0;
+    };
+
+} // namespace hicc::util
+
+namespace hicc::util {
+
     inline std::string detect_shell_env() {
         auto *str = std::getenv("SHELL");
         if (str != nullptr) {
@@ -238,6 +266,10 @@ namespace hicc::util {
         }
         return "unknown";
     }
+
+} // namespace hicc::util
+
+namespace hicc::util {
 
     /**
      * @brief 
