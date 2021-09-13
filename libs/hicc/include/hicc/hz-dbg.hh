@@ -241,6 +241,18 @@ namespace hicc::debug {
         return std::string_view{value.data(), value.size()};
     }
 
+    /**
+     * @brief remove the scoped prefix (before '::')
+     * @tparam T 
+     * @return 
+     */
+    template<typename T>
+    constexpr auto short_type_name() -> std::string_view {
+        constexpr auto &value = type_name_holder<T>::value;
+        constexpr auto end = value.rfind("::");
+        return std::string_view{value.data() + (end != std::string_view::npos ? end + 2 : 0)};
+    }
+
     // https://bitwizeshift.github.io/posts/2021/03/09/getting-an-unmangled-type-name-at-compile-time/
 #endif
 
@@ -736,10 +748,10 @@ namespace hicc::debug {
 
     template<int signal_catching>
     inline SignalInstaller<signal_catching> *SignalInstaller<signal_catching>::_this{nullptr};
-    
+
     template<int signal_catching>
     using signal_installer = SignalInstaller<signal_catching>;
-    
+
 } // namespace hicc::debug
 #endif // !OS_WIN
 

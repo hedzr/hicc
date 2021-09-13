@@ -79,8 +79,11 @@ void test_type_name() {
     std::string str{fn};
     printf(">>> '%s'\n", str.c_str());
 
-    std::cout << hicc::debug::type_name<std::string>() << '\n';
-    std::cout << std::string(hicc::debug::type_name<std::string>()) << '\n';
+    printf("typenames: -----\n");
+    std::cout << hicc::debug::type_name<std::string>();
+    std::string_view t1 = hicc::debug::short_type_name<std::string>();
+    std::cout << ", " << std::string(t1) << '\n';
+    std::cout << std::string(hicc::debug::type_name<std::string>()) << ", " << std::string(hicc::debug::short_type_name<std::string>()) << '\n';
     printf(">>> %s\n", std::string(hicc::debug::type_name<std::string>()).c_str());
 }
 
