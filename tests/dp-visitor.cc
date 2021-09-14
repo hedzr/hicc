@@ -109,7 +109,7 @@ namespace hicc::dp::visitor::basic {
         // more: attrs, ...
     };
 
-    struct canva : public hicc::util::visitable<drawable> {
+    struct canvas : public hicc::util::visitable<drawable> {
         using layer_t = std::unique_ptr<layer>;
         using layers_t = std::unordered_map<draw_id, layer_t>;
         layers_t layers;
@@ -149,7 +149,7 @@ namespace hicc::dp::visitor::basic {
 void test_visitor_basic() {
     using namespace hicc::dp::visitor::basic;
 
-    canva c;
+    canvas c;
     static draw_id id = 0, did = 0;
     c.add(++id);
     c[1]->add(std::make_unique<line>(++did));
