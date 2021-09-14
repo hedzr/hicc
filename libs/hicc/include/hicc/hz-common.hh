@@ -242,7 +242,7 @@ namespace hicc::util {
     public:
         using return_t = ReturnType;
         using visited_t = std::unique_ptr<Visited>;
-        virtual return_t visit(visited_t &visited) = 0;
+        virtual return_t visit(visited_t const &visited) = 0;
     };
 
     template<typename Visited, typename ReturnType = void>

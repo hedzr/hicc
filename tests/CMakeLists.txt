@@ -115,6 +115,7 @@ define_test_program(awesome-enum awesome-enum.cc)
 define_test_program(dp-factory dp-factory.cc)     # factory
 define_test_program(dp-builder dp-builder.cc)     # builder
 define_test_program(dp-flyweight dp-flyweight.cc) # flyweight
+define_test_program(dp-visitor dp-visitor.cc)
 
 define_test_program(btree btree.cc)
 define_test_program(bt0 bt0.cc)
