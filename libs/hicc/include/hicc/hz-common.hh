@@ -44,6 +44,119 @@ namespace std {
 
 } // namespace std
 
+namespace hicc::types {
+
+    // https://stackoverflow.com/questions/36797770/get-function-parameters-count
+
+
+    /**
+     * @brief 
+     * @tparam R 
+     * @tparam Types 
+     * @param f 
+     * @return 
+     * @details For example:
+     * @code{c++}
+     * void foo2(int, int, char*) { }
+     * size_t count = args_count(foo2);
+     * @endcode
+     */
+    template<typename R, typename... Types>
+    constexpr size_t args_count(R (*f)(Types...)) {
+        UNUSED(f);
+        return sizeof...(Types);
+    }
+
+    /**
+     * @brief 
+     * @tparam R 
+     * @tparam T 
+     * @tparam Types 
+     * @return 
+     * @details For example:
+     * @code{c++}
+     * struct s {
+     *   void m(char *, int &) { std::cout << "member function\n"; }
+     * };
+     * const int c3 = hicc::types::member_args_count(&s::m).value;
+     */
+    template<typename R, typename T, typename... Types>
+    constexpr std::integral_constant<unsigned, sizeof...(Types)>
+    member_args_count(R (T::*)(Types...)) {
+        return std::integral_constant<unsigned, sizeof...(Types)>{};
+    }
+    
+
+    /**
+     * @brief 
+     * @tparam R 
+     * @tparam Args 
+     * @return 
+     * @details For example:
+     * @code{c++}
+     * inline void foo1(int a, int b, int c){ UNUSED(a, b, c); }
+     * size_t count = argCounter(foo1);
+     * @endcode
+     */
+    template<class R, class... Args>
+    constexpr auto argCounter(R(Args...)) {
+        return sizeof...(Args);
+    }
+
+    /**
+     * @brief 
+     * @tparam function
+     * @details For example:
+     * @code{c++}
+     * inline void foo1(int, int, int){}
+     * size_t count = argCount<foo1>;
+     * @endcode
+     */
+    template<auto function>
+    inline constexpr auto argCount = argCounter(function);
+
+
+    template<class R, class... ARGS>
+    struct function_ripper {
+        static constexpr size_t n_args = sizeof...(ARGS);
+    };
+
+    /**
+     * @brief 
+     * @tparam R 
+     * @tparam ARGS 
+     * @return 
+     * @details For example:
+     * @code{c++}
+     * void foo(int, double, const char*);
+     * void check_args() {
+     *   constexpr size_t foo_args = decltype(make_ripper(foo))::n_args;
+     *   std::cout &lt;&lt;"Foo has  " &lt;&lt; foo_args &lt;&lt; " arguments.\n";
+     * }
+     * @endcode
+     */
+    template<class R, class... ARGS>
+    auto constexpr make_ripper(R(ARGS...)) {
+        return function_ripper<R, ARGS...>();
+    }
+
+    /**
+     * @brief 
+     * @tparam func
+     * @details For example:
+     * @code{c++}
+     * void foo(int, double, const char*);
+     * void check_args() {
+     *   constexpr size_t foo_args = decltype(make_ripper(foo))::n_args;
+     *   std::cout &lt;&lt; "Foo has  " &lt;&lt; foo_args &lt;&lt; " arguments.\n";
+     * }
+     * @endcode
+     */
+    template<auto func>
+    constexpr size_t n_args = decltype(make_ripper(func))::n_args;
+
+} // namespace hicc::types
+
 namespace hicc::util {
 
     /**
@@ -252,6 +365,83 @@ namespace hicc::util {
         using return_t = ReturnType;
         using visitor_t = visitor<Visited, return_t>;
         virtual return_t accept(visitor_t &guest) = 0;
+    };
+
+} // namespace hicc::util
+
+namespace hicc::util {
+
+    template<typename S>
+    class observer {
+    public:
+        virtual ~observer() {}
+        using subject_t = S;
+        virtual void observe(subject_t const &e) = 0;
+    };
+
+    template<typename S, typename Observer = observer<S>, bool Managed = false>
+    class observable {
+    public:
+        virtual ~observable() { clear(); }
+        using subject_t = S;
+        using observer_t_nacked = Observer;
+        using observer_t = std::weak_ptr<observer_t_nacked>;
+        using observer_t_shared = std::shared_ptr<observer_t_nacked>;
+        observable &add_observer(observer_t const &o) {
+            _observers.push_back(o);
+            return (*this);
+        }
+        observable &add_observer(observer_t_shared &o) {
+            observer_t wp = o;
+            _observers.push_back(wp);
+            return (*this);
+        }
+        observable &remove_observer(observer_t_nacked *o) {
+            _observers.erase(std::remove_if(_observers.begin(), _observers.end(), [o](observer_t const &rhs) {
+                                 if (auto spt = rhs.lock())
+                                     return spt.get() == o;
+                                 return false;
+                             }),
+                             _observers.end());
+            return (*this);
+        }
+        observable &remove_observer(observer_t_shared &o) {
+            _observers.erase(std::remove_if(_observers.begin(), _observers.end(), [o](observer_t const &rhs) {
+                                 if (auto spt = rhs.lock())
+                                     return spt.get() == o.get();
+                                 return false;
+                             }),
+                             _observers.end());
+            return (*this);
+        }
+        observable &operator+=(observer_t const &o) { return add_observer(o); }
+        observable &operator+=(observer_t_shared &o) { return add_observer(o); }
+        observable &operator-=(observer_t_nacked *o) { return remove_observer(o); }
+        observable &operator-=(observer_t_shared &o) { return remove_observer(o); }
+
+    public:
+        /**
+         * @brief fire an event along the observers chain.
+         * @param event_or_subject 
+         */
+        void emit(subject_t const &event_or_subject) {
+            for (auto const &wp : _observers)
+                if (auto spt = wp.lock())
+                    spt->observe(event_or_subject);
+        }
+
+    private:
+        void clear() {
+            if (Managed) {
+                // for (auto &o : _observers) {
+                //     if (auto spt = o.lock())
+                //         spt.release();
+                // }
+            }
+        }
+
+    private:
+        std::vector<observer_t> _observers;
     };
 
 } // namespace hicc::util
