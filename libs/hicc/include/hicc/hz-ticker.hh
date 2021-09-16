@@ -747,7 +747,7 @@ namespace hicc::chrono {
                 auto it = _twl.find(tp);
                 if (it != _twl.end()) {
                     auto &coll = (*it).second;
-                    std::remove(coll.begin(), coll.end(), task);
+                    coll.erase(std::remove(coll.begin(), coll.end(), task), coll.end());
                 }
                 size = _twl.size();
             }
