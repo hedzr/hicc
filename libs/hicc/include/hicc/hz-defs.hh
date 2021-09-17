@@ -119,10 +119,18 @@ inline void UNUSED([[maybe_unused]] Args &&...args) {
 #define __MOVE(m) this->m = std::move(o.m)
 #endif
 
-#if !defined(_WIN32)
-#ifndef TEXT
-#define TEXT(x) (#x)
+#ifndef _TEXT
+#define _TEXT_BASE(x) #x
+#define _TEXT(x) _TEXT_BASE(x)
 #endif
+
+#ifndef _CONCAT
+#define _CONCAT_BASE(x, y) x##y
+#define _CONCAT(x, y) _CONCAT_BASE(x, y)
+#endif
+
+#if !defined(_EMPTY)
+#define _EMPTY()
 #endif
 
 #ifndef DISABLE_MSVC_WARNINGS
@@ -265,6 +273,27 @@ inline void UNUSED([[maybe_unused]] Args &&...args) {
 
 //
 
+
+#if defined(__has_builtin)
+#define HAS_BUILTIN(...) __has_builtin(__VA_ARGS__)
+#else
+#define HAS_BUILTIN(...) 0
+#endif
+#if defined(__has_cpp_attribute)
+#if __has_cpp_attribute(nodiscard)
+#define HAS_NODISCARD [[nodiscard]]
+#endif
+#endif
+
+#if !defined HAS_NODISCARD
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#define HAS_NODISCARD _Check_return_
+#elif defined(__GNUC__)
+#define HAS_NODISCARD __attribute__((__warn_unused_result__))
+#else
+#define HAS_NODISCARD
+#endif
+#endif
 
 #ifndef HAS_STRING_VIEW
 #if __cplusplus >= 201703 || (defined(_MSVC_LANG) && _MSVC_LANG >= 201703L)
@@ -442,6 +471,8 @@ namespace std {
 #endif
 #endif
 
+// OS
+
 #ifndef _OS_MACROS
 #define _OS_MACROS
 
@@ -497,7 +528,11 @@ namespace std {
 //#error "Unknown compiler"
 #define OS_UNKNOWN
 #endif
+
 #endif //_OS_MACROS
+
+#ifndef _OS_MACROS_MORE
+#define _OS_MACROS_MORE
 
 #ifdef OS_UNIX
 #undef OS_UNIX
@@ -540,6 +575,8 @@ namespace std {
 #define OS_POSIX 0
 #endif
 
+// ARCH
+
 #if defined(__arm__)
 #define ARCH_ARM 1
 #else
@@ -564,61 +601,111 @@ namespace std {
 #define ARCH_PPC64 0
 #endif
 
-#if defined(__has_builtin)
-#define HAS_BUILTIN(...) __has_builtin(__VA_ARGS__)
+#endif // _OS_MACROS_MORE
+
+// Compilers
+
+#ifndef _COMPILER_NAME
+#define _COMPILER_NAME
+
+// https://blog.kowalczyk.info/article/j/guide-to-predefined-macros-in-c-compilers-gcc-clang-msvc-etc..html
+// http://beefchunk.com/documentation/lang/c/pre-defined-c/precomp.html
+// and: https://github.com/arnemertz/online-compilers/blob/gh-pages/compiler_version.cpp
+#if defined(__clang__)
+#if defined(__riscv__) || defined(__riscv)
+#define _GNU_PREFIX "risc-v clang"
 #else
-#define HAS_BUILTIN(...) 0
+#define _GNU_PREFIX "clang"
 #endif
-#if defined(__has_cpp_attribute)
-#if __has_cpp_attribute(nodiscard)
-#define HAS_NODISCARD [[nodiscard]]
+#define COMPILER_NAME _GNU_PREFIX " " _TEXT(__clang_major__) "." _TEXT(__clang_minor__) "." _TEXT(__clang_patchlevel__)
+#elif defined(__ICC) || defined(__INTEL_COMPILER)
+#define COMPILER_NAME "Intel " _TEXT(__INTEL_COMPILER)
+#elif defined(__GNUC__) || defined(__GNUG__)
+#if defined(__DJGPP__)
+#define _GNU_PREFIX "djgpp gcc"
+#elif defined(__riscv__) || defined(__riscv)
+#define _GNU_PREFIX "risc-v gcc"
+#else
+#define _GNU_PREFIX "gcc"
 #endif
+#if __GNUC_PATCHLEVEL__
+#define _GNU_PATCH_PART "." _TEXT(__GNUC_PATCHLEVEL__)
+#else
+#define _GNU_PATCH_PART ""
+#endif
+#define COMPILER_NAME _GNU_PREFIX " " _TEXT(__GNUC__) "." _TEXT(__GNUC_MINOR__) _GNU_PATCH_PART
+#elif defined(__HP_cc) || defined(__HP_aCC)
+#define COMPILER_NAME "HP " _TEXT(__HP_aCC)
+#elif defined(__IBMC__) || defined(__IBMCPP__)
+#define COMPILER_NAME "IBM " _TEXT(__IBMCPP__)
+#elif defined(_MSC_VER)
+#define COMPILER_NAME "MSVC " _TEXT(_MSC_FULL_VER)
+#elif defined(__PGI)
+#define COMPILER_NAME "Portland PGCPP" _TEXT(__VERSION__)
+#elif defined(__SUNPRO_C) || defined(__SUNPRO_CC)
+#define COMPILER_NAME "Solaris Studio" _TEXT(__SUNPRO_CC)
+#elif defined(__EMSCRIPTEN__)
+#define COMPILER_NAME "emscripten "
+#elif defined(__MINGW32__)
+#define COMPILER_NAME "MinGW 32bit " _TEXT(__MINGW32_MAJOR_VERSION) "." _TEXT(__MINGW32_MINOR_VERSION)
+#elif defined(__MINGW64__)
+#define COMPILER_NAME "MinGW 64bit " _TEXT(__MINGW64_VERSION_MAJOR) "." _TEXT(__MINGW64_VERSION_MINOR)
+#else
+#define COMPILER_NAME "UNKNOWN COMPILER "
 #endif
 
-#if !defined HAS_NODISCARD
-#if defined(_MSC_VER) && (_MSC_VER >= 1700)
-#define HAS_NODISCARD _Check_return_
-#elif defined(__GNUC__)
-#define HAS_NODISCARD __attribute__((__warn_unused_result__))
-#else
-#define HAS_NODISCARD
+// boost version name
+
+#ifndef CHECK_BOOST_VERSION
+#define CHECK_BOOST_VERSION 0
 #endif
+#if CHECK_BOOST_VERSION
+#include <boost/version.hpp>
+#define BOOST_VERSION_NAME "Boost v" _TEXT(BOOST_LIB_VERSION)
 #endif
 
-namespace hicc::cross {
+#endif // _COMPILER_NAME
+
+// constexpr values
+
+namespace hicc { namespace cross {
     constexpr bool kIsArchArm = ARCH_ARM == 1;
     constexpr bool kIsArchAmd64 = ARCH_X64 == 1;
     constexpr bool kIsArchAArch64 = ARCH_AARCH64 == 1;
     constexpr bool kIsArchPPC64 = ARCH_PPC64 == 1;
-} // namespace hicc::cross
-namespace hicc::cross {
+}} // namespace hicc::cross
+namespace hicc { namespace cross {
 #ifdef NDEBUG
     constexpr auto kIsDebug = false;
 #else
     constexpr auto kIsDebug = true;
 #endif
-} // namespace hicc::cross
-namespace hicc::cross {
+}} // namespace hicc::cross
+namespace hicc { namespace cross {
 #if defined(_MSC_VER)
     constexpr bool kIsMsvc = true;
 #else
     constexpr bool kIsMsvc = false;
 #endif
-} // namespace hicc::cross
-namespace hicc::cross {
+}} // namespace hicc::cross
+namespace hicc { namespace cross {
 #if FOLLY_SANITIZE_THREAD
     constexpr bool kIsSanitizeThread = true;
 #else
     constexpr bool kIsSanitizeThread = false;
 #endif
-} // namespace hicc::cross
-namespace hicc::cross {
+}} // namespace hicc::cross
+namespace hicc { namespace cross {
 #if defined(__linux__) && !FOLLY_MOBILE
     constexpr auto kIsLinux = true;
 #else
     constexpr auto kIsLinux = false;
 #endif
-} // namespace hicc::cross
+}} // namespace hicc::cross
+namespace hicc { namespace cross {
+    constexpr auto kCompilerName = COMPILER_NAME;
+    constexpr auto kBoostVersion = "No boost";
+}} // namespace hicc::cross
 
 //
 
@@ -629,7 +716,7 @@ struct always_false : std::false_type {};
 template<typename T>
 [[maybe_unused]] constexpr bool always_false_v = always_false<T>::value;
 
-namespace hicc::cross {
+namespace hicc { namespace cross {
     template<typename T>
     constexpr T constexpr_max(T a) {
         return a;
@@ -660,7 +747,7 @@ namespace hicc::cross {
     constexpr T constexpr_log2_ceil(T t) {
         return detail::constexpr_log2_ceil_(constexpr_log2(t), t);
     }
-} // namespace hicc::cross
+}} // namespace hicc::cross
 
 #ifndef _CONST_CHARS_DEFINED
 #define _CONST_CHARS_DEFINED
@@ -675,14 +762,14 @@ typedef std::vector<std::string> string_array;
 #ifndef _VECTOR_TO_STRING_HELPERS_DEFINED
 #define _VECTOR_TO_STRING_HELPERS_DEFINED
 
-// namespace cmdr::detail {
+// namespace hicc::detail {
 //     using std::begin;
 //
 //     template<class T>
 //     inline auto check() -> decltype(begin(std::declval<T>())) {}
 // }
 //
-// template<class T, class = decltype(cmdr::detail::check<T>())>
+// template<class T, class = decltype(hicc::detail::check<T>())>
 // inline constexpr bool is_iterable(int) { return true; }
 //
 // template<class>
@@ -777,11 +864,11 @@ inline std::ostream &operator<<(std::ostream &os, Container<TX> &o) {
 // // number which have a base from 3333.
 // const char *const NOBODY_GROUP_SORTER = "3333";
 
-//template<class T=std::string>
-//constexpr T UNSORTED_GROUP = T("1230.Unsorted");
+// template<class T=std::string>
+// constexpr T UNSORTED_GROUP = T("1230.Unsorted");
 //
-//template<class T=std::string>
-//constexpr T SYS_MGMT_GROUP = T("9000.System Management");
+// template<class T=std::string>
+// constexpr T SYS_MGMT_GROUP = T("9000.System Management");
 
 // #if defined(HICC_ENABLE_VERBOSE_LOG)
 // #include <spdlog/spdlog.h>
@@ -801,7 +888,7 @@ inline std::ostream &operator<<(std::ostream &os, Container<TX> &o) {
 #undef min
 #undef max
 #include <time.h>
-namespace hicc::cross {
+namespace hicc { namespace cross {
     inline void setenv(const char *__name, const char *__value, int __overwrite = 1) {
         UNUSED(__overwrite);
         std::ostringstream os;
@@ -827,12 +914,12 @@ namespace hicc::cross {
     inline T max(T a, T b) { return a < b ? b : a; }
     template<class T>
     inline T min(T a, T b) { return a < b ? a : b; }
-} // namespace hicc::cross
+}} // namespace hicc::cross
 #else
 #include <algorithm>
 #include <ctime>
 #include <time.h>
-namespace hicc::cross {
+namespace hicc { namespace cross {
     inline void setenv(const char *__name, const char *__value, int __overwrite = 1) {
         ::setenv(__name, __value, __overwrite);
     }
@@ -852,7 +939,7 @@ namespace hicc::cross {
     inline T max(T a, T b) { return std::max(a, b); }
     template<class T>
     inline T min(T a, T b) { return std::min(a, b); }
-} // namespace hicc::cross
+}} // namespace hicc::cross
 #endif
 
 
@@ -864,7 +951,7 @@ namespace std {
 }
 #endif
 #endif
-namespace hicc::cross {
+namespace hicc { namespace cross {
     //  has_extended_alignment
     //
     //  True if it may be presumed that the platform has static extended alignment;
@@ -993,6 +1080,7 @@ namespace hicc::cross {
     //
     // inline auto now() noexcept { return std::chrono::high_resolution_clock::now(); }
 
-} // namespace hicc::cross
+}} // namespace hicc::cross
+
 
 #endif //HICC_CXX_HZ_DEFS_HH
