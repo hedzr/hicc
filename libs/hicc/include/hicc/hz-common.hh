@@ -8,6 +8,7 @@
 #include "hz-defs.hh"
 
 #include <memory>
+#include <functional>
 
 namespace std {
 
@@ -406,10 +407,10 @@ namespace hicc::util {
                              _observers.end());
             return (*this);
         }
-        observable &operator+=(observer_t const &o) { return add_observer(o); }
         observable &operator+=(observer_t_shared &o) { return add_observer(o); }
-        observable &operator-=(observer_t_nacked *o) { return remove_observer(o); }
+        observable &operator+=(observer_t const &o) { return add_observer(o); }
         observable &operator-=(observer_t_shared &o) { return remove_observer(o); }
+        observable &operator-=(observer_t_nacked *o) { return remove_observer(o); }
 
     public:
         /**
