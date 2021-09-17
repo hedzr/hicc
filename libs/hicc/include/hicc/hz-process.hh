@@ -132,14 +132,14 @@ namespace hicc::process {
                                     (DWORD) bufsize,
                                     &n,
                                     nullptr);
-                            // cmdr_verbose_debug("STDERR: Success:%d n:%d\n", success, (int) n);
+                            // hicc_verbose_debug("STDERR: Success:%d n:%d\n", success, (int) n);
                             if (!success || n == 0)
                                 break;
                             std::string s(buffer, n);
-                            // cmdr_verbose_debug("STDOUT:(%s)\n", s.c_str());
+                            // hicc_verbose_debug("STDOUT:(%s)\n", s.c_str());
                             lst_stdout += s;
                         }
-                        // cmdr_verbose_debug("STDOUT:BREAK!\n");
+                        // hicc_verbose_debug("STDOUT:BREAK!\n");
                     });
                 }
 
@@ -156,14 +156,14 @@ namespace hicc::process {
                                     (DWORD) bufsize,
                                     &n,
                                     nullptr);
-                            // cmdr_verbose_debug("STDERR: Success:%d n:%d\n", success, (int) n);
+                            // hicc_verbose_debug("STDERR: Success:%d n:%d\n", success, (int) n);
                             if (!success || n == 0)
                                 break;
                             std::string s(buffer, n);
-                            // cmdr_verbose_debug("STDERR:(%s)\n", s.c_str());
+                            // hicc_verbose_debug("STDERR:(%s)\n", s.c_str());
                             lst_stderr += s;
                         }
-                        // cmdr_verbose_debug("STDERR:BREAK!\n");
+                        // hiccverbose_debug("STDERR:BREAK!\n");
                     });
                 }
 

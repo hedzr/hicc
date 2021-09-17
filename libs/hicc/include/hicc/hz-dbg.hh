@@ -225,13 +225,13 @@ namespace hicc::debug {
      * 
      * 1. use std::ostream directly:
      * @code{c++}
-     * std::cout << cmdr::debug::type_name&lt;std::string>() << '\n';
+     * std::cout << hicc::debug::type_name&lt;std::string>() << '\n';
      * @endcode
      * 
      * 2. wrap the string_view into a std::string:
      * @code{c++}
-     * std::cout << std::string(cmdr::debug::type_name&lt;std::string>()) << '\n';
-     * printf(">>> %s\n", std::string(cmdr::debug::type_name&lt;std::string>()).c_str());
+     * std::cout << std::string(hicc::debug::type_name&lt;std::string>()) << '\n';
+     * printf(">>> %s\n", std::string(hicc::debug::type_name&lt;std::string>()).c_str());
      * @endcode
      * 
      */

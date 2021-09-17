@@ -28,18 +28,18 @@ inline int gettimeofday(struct timeval *tp, struct timezone * /* tzp */) {
     return 0;
 }
 
-namespace cmdr::chrono::detail {
+namespace hicc::chrono::detail {
     const __int64 exp7 = 10000000i64;           //1E+7     //C-file part
     const __int64 exp9 = 1000000000i64;         //1E+9
     const __int64 w2ux = 116444736000000000i64; //1.jan1601 to 1.jan1970
-} // namespace cmdr::chrono::detail
+} // namespace hicc::chrono::detail
 
 inline void unix_time(struct timespec *spec) {
     __int64 wintime;
     ::GetSystemTimeAsFileTime((FILETIME *) &wintime);
-    wintime -= cmdr::chrono::detail::w2ux;
-    spec->tv_sec = wintime / cmdr::chrono::detail::exp7;
-    spec->tv_nsec = wintime % cmdr::chrono::detail::exp7 * 100;
+    wintime -= hicc::chrono::detail::w2ux;
+    spec->tv_sec = wintime / hicc::chrono::detail::exp7;
+    spec->tv_nsec = wintime % hicc::chrono::detail::exp7 * 100;
 }
 inline int clock_gettime(int, timespec *spec) {
     static struct timespec startspec;
@@ -51,15 +51,15 @@ inline int clock_gettime(int, timespec *spec) {
         tps = tmp; //init ~~ONCE         //possibly change freq ?
         ::QueryPerformanceCounter((LARGE_INTEGER *) &startticks);
         unix_time(&startspec);
-        ticks2nano = (double) cmdr::chrono::detail::exp9 / tps;
+        ticks2nano = (double) hicc::chrono::detail::exp9 / tps;
     }
     ::QueryPerformanceCounter((LARGE_INTEGER *) &curticks);
     curticks -= startticks;
     spec->tv_sec = startspec.tv_sec + (curticks / tps);
     spec->tv_nsec = (long) (startspec.tv_nsec + (double) (curticks % tps) * ticks2nano);
-    if (!(spec->tv_nsec < cmdr::chrono::detail::exp9)) {
+    if (!(spec->tv_nsec < hicc::chrono::detail::exp9)) {
         spec->tv_sec++;
-        spec->tv_nsec -= cmdr::chrono::detail::exp9;
+        spec->tv_nsec -= hicc::chrono::detail::exp9;
     }
     return 0;
 }
