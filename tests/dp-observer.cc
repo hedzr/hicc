@@ -30,7 +30,9 @@ namespace hicc::dp::observer::basic {
         // bool operator==(const std::string_view &tn) const { return hicc::debug::type_name<event>() == tn; }
     };
 
-    class Store : public hicc::util::observable<event> {};
+    struct mouse_move_event : public event {};
+    
+    class Store : public hicc::util::observable<event, true> {};
 
     class Customer : public hicc::util::observer<event> {
     public:
@@ -48,9 +50,13 @@ void test_observer_basic() {
 
     Store store;
     Store::observer_t_shared c = std::make_shared<Customer>(); // uses Store::observer_t_shared rather than 'auto'
+
     store += c;
     store.emit(event{});
     store -= c;
+
+    hicc::util::registerer<event, true> __r(store, c);
+    store.emit(mouse_move_event{});
 }
 
 int main() {
