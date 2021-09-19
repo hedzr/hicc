@@ -18,7 +18,7 @@ std::mutex cout_mutex;
 constexpr int max_write_iterations{10'000'000}; // 性能评估时间调节
 
 DISABLE_ALIGN_WARNINGS
-namespace hicc::cross {
+namespace hicc { namespace cross {
 
     struct alignas(hardware_constructive_interference_size)
             OneCacheLiner { // 占据一条缓存线
@@ -72,7 +72,7 @@ namespace hicc::cross {
             twoCacheLiner.y = (uint64_t) elapsed.count();
     }
 
-} // namespace hicc::cross
+}} // namespace hicc::cross
 RESTORE_ALIGN_WARNINGS
 
 using namespace hicc::cross;
