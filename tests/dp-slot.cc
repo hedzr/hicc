@@ -159,10 +159,10 @@ void foo2(int, int &, char *) {}
 void test_slot_basic() {
     using namespace hicc::dp::slot::basic;
 
-    const int c1 = hicc::traits::argCounter(foo1);
-    const int c2 = hicc::traits::argCount<foo1>;
-    const int c3 = hicc::traits::member_args_count(&s::m).value;
-    const int c4 = hicc::traits::args_count(foo2);
+    const int c1 = (int) hicc::traits::argCounter(foo1);
+    const int c2 = (int) hicc::traits::argCount<foo1>;
+    const int c3 = (int) hicc::traits::member_args_count(&s::m).value;
+    const int c4 = (int) hicc::traits::args_count(foo2);
     UNUSED(c1, c2, c3, c4);
     std::cout << "c1/c2/c3: " << c1 << '/' << c2 << '/' << c3 << '/' << c4 << '\n';
 #if 0
