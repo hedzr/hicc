@@ -662,6 +662,55 @@ namespace hicc::util {
         std::vector<FN> _callbacks{};
     };
 
+    template<typename... Subjects>
+    class signal {
+    public:
+        virtual ~signal() { clear(); }
+        using FN = std::function<void(Subjects &&...)>;
+        static constexpr std::size_t SubjectCount = sizeof...(Subjects);
+
+        // template<typename _Callable, typename _Arg>
+        // auto expanded_connect(std::size_t, _Callable &&f, _Arg &&arg) {
+        //     FN fn = std::bind(std::forward<_Callable>(f), arg);
+        //     return fn;
+        // }
+        template<typename _Callable, typename... _Args>
+        auto expanded_connect(_Callable &&f, _Args &&...args) {
+            // constexpr auto Max = sizeof...(Subjects);
+            FN fn = std::bind(std::forward<_Callable>(f), std::forward<_Args>(args)...);
+            return fn;
+        }
+        template<typename _Callable, typename... _Args>
+        signal &connect(_Callable &&f, _Args &&...args) {
+            using namespace std::placeholders;
+            FN fn = std::bind(std::forward<_Callable>(f), std::forward<_Args>(args)...); //, _1, _2, _3, _4, _5, _6, _7, _8, _9);
+            // constexpr auto Max = sizeof...(Subjects);
+            // // FN fn = expanded_connect(f, args..., _1, _2, _3, _4, _5, _6, _7, _8, _9);
+            // FN fn = std::bind(std::forward<_Callable>(f), types::head_n<Max, args..., _1, _2, _3, _4, _5, _6, _7, _8, _9>::type...);
+            _callbacks.push_back(fn);
+            return (*this);
+        }
+        template<typename _Callable, typename... _Args>
+        signal &on(_Callable &&f, _Args &&...args) { return connect(f, args...); }
+
+        /**
+         * @brief fire an event along the observers chain.
+         * @param event_or_subject 
+         */
+        signal &emit(Subjects &&...event_or_subjects) {
+            for (auto &fn : _callbacks)
+                fn(std::move(event_or_subjects)...);
+            return (*this);
+        }
+        signal &operator()(Subjects &&...event_or_subjects) { return emit(event_or_subjects...); }
+
+    private:
+        void clear() {}
+
+    private:
+        std::vector<FN> _callbacks{};
+    };
+
 } // namespace hicc::util
 
 namespace hicc::util {
