@@ -16,6 +16,20 @@
 #include <iostream>
 
 
+#ifndef DISABLE_MSVC_WARNINGS
+#if defined(_MSC_VER)
+#define DISABLE_MSVC_WARNINGS(...)   \
+    __pragma(warning(push))          \
+            __pragma(warning(disable \
+                             : __VA_ARGS__)) /*disable _ctlState prefast warning*/
+#define RESTORE_MSVC_WARNINGS \
+    __pragma(warning(pop))
+#else
+#define DISABLE_MSVC_WARNINGS(...) /* __VA_ARGS__ */
+#define RESTORE_MSVC_WARNINGS
+#endif
+#endif
+
 namespace hicc::path {
 
     namespace fs = std::filesystem;
@@ -271,7 +285,10 @@ namespace hicc::path {
 
     inline const char *to_filename(std::filesystem::path const &path) {
 #if defined(_WIN32)
-        return path.u8string().c_str();
+        // BEWARE! the returned pointer pointed to a destroyed instance!!!
+        DISABLE_MSVC_WARNINGS(26815)
+        return path.u8string().c_str(); // BUG!!
+        RESTORE_MSVC_WARNINGS
 #else
         return path.c_str();
 #endif
@@ -322,7 +339,7 @@ namespace hicc::io {
     inline void close_file(std::fstream &fs) { fs.close(); }
 
     inline std::string read_file_content(std::ifstream &ifs) {
-        ifs.ignore((std::numeric_limits<std::streamsize>::max) ());
+        ifs.ignore((std::numeric_limits<std::streamsize>::max)());
         std::string data(ifs.gcount(), 0);
         ifs.seekg(0);
         ifs.read(data.data(), data.size());
@@ -423,7 +440,7 @@ namespace hicc::path {
         return (st.st_blksize * st.st_blocks < st.st_size);
 #endif
     }
-    
+
     /** create a directory if not exists */
     inline bool ensure_directory(std::filesystem::path const &name) {
         return fs::create_directories(name);
