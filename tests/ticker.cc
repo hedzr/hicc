@@ -137,7 +137,7 @@ void test_periodical_job() {
 #define NOW_CASE(now_str, expected_str, desc, anchor, ofs) \
     testcase { desc, anchor, ofs, 1, -1, hicc::chrono::parse_datetime(now_str), hicc::chrono::parse_datetime(expected_str) }
 
-    for (auto t : {
+    for (auto const &t : {
                  // Month
                  NOW_CASE("2021-08-05", "2021-09-03", "day 3 every month", chr::anchors::Month, 3),
                  NOW_CASE("2021-08-05", "2021-08-23", "day 23 every month", chr::anchors::Month, 23),
@@ -203,11 +203,8 @@ void test_timer() {
     std::this_thread::sleep_for(300ms);
 #endif
 
-    {
-        auto now = hicc::chrono::now();
-        printf("  - start at: %s\n", hicc::chrono::format_time_point(now).c_str());
-    }
-    t.after(1us)
+    hicc_print("  - start at: %s", hicc::chrono::format_time_point().c_str());
+    t->after(1us)
             .on([&count] {
                 auto now = hicc::chrono::now();
                 hicc::pool::cw_setter cws(count);
@@ -217,8 +214,10 @@ void test_timer() {
             })
             .build();
 
-    count.wait();
+    printf("count.wait()\n");
+    count.wait_for(3s);
     // t.clear();
+    printf("end of %s\n", __FUNCTION_NAME__);
 }
 
 void test_ticker() {
@@ -232,19 +231,19 @@ void test_ticker() {
 #endif
 
     {
-        auto now = hicc::chrono::now();
-        printf("  - start at: %s\n", hicc::chrono::format_time_point(now).c_str());
+        hicc_print("  - start at: %s", hicc::chrono::format_time_point().c_str());
     }
-    t.every(1us)
+    t->every(1us)
             .on([&count]() {
-                auto now = hicc::chrono::now();
+                // auto now = hicc::chrono::now();
                 hicc::pool::cw_setter cws(count);
-                printf("  - every [%02d]: %s\n", count.val(), hicc::chrono::format_time_point(now).c_str());
+                printf("  - every [%02d]: %s\n", count.val(), hicc::chrono::format_time_point().c_str());
             })
             .build();
 
     count.wait();
     // t.clear();
+    printf("end of %s\n", __FUNCTION_NAME__);
 }
 
 void test_ticker_interval() {
@@ -252,19 +251,16 @@ void test_ticker_interval() {
     hicc::debug::X x_local_var;
 
     hicc::pool::conditional_wait_for_int count2{4};
-    hicc::chrono::ticker<>::super::get([] {
-        auto now = hicc::chrono::now();
-        printf("  - start at: %s\n", hicc::chrono::format_time_point(now).c_str());
-    })
-            .interval(200ms)
+    auto t = hicc::chrono::ticker<>::get([] { hicc_print("  - start at: %s", hicc::chrono::format_time_point().c_str()); });
+    t->interval(200ms)
             .on([&count2] {
-                auto now = hicc::chrono::now();
                 hicc::pool::cw_setter cws(count2);
-                printf("  - interval [%02d]: %s\n", count2.val(), hicc::chrono::format_time_point(now).c_str());
+                printf("  - interval [%02d]: %s\n", count2.val(), hicc::chrono::format_time_point().c_str());
             })
             .build();
 
     count2.wait();
+    printf("end of %s\n", __FUNCTION_NAME__);
 }
 
 void test_alarmer() {
@@ -272,29 +268,31 @@ void test_alarmer() {
     hicc::debug::X x_local_var;
     hicc::pool::conditional_wait_for_int count2{4};
     hicc::chrono::alarmer<>::super::get()
-            .every_month(3)
+            ->every_month(3)
             .on([&count2] {
                 auto now = hicc::chrono::now();
                 hicc::pool::cw_setter cws(count2);
                 printf("  - alarmer [%02d]: %s\n", count2.val(), hicc::chrono::format_time_point(now).c_str());
             })
             .build();
+    printf("end of %s\n", __FUNCTION_NAME__);
 }
 
 int main() {
     // test_thread();
 
     HICC_TEST_FOR(test_periodical_job);
-    HICC_TEST_FOR(test_alarmer);
 
 #if 1
     HICC_TEST_FOR(test_type_name);
-
     HICC_TEST_FOR(test_thread_basics);
 
     HICC_TEST_FOR(test_timer);
+
     HICC_TEST_FOR(test_ticker);
     HICC_TEST_FOR(test_ticker_interval);
+
+    HICC_TEST_FOR(test_alarmer);
 
     // using namespace std::literals::chrono_literals;
     // std::this_thread::sleep_for(200ns);

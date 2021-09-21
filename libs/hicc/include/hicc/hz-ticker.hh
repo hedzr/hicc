@@ -440,7 +440,7 @@ namespace hicc::chrono {
         base(base &&o) {
             __copy(o);
         }
-        virtual ~base() { clear(); }
+        virtual ~base() {}
 
         using __D = Derived;
         using _This = base<__D>;
@@ -448,21 +448,20 @@ namespace hicc::chrono {
             __W() = default;
             ~__W() {}
         };
-        static std::shared_ptr<base> create(std::function<void()> &&f = nullptr) {
-            util::defer<bool> defer_(f);
+        static std::shared_ptr<base> create(std::function<void()> &&fn_after_constructed = nullptr) {
+            util::defer<bool> defer_(fn_after_constructed);
             return std::make_shared<__W>();
         }
-        // static timer get(std::function<void()> &&f = nullptr) {
-        //     util::defer<bool> defer_(f);
+        // static timer get(std::function<void()> &&fn_after_constructed = nullptr) {
+        //     util::defer<bool> defer_(fn_after_constructed);
         //     return timer{};
         // }
-        static __D get(std::function<void()> &&f = nullptr) {
-            util::defer<bool> defer_(f);
-            __W w;
-            return std::move(w);
+        static std::unique_ptr<__D> get(std::function<void()> &&fn_after_constructed = nullptr) {
+            util::defer<bool> defer_(fn_after_constructed);
+            // __W w;
+            // return std::move(w);
+            return std::make_unique<__W>();
         }
-
-        virtual void clear() {}
 
     protected:
         base() {}
@@ -494,7 +493,7 @@ namespace hicc::chrono {
     public:
         using _This = timer<DerivedT, Clock, GMT, ConcreteJob>;
         using super = base<typename std::conditional<std::is_same_v<std::nullopt_t, DerivedT>, _This, DerivedT>::type>;
-        using base = super;
+        using base_t = super;
         using Job = timer_job;
         using _J = std::shared_ptr<Job>;
         using _C = Clock;
@@ -504,7 +503,7 @@ namespace hicc::chrono {
 
     protected:
         timer()
-            : base{}
+            : base_t{}
             , _pool(-1) { start(); }
         // CLAZZ_NON_MOVEABLE(timer);
         void __copy(timer const &o) {
@@ -523,14 +522,22 @@ namespace hicc::chrono {
         }
 
     public:
-        timer(timer const &o) {
+        timer(timer const &o)
+            : base_t{}
+            , _pool(-1) {
             __copy(o);
         }
-        timer(timer &&o) {
+        timer(timer &&o)
+            : base_t{}
+            , _pool(-1) {
             __copy(o);
         }
-        virtual ~timer() {}
+        virtual ~timer() {
+            hicc_debug("[timer] dtor...");
+            clear();
+        }
         void clear() { stop(); }
+        void join() { stop(); }
 
         /**
          * @brief run task in (one minute, five seconds, ...)
@@ -587,44 +594,27 @@ namespace hicc::chrono {
 
     private:
         void stop() {
+            hicc_debug("[runner] stopping...");
+            _t.detach();
             _tk.kill();
+            // if (_t.joinable()) _t.join();
             _ended.wait();
+            hicc_debug("[runner] stopped.");
         }
         void start() {
-            auto t = std::thread(runner, this);
+            {
+                std::unique_lock<std::mutex> l(_l_twl);
+                hicc_trace("[runner] starting...");
+            }
+            _t = std::thread(runner, this);
             _started.wait();
-            t.detach();
+            // t.detach();
+            hicc_trace("[runner] started.");
         }
 
-        std::tuple<typename TimingWheel::iterator, typename TimingWheel::iterator, bool> find_next() {
-            auto time_now = Clock::to_time_t(Clock::now());
-            bool found{};
-
-            std::unique_lock<std::mutex> l(_l_twl);
-            typename TimingWheel::iterator itn = _twl.end();
-            typename TimingWheel::iterator itp = itn;
-
-            for (auto it = _twl.begin(); it != itn; ++it) {
-                auto &tp = (*it).first;
-                auto tmp = Clock::to_time_t(tp);
-                if (tmp > time_now) break;
-                itp = it;
-                continue;
-            }
-
-            if (itp != itn) {
-                found = true;
-                itn = itp;
-                itn++;
-            }
-            return {itp, itn, found};
-        }
-
-        static void runner(timer *_this) {
-            hicc_trace("[runner] ready...");
-            _this->runner_loop();
-        }
+        static void runner(timer *_this) { _this->runner_loop(); }
         void runner_loop() {
+            bool ret;
             using namespace std::literals::chrono_literals;
             const auto starting_gap = 10ns;
             std::chrono::nanoseconds d = starting_gap;
@@ -632,41 +622,44 @@ namespace hicc::chrono {
             std::size_t hit{0}, loop{0};
 #endif
             _started.set();
-            // std::cout << d;
-            while (_tk.wait_for(d)) {
+            hicc_trace("[runner] ready...");
+            while ((ret = _tk.wait_for(d)) != _tk.ConditionMatched) {
                 // std::this_thread::sleep_for(d);
-                // pool_debug("[runner] waked up");
-                std::this_thread::yield();
+                hicc_debug("[runner] waked up. (_tk.terminated() == %d, ret=%d)", _tk.terminated(), ret);
                 d = _larger_gap;
 
                 TP picked;
                 Jobs jobs, recurred_jobs;
                 {
                     auto [itp, itn, found] = find_next();
-                    if (found) {
-                        // got a picked point
-                        std::unique_lock<std::mutex> l(_l_twl);
-                        (*itp).second.swap(jobs);
-                        picked = (*itp).first;
+                    if (!found) {
+                        hicc_debug("[runner] find_next() returned not found");
+                        continue;
+                    }
 
-                        // erase all expired jobs
-                        _twl.erase(_twl.begin(), itp);
+                    hicc_debug("[runner] found a time-point");
+                    // got a picked point
+                    std::unique_lock<std::mutex> l(_l_twl);
+                    (*itp).second.swap(jobs);
+                    picked = (*itp).first;
 
-                        if (itn != _twl.end()) {
-                            auto next_tp = (*itn).first;
-                            d = (next_tp - picked);
-                            if (d > _wastage)
-                                d -= _wastage;
+                    // erase all expired jobs
+                    _twl.erase(_twl.begin(), itp);
+
+                    if (itn != _twl.end()) {
+                        auto next_tp = (*itn).first;
+                        d = (next_tp - picked);
+                        if (d > _wastage)
+                            d -= _wastage;
 #if defined(_DEBUG) || HICC_TEST_THREAD_POOL_DBGOUT
-                            if ((hit % 10) == 0)
-                                pool_debug("[runner] [size: %u, hit: %u, loop: %u] picked = %s, next_tp = %s, duration = %s",
-                                           _twl.size(), hit, loop,
-                                           chrono::format_time_point(picked).c_str(),
-                                           chrono::format_time_point(next_tp).c_str(),
-                                           chrono::format_duration(d).c_str());
-                            hit++;
+                        if ((hit % 10) == 0)
+                            pool_debug("[runner] [size: %u, hit: %u, loop: %u] picked = %s, next_tp = %s, duration = %s",
+                                       _twl.size(), hit, loop,
+                                       chrono::format_time_point(picked).c_str(),
+                                       chrono::format_time_point(next_tp).c_str(),
+                                       chrono::format_duration(d).c_str());
+                        hit++;
 #endif
-                        }
                     }
                 }
 
@@ -674,16 +667,16 @@ namespace hicc::chrono {
                 for (auto it = jobs.begin(); it != jobs.end(); ++it) {
                     std::shared_ptr<Job> &j = (*it);
                     if (j->_interval) {
-                        // hicc_debug("[runner] job starting, _interval");
+                        // pool_debug("[runner] job starting, _interval");
                         j->launch_to(_pool, [&](timer_job *tj) {
                             add_task(tj->next_time_point(), std::move(j));
                         });
                     } else if (j->_recur) {
-                        // hicc_debug("[runner] job starting, _recur");
+                        // pool_debug("[runner] job starting, _recur");
                         j->launch_to(_pool);
                         recurred_jobs.emplace_back(std::move(j));
                     } else {
-                        // hicc_debug("[runner] job starting");
+                        // pool_debug("[runner] job starting");
                         j->launch_to(_pool);
                     }
                 }
@@ -711,11 +704,33 @@ namespace hicc::chrono {
                     if (d > _wastage)
                         d -= _wastage;
                 }
-
-                std::this_thread::yield();
             }
-            hicc_debug("[runner] timer::runner ended (%d).", _tk.terminated());
+            hicc_debug("[runner] timer::runner ended (_tk.terminated() == %d, ret = %d).", _tk.terminated(), ret);
             _ended.set();
+        }
+        std::tuple<typename TimingWheel::iterator, typename TimingWheel::iterator, bool>
+        find_next() {
+            auto time_now = Clock::to_time_t(Clock::now());
+            bool found{};
+
+            std::unique_lock<std::mutex> l(_l_twl);
+
+            typename TimingWheel::iterator itn = _twl.end();
+            typename TimingWheel::iterator itp = itn;
+
+            for (auto it = _twl.begin(); it != itn; ++it) {
+                auto &tp = (*it).first;
+                auto tmp = Clock::to_time_t(tp);
+                if (tmp > time_now) break;
+                itp = it, found = true;
+                continue;
+            }
+
+            if (found) {
+                itn = itp;
+                itn++;
+            }
+            return {itp, itn, found};
         }
 
     protected:
@@ -760,7 +775,7 @@ namespace hicc::chrono {
         std::function<void()> _f{nullptr};
 
     private:
-        // std::thread _t;
+        std::thread _t;
         pool::timer_killer _tk{}; // to shut down the sleep+loop in `runner` thread gracefully
         TimingWheel _twl{};
         TimingWheel _pasts{};
@@ -788,7 +803,7 @@ namespace hicc::chrono {
         ~ticker() {}
         using _This = ticker<DerivedT, Clock, GMT, ConcreteJob>;
         using super = timer<typename std::conditional<std::is_same_v<std::nullopt_t, DerivedT>, _This, DerivedT>::type, Clock, GMT, ConcreteJob>;
-        using base = typename super::base;
+        using base_t = typename super::base_t;
         // struct __W : public ticker<Clock, GMT, ConcreteJob> {
         //     __W() = default;
         // };
@@ -801,13 +816,13 @@ namespace hicc::chrono {
         //     return ticker{};
         // }
 
-        typename base::__D &every(const typename Clock::duration time) {
+        typename base_t::__D &every(const typename Clock::duration time) {
             _dur = time, _interval = false;
-            return static_cast<typename base::__D &>(*this);
+            return static_cast<typename base_t::__D &>(*this);
         }
-        typename base::__D &interval(const typename Clock::duration time) {
+        typename base_t::__D &interval(const typename Clock::duration time) {
             _dur = time, _interval = true;
-            return static_cast<typename base::__D &>(*this);
+            return static_cast<typename base_t::__D &>(*this);
         }
 
         void build() {
@@ -853,7 +868,7 @@ namespace hicc::chrono {
         ~alarmer() {}
         using _This = alarmer<DerivedT, Clock, GMT, ConcreteJob>;
         using super = ticker<typename std::conditional<std::is_same_v<std::nullopt_t, DerivedT>, _This, DerivedT>::type, Clock, GMT, ConcreteJob>;
-        using base = typename super::base;
+        using base_t = typename super::base_t;
 
         // struct __W : public alarmer<Clock> {
         //     __W() = default;
@@ -865,10 +880,10 @@ namespace hicc::chrono {
         //     return t;
         // }
 
-        typename base::__D &every_month(int day_offset = 1, int how_many = 1, int repeat_times = 0) {
+        typename base_t::__D &every_month(int day_offset = 1, int how_many = 1, int repeat_times = 0) {
             _anchor = anchors::Month;
             _ordinal = how_many, _offset = day_offset, _times = repeat_times;
-            return static_cast<typename base::__D &>(*this);
+            return static_cast<typename base_t::__D &>(*this);
         }
 
         void build() {
