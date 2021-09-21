@@ -51,7 +51,7 @@ inline std::ostream &operator<<(std::ostream &os, Animal value) {
 
 AWESOME_MAKE_ENUM(Week,
                   Sunday, Monday,
-                  Tuesday, Wednesday, Thursday, Friday, Saturday);
+                  Tuesday, Wednesday, Thursday, Friday, Saturday)
 
 void test_awesome_enum() {
     auto dog = Animal::DOG;
