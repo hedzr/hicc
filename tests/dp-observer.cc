@@ -108,10 +108,10 @@ void test_util_bind() {
 
 #ifndef _MSC_VER
         moo m;
-        auto fn1 = cmdr::util::bind(&moo::doit, m, _1, 3.0f);
+        auto fn1 = hicc::util::bind(&moo::doit, m, _1, 3.0f);
         std::cout << "fn1: " << fn1(1) << '\n';
 
-        auto fn2 = cmdr::util::bind(doit, _1, 3.0f);
+        auto fn2 = hicc::util::bind(doit, _1, 3.0f);
         std::cout << "fn2: " << fn2(9) << '\n';
 #else
         // in msvc, C4244 warning will be thrown since it's converting 
