@@ -35,6 +35,7 @@
 
 #include <cstdio>
 #include <cstdlib>
+#include <cstring> // std::strcmp, ...
 #include <iomanip>
 #include <iostream>
 #include <string>
@@ -69,6 +70,7 @@ namespace std {
 
 } // namespace std
 
+// ------------------- arg-count, mem-arg-count, ...
 namespace hicc::traits {
 
     // https://stackoverflow.com/questions/36797770/get-function-parameters-count
@@ -251,6 +253,7 @@ namespace hicc::traits {
 
 } // namespace hicc::traits
 
+// ------------------- iterate, first_of, typelist, tag
 namespace hicc::traits {
 
     // ---------------------------
@@ -317,6 +320,7 @@ namespace hicc::traits {
 
 } // namespace hicc::traits
 
+// ------------------- head_n, drop_from_end
 namespace hicc::traits {
 
     template<typename... Pack>
@@ -435,7 +439,71 @@ namespace hicc::traits {
                                 A...>::type>::type type;
     };
 
-} // namespace hicc::traits (drop_from_end, head_n)
+} // namespace hicc::traits
+
+// -------------------
+namespace hicc::traits {
+
+#if __cplusplus >= 202001
+    namespace detail {
+        template<typename T, auto Start, auto Step, T... Is>
+        constexpr auto make_cons_helper_impl_(std::integer_sequence<T, Is...>) {
+            auto eval_ = [](const T &I) consteval->T { return Start + Step * I; };
+            return std::integer_sequence<T, eval_(Is)...>{};
+        }
+
+        template<typename T, auto Start, auto Count, auto Step>
+        constexpr auto make_cons_impl_() {
+            return make_cons_helper_impl_<T, Start, Step>(std::make_integer_sequence<T, Count>{});
+        }
+    } // namespace detail
+
+    template<std::integral T, auto Start, auto Count, auto Step = 1>
+    using make_consecutive_integer_sequence = decltype(detail::make_cons_impl_<T, Start, Count, Step>());
+
+    template<auto Start, auto Count, auto Step = 1>
+    using make_consecutive_index_sequence = make_consecutive_integer_sequence<std::size_t, Start, Count, Step>;
+
+    template<std::size_t N>
+    using make_first_n_index_sequence = make_consecutive_index_sequence<0, N>;
+
+    template<std::size_t N, std::size_t S>
+    using make_last_n_index_sequence = make_consecutive_index_sequence<S - N, N>;
+
+    template<std::size_t B, std::size_t E>
+    using make_slice_index_sequence = make_consecutive_index_sequence<B, E - B>;
+    template<typename... Ts, std::size_t... Is>
+    constexpr auto get_subpack_by_seq(std::index_sequence<Is...>, Ts &&...args) {
+        return std::make_tuple(std::get<Is>(std::forward_as_tuple(args...))...);
+    }
+
+    template<std::size_t N, typename... Ts>
+    requires(N <= sizeof...(Ts)) constexpr auto head(Ts &&...args) {
+        return get_subpack_by_seq(
+                make_first_n_index_sequence<N>{},
+                std::forward<Ts>(args)...);
+    }
+
+    template<std::size_t N, typename... Ts>
+    requires(N <= sizeof...(Ts)) constexpr auto tail(Ts &&...args) {
+        return get_subpack_by_seq(
+                make_last_n_index_sequence<N, sizeof...(Ts)>{},
+                std::forward<Ts>(args)...);
+    }
+
+    template<std::size_t B, std::size_t E, typename... Ts>
+    requires(B < E && B <= sizeof...(Ts) && E <= sizeof...(Ts)) constexpr auto slice(Ts &&...args) {
+        return get_subpack_by_seq(
+                make_slice_index_sequence<B, E>{},
+                std::forward<Ts>(args)...);
+    }
+
+    static_assert(head<3>(1, 2.0f, "three", '4') == std::make_tuple(1, 2.0f, "three"));
+    static_assert(tail<2>(1, 2.0f, "three", '4') == std::make_tuple("three", '4'));
+    static_assert(slice<1, 3>(1, 2.0f, "three", '4') == std::make_tuple(2.0f, "three"));
+
+#endif // C++20 or later
+} // namespace hicc::traits
 
 // ------------------- light-weight bind
 namespace hicc::util {
@@ -510,6 +578,7 @@ namespace std {
     struct is_placeholder<hicc::traits::placeholder<I>> : std::integral_constant<int, I> {};
 } // namespace std
 
+// ------------------- easy_bind, bind_this
 namespace hicc::util {
     // ------------------- easy bind
     using namespace hicc::traits;
@@ -539,6 +608,7 @@ namespace hicc::util {
     }
 } // namespace hicc::util
 
+// ------------------- get_template_type_t, return_type_of_t
 namespace hicc::util {
 
     /**
@@ -596,6 +666,7 @@ namespace hicc::util {
 
 } // namespace hicc::util
 
+// ------------------- singleton
 namespace hicc::util {
 
     template<typename T>
@@ -658,6 +729,7 @@ namespace hicc::util {
 
 #define HICC_SINGLETON(t) hicc::util::singleton<t>
 
+// ------------------- defer
 namespace hicc::util {
 
     /**
@@ -723,6 +795,7 @@ namespace hicc::util {
 
 } // namespace hicc::util
 
+// ------------------- visitor
 namespace hicc::util {
 
     struct base_visitor {
@@ -751,6 +824,7 @@ namespace hicc::util {
 
 } // namespace hicc::util
 
+// ------------------- observer
 namespace hicc::util {
 
     template<typename S>
@@ -981,6 +1055,7 @@ namespace hicc::util {
 
 } // namespace hicc::util
 
+// ------------------- detect_shell_env
 namespace hicc::util {
 
     inline std::string detect_shell_env() {
@@ -994,6 +1069,7 @@ namespace hicc::util {
 
 } // namespace hicc::util
 
+// ------------------- is_in
 namespace hicc::util {
 
     /**
