@@ -78,17 +78,19 @@ namespace hicc::pool {
          * @tparam R 
          * @tparam P 
          * @param time a timeout (std::chrono::duration)
-         * @return true if condition matched, false if timeout
+         * @return true if condition matched, false while not matched
          */
         template<class R, class P>
         bool wait_for(std::chrono::duration<R, P> const &time) {
             std::unique_lock<std::mutex> lk(_m);
-            return !_cv.wait_for(lk, time, _p);
+            return _cv.wait_for(lk, time, _p);
         }
+        const bool ConditionMatched = true;
         /**
          * @brief do Setter, and trigger any one of the wating routines
          */
         void set() {
+            // hicc_debug("%s", __FUNCTION_NAME__);
             {
                 std::unique_lock<std::mutex> lk(_m);
                 _s();
@@ -173,7 +175,7 @@ namespace hicc::pool {
      *     static void runner(timer *_this) {
      *         using namespace std::literals::chrono_literals;
      *         auto d = 10ns;
-     *         while (_this->_tk.wait_for(d)) {
+     *         while (!_this->_tk.wait_for(d)) {
      *             // std::this_thread::sleep_for(d);
      *             std::this_thread::yield();
      *         }
@@ -207,7 +209,26 @@ namespace hicc::pool {
         //     std::unique_lock<std::mutex> lock(_m);
         //     return !_cv.wait_for(lock, time, [&] { return _terminate; });
         // }
-        bool terminated() { return val(); }
+        bool terminated() const { return val(); }
+        /**
+         * @brief wait for Pred condition matched, or a timeout arrived.
+         * @tparam R 
+         * @tparam P 
+         * @param time a timeout (std::chrono::duration)
+         * @return true if condition matched, false while not matched
+         */
+        template<class R, class P>
+        bool wait_for(std::chrono::duration<R, P> const &time) {
+            return conditional_wait_for_bool::wait_for(time);
+        }
+        void set() {
+            hicc_debug("%s", __FUNCTION_NAME__);
+            conditional_wait_for_bool::set();
+        }
+        void set_for_all() {
+            hicc_debug("%s", __FUNCTION_NAME__);
+            conditional_wait_for_bool::set_for_all();
+        }
         // void kill() {
         //     bool go{false};
         //     {
@@ -370,7 +391,7 @@ namespace hicc::pool {
                                     n
 #endif
                 ] {
-                            cw_setter cws(_future_ended);
+                                       cw_setter cws(_future_ended);
 #if HICC_ENABLE_THREAD_POOL_READY_SIGNAL
                                        _cv_started.set();
 #endif
