@@ -99,23 +99,23 @@ void test_util_bind() {
 
         // lambda_to_function
 
-        helpers::Callback(hicc::types::l2f([](int a, float b) { std::cout << a << ',' << b << '\n'; }));
+        helpers::Callback(hicc::traits::l2f([](int a, float b) { std::cout << a << ',' << b << '\n'; }));
 
-        // hicc::types::bind
+        // hicc::util::bind
 
-        auto fn0 = hicc::types::bind([](int a, float b) { std::cout << "\nfn0: " << a << ',' << b << '\n'; }, _1, _2);
+        auto fn0 = hicc::util::bind([](int a, float b) { std::cout << "\nfn0: " << a << ',' << b << '\n'; }, _1, _2);
         fn0(1, 20.f);
 
         moo m;
-        auto fn1 = hicc::types::bind(&moo::doit, m, _1, 3.0f);
+        auto fn1 = hicc::util::bind(&moo::doit, m, _1, 3.0f);
         std::cout << "fn1: " << fn1(1) << '\n';
 
-        auto fn2 = hicc::types::bind(doit, _1, 3.0f);
+        auto fn2 = hicc::util::bind(doit, _1, 3.0f);
         std::cout << "fn2: " << fn2(9) << '\n';
     }
 
     {
-        auto fn = hicc::types::lambda([&](std::vector<std::string> const &vec) {
+        auto fn = hicc::traits::lambda([&](std::vector<std::string> const &vec) {
             std::cout << vec << '\n';
         });
         std::vector<std::string> vec{"aa", "bb", "cc"};
@@ -156,8 +156,7 @@ void test_observer_cb() {
 
     store.add_callback([](event const &e) {
         hicc_print("event CB lamdba: %s", e.to_string().c_str());
-    },
-                       _1);
+    });
     struct eh1 {
         void cb(event const &e) {
             hicc_print("event CB member fn: %s", e.to_string().c_str());
@@ -166,20 +165,132 @@ void test_observer_cb() {
             hicc_print("event CB member operator() fn: %s", e.to_string().c_str());
         }
     };
-    store.on(&eh1::cb, eh1{}, _1);
-    store.on(&eh1::operator(), eh1{}, _1);
+    store.on(&eh1::cb, eh1{});
+    store.on(&eh1::operator(), eh1{});
 
-    store.on(fntest, _1);
-    
+    store.on(fntest);
+
     store.emit(mouse_move_event{});
+}
+
+namespace hicc::dp::observer::slots {
+
+    void f() { std::cout << "free function\n"; }
+
+    struct s {
+        void m(char *, int &) { std::cout << "member function\n"; }
+        static void sm(char *, int &) { std::cout << "static member function\n"; }
+        void ma() { std::cout << "member function\n"; }
+        static void sma() { std::cout << "static member function\n"; }
+    };
+
+    struct o {
+        void operator()() { std::cout << "function object\n"; }
+    };
+
+    inline void foo1(int, int, int) {}
+    void foo2(int, int &, char *) {}
+
+    struct example {
+        template<typename... Args, typename T = std::common_type_t<Args...>>
+        static std::vector<T> foo(Args &&...args) {
+            std::initializer_list<T> li{std::forward<Args>(args)...};
+            std::vector<T> res{li};
+            return res;
+        }
+    };
+
+} // namespace hicc::dp::observer::slots
+
+void test_observer_slots() {
+    using namespace hicc::dp::observer::slots;
+    using namespace std::placeholders;
+    {
+        std::vector<int> v1 = example::foo(1, 2, 3, 4);
+        for (const auto &elem : v1)
+            std::cout << elem << " ";
+        std::cout << "\n";
+
+        // auto v2 = example::foo(1, 2.0, true, "str");
+        // for (const auto &elem : v2)
+        //     std::cout << elem << " ";
+        // std::cout << "\n";
+    }
+    s d;
+    auto lambda = []() { std::cout << "lambda\n"; };
+    auto gen_lambda = [](auto &&...a) { std::cout << "generic lambda: "; (std::cout << ... << a) << '\n'; };
+    UNUSED(d);
+
+    hicc::util::signal<> sig;
+
+    sig.on(f);
+    sig.connect(&s::ma, d);
+    sig.on(&s::sma);
+    sig.on(o());
+    sig.on(lambda);
+    sig.on(gen_lambda);
+
+    sig(); // emit a signal
+}
+
+void test_observer_slots_args() {
+    using namespace hicc::dp::observer::slots;
+    using namespace std::placeholders;
+
+    struct foo {
+        // Notice how we accept a double as first argument here.
+        // This is fine because float is convertible to double.
+        // 's' is a reference and can thus be modified.
+        void bar(double d, int i, bool b, std::string &&s) {
+            std::cout << "memfn: " << s << (b ? std::to_string(i) : std::to_string(d)) << '\n';
+        }
+    };
+
+    // Function objects can cope with default arguments and overloading.
+    // It does not work with static and member functions.
+    struct obj {
+        void operator()(float, int, bool, std::string &&, int = 0) {
+            std::cout << "obj.operator(): I was here" << '\n';
+        }
+
+        // void operator()() {}
+    };
+
+    // a generic lambda that prints its arguments to stdout
+    auto printer = [](auto a, auto &&...args) {
+        std::cout << a;
+        (void) std::initializer_list<int>{
+                ((void) (std::cout << " " << args), 1)...};
+        std::cout << '\n';
+    };
+
+    // declare a signal with float, int, bool and string& arguments
+    hicc::util::signal<float, int, bool, std::string> sig;
+
+    // connect the slots
+    sig.connect(printer, _1, _2, _3, _4);
+    foo ff;
+    sig.on(&foo::bar, ff, _1, _2, _3, _4);
+    // sig.on(&foo::bar, ff);
+    sig.on(obj(), _1, _2, _3, _4);
+
+    float f = 1.f;
+    short i = 2; // convertible to int
+    std::string s = "0";
+
+    // emit a signal
+    sig.emit(std::move(f), i, false, std::move(s));
+    sig.emit(std::move(f), i, true, std::move(s));
 }
 
 int main() {
 
     HICC_TEST_FOR(test_util_bind);
-    
+
     HICC_TEST_FOR(test_observer_basic);
     HICC_TEST_FOR(test_observer_cb);
+    HICC_TEST_FOR(test_observer_slots);
+    HICC_TEST_FOR(test_observer_slots_args);
 
     return 0;
 }

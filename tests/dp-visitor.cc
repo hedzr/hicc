@@ -129,6 +129,7 @@ namespace hicc::dp::visitor::basic {
     struct screen : public hicc::util::visitor<drawable> {
         return_t visit(visited_t const &visited) override {
             hicc_debug("[screen][draw] for: %s", to_string(visited.get()).c_str());
+            UNUSED(visited);
         }
         friend std::ostream &operator<<(std::ostream &os, screen const &) {
             return os << "[screen] ";
@@ -138,6 +139,7 @@ namespace hicc::dp::visitor::basic {
     struct printer : public hicc::util::visitor<drawable> {
         return_t visit(visited_t const &visited) override {
             hicc_debug("[printer][draw] for: %s", to_string(visited.get()).c_str());
+            UNUSED(visited);
         }
         friend std::ostream &operator<<(std::ostream &os, printer const &) {
             return os << "[printer] ";

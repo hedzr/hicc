@@ -9,9 +9,12 @@
 
 #include <algorithm>
 #include <functional>
+#include <initializer_list>
 #include <memory>
 #include <mutex>
+#include <tuple>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 namespace std {
@@ -42,7 +45,7 @@ namespace std {
 
 } // namespace std
 
-namespace hicc::types {
+namespace hicc::traits {
 
     // https://stackoverflow.com/questions/36797770/get-function-parameters-count
 
@@ -76,7 +79,7 @@ namespace hicc::types {
      * struct s {
      *   void m(char *, int &) { std::cout << "member function\n"; }
      * };
-     * const int c3 = hicc::types::member_args_count(&s::m).value;
+     * const int c3 = hicc::traits::member_args_count(&s::m).value;
      */
     template<typename R, typename T, typename... Types>
     constexpr std::integral_constant<unsigned, sizeof...(Types)>
@@ -188,7 +191,7 @@ namespace hicc::types {
      * @return std::function<R(Args...)>
      * @details For example:
      * @code{c++}
-     *     auto fn = hicc::types::lambda([&](std::vector<std::string> const &vec){...});
+     *     auto fn = hicc::traits::lambda([&](std::vector<std::string> const &vec){...});
      *     fn(vec);
      * @endcode
      */
@@ -222,8 +225,78 @@ namespace hicc::types {
     template<typename F>
     typename memfun_type<decltype(&F::operator())>::type inline l2f(F const &func) { return func; }
 
+} // namespace hicc::traits
 
-    // -------------------
+namespace hicc::traits {
+
+    // ---------------------------
+
+    template<std::size_t N, class = std::make_index_sequence<N>>
+    struct iterate;
+
+    template<std::size_t N, std::size_t... Is>
+    struct iterate<N, std::index_sequence<Is...>> {
+        template<class Lambda>
+        auto operator()(Lambda lambda) {
+            return lambda(std::integral_constant<std::size_t, Is>{}...);
+        }
+    };
+
+    template<size_t... Is>
+    struct first_of_A {};
+
+    template<size_t N, size_t... Is>
+    auto first_of() {
+        return iterate<N>{}([](auto... ps) {
+            using type = std::tuple<std::integral_constant<std::size_t, Is>...>;
+            return first_of_A<std::tuple_element_t<ps, type>{}...>{};
+        });
+    }
+
+    // ----------------------------
+
+    template<class... Ts>
+    struct typelist {
+        using type = typelist;
+        static constexpr std::size_t size = sizeof...(Ts);
+    };
+
+    template<class T>
+    struct tag { using type = T; };
+
+    template<std::size_t N, class R, class TL>
+    struct head_n_impl;
+
+    // have at least one to pop from and need at least one more, so just
+    // move it over
+    template<std::size_t N, class... Ts, class U, class... Us>
+    struct head_n_impl<N, typelist<Ts...>, typelist<U, Us...>>
+        : head_n_impl<N - 1, typelist<Ts..., U>, typelist<Us...>> {};
+
+    // we have two base cases for 0 because we need to be more specialized
+    // than the previous case regardless of if we have any elements in the list
+    // left or not
+    template<class... Ts, class... Us>
+    struct head_n_impl<0, typelist<Ts...>, typelist<Us...>>
+        : tag<typelist<Ts...>> {};
+
+    template<class... Ts, class U, class... Us>
+    struct head_n_impl<0, typelist<Ts...>, typelist<U, Us...>>
+        : tag<typelist<Ts...>> {};
+
+    template<std::size_t N, class TL>
+    using head_n = typename head_n_impl<N, typelist<>, TL>::type;
+
+    // ---- first_of_args
+
+} // namespace hicc::traits
+
+namespace hicc::traits {
+
+} // namespace hicc::traits
+
+// ------------------- light-weight bind
+namespace hicc::util {
 
     /**
      * @brief bind a lambda or function into std::function<...>
@@ -238,16 +311,16 @@ namespace hicc::types {
      *     int doit(int x, int y) { return x + y; }
      *   };
      *   
-     *   auto fn0 = hicc::types::bind([](int a, float b) {
+     *   auto fn0 = hicc::traits::bind([](int a, float b) {
      *     std::cout &lt;&lt; a &lt;&lt; ',' &lt;&lt; b &lt;&lt; '\n';
      *   }, _1, _2);
      *   fn0(1, 20.f);
      *
      *   moo m;
-     *   auto fn1 = hicc::types::bind(&moo::doit, m, _1, 3.0f);
+     *   auto fn1 = hicc::traits::bind(&moo::doit, m, _1, 3.0f);
      *   std::cout &lt;&lt; '\n' &lt;&lt; fn1(1);
      *   
-     *   auto fn2 = hicc::types::bind(doit, _1, 3.0f);
+     *   auto fn2 = hicc::traits::bind(doit, _1, 3.0f);
      *   std::cout &lt;&lt; '\n' &lt;&lt; fn2(9);
      * @endcode
      */
@@ -257,7 +330,72 @@ namespace hicc::types {
         return fn;
     }
 
-} // namespace hicc::types
+} // namespace hicc::util
+
+// ------------------- indices
+namespace hicc::traits {
+    // @see http://loungecpp.wikidot.com/tips-and-tricks:indices
+
+    template<std::size_t... Is>
+    struct indices {};
+
+    template<std::size_t N, std::size_t... Is>
+    struct build_indices
+        : build_indices<N - 1, N - 1, Is...> {};
+
+    template<std::size_t... Is>
+    struct build_indices<0, Is...> : indices<Is...> {};
+
+    template<typename T>
+    using Bare = typename std::remove_cv<typename std::remove_reference<T>::type>::type;
+
+    template<typename Tuple>
+    using IndicesFor = build_indices<std::tuple_size<Bare<Tuple>>::value>;
+
+    template<typename Tuple, std::size_t... Indices>
+    std::array<int, std::tuple_size<Tuple>::value> f_them_all(Tuple &&t, indices<Indices...>) {
+        return std::array<int, std::tuple_size<Tuple>::value>{{f(std::get<Indices>(std::forward<Tuple>(t)))...}};
+    }
+} // namespace hicc::traits
+
+namespace hicc::traits {
+    template<int I>
+    struct placeholder {};
+} // namespace hicc::traits
+
+namespace std {
+    template<int I>
+    struct is_placeholder<hicc::traits::placeholder<I>> : std::integral_constant<int, I> {};
+} // namespace std
+
+namespace hicc::util {
+    // ------------------- easy bind
+    using namespace hicc::traits;
+    namespace detail {
+        template<std::size_t... Is, class F, class... Args>
+        inline auto easy_bind(indices<Is...>, F const &f, Args &&...args)
+                -> decltype(std::bind(f, std::forward<Args>(args)..., placeholder<Is + 1>{}...)) {
+            return std::bind(f, std::forward<Args>(args)..., placeholder<Is + 1>{}...);
+        }
+    } // namespace detail
+
+    template<class R, class... FArgs, class... Args>
+    inline auto easy_bind(std::function<R(FArgs...)> const &f, Args &&...args)
+            -> decltype(detail::easy_bind(build_indices<sizeof...(FArgs) - sizeof...(Args)>{}, f, std::forward<Args>(args)...)) {
+        return detail::easy_bind(build_indices<sizeof...(FArgs) - sizeof...(Args)>{}, f, std::forward<Args>(args)...);
+    }
+
+    // ------------------- bind_this
+    template<class C, typename Ret, typename... Ts>
+    inline std::function<Ret(Ts...)> bind_this(C *c, Ret (C::*m)(Ts...)) {
+        return [=](auto &&...args) { return (c->*m)(std::forward<decltype(args)>(args)...); };
+    }
+
+    template<class C, typename Ret, typename... Ts>
+    inline std::function<Ret(Ts...)> bind_this(const C *c, Ret (C::*m)(Ts...) const) {
+        return [=](auto &&...args) { return (c->*m)(std::forward<decltype(args)>(args)...); };
+    }
+} // namespace hicc::util
 
 namespace hicc::util {
 
@@ -625,27 +763,15 @@ namespace hicc::util {
         using subject_t = S;
         using FN = std::function<void(subject_t const &)>;
 
-        // template<typename _Callable, typename... _Args>
-        // auto bind(_Callable &&f, _Args &&...args) {
-        //     auto fn = std::bind(std::forward<_Callable>(f), std::forward<_Args>(args)...);
-        //     return fn;
-        // }
         template<typename _Callable, typename... _Args>
         observable_bindable &add_callback(_Callable &&f, _Args &&...args) {
-            FN fn = std::bind(std::forward<_Callable>(f), std::forward<_Args>(args)...);
+            FN fn = std::bind(std::forward<_Callable>(f), std::forward<_Args>(args)..., std::placeholders::_1);
             _callbacks.push_back(fn);
             return (*this);
         }
-        // template<class L>
-        // observable_bindable &add_callback(types::overload_lambda<L> fn) {
-        //     _callbacks.push_back(fn);
-        //     return (*this);
-        // }
         template<typename _Callable, typename... _Args>
-        observable_bindable &on(_Callable &&f, _Args &&...args) {
-            return add_callback(f, args...);
-        }
-        
+        observable_bindable &on(_Callable &&f, _Args &&...args) { return add_callback(f, args...); }
+
         /**
          * @brief fire an event along the observers chain.
          * @param event_or_subject 
@@ -744,7 +870,7 @@ namespace hicc::util {
         return ((first == t) || ...);
     }
 
-} //namespace hicc::util
+} // namespace hicc::util
 
 template<class T>
 inline bool compare_vector_values(std::vector<T> const &v1, std::vector<T> const &v2) {

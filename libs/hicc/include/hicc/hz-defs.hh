@@ -776,7 +776,7 @@ typedef std::vector<std::string> string_array;
 // inline constexpr bool is_iterable(unsigned) { return false; }
 
 #if OS_WIN
-namespace hicc::types {
+namespace hicc::traits {
     template<typename T, typename = void>
     struct is_iterable : std::false_type {};
 
@@ -784,11 +784,11 @@ namespace hicc::types {
     struct is_iterable<T, std::void_t<decltype(std::declval<T>().begin()),
                                       decltype(std::declval<T>().end())>>
         : std::true_type {};
-} // namespace hicc::types
+} // namespace hicc::traits
 namespace detail {
     template<class Container,
              std::enable_if_t<
-                     hicc::types::is_iterable<Container>::value &&
+                     hicc::traits::is_iterable<Container>::value &&
                              !std::is_same<Container, std::string>::value &&
                              !std::is_same<Container, std::string_view>::value &&
                              !std::is_same<Container, std::wstring_view>::value &&
@@ -810,7 +810,7 @@ namespace detail {
 } // namespace detail
 template<class Container,
          std::enable_if_t<
-                 hicc::types::is_iterable<Container>::value &&
+                 hicc::traits::is_iterable<Container>::value &&
                          !std::is_same<Container, std::string>::value &&
                          !std::is_same<Container, std::string_view>::value &&
                          !std::is_same<Container, std::wstring_view>::value &&
@@ -823,7 +823,7 @@ inline std::ostream &operator<<(std::ostream &os, Container const &o) {
     return os;
 }
 #else
-namespace hicc::types {
+namespace hicc::traits {
     template<typename T, typename = void>
     struct is_iterable : std::false_type {};
 
@@ -833,11 +833,11 @@ namespace hicc::types {
 
     template<typename T>
     constexpr bool is_iterable_v = is_iterable<T>::value;
-} // namespace hicc::types
+} // namespace hicc::traits
 namespace detail {
     template<class TX,
              template<typename, typename...> class Container = std::vector,
-             std::enable_if_t<hicc::types::is_iterable<Container<TX>>::value &&
+             std::enable_if_t<hicc::traits::is_iterable<Container<TX>>::value &&
                                       !std::is_same<std::decay_t<Container<TX>>, std::string_view>::value &&
                                       !std::is_same<std::decay_t<Container<TX>>, std::wstring_view>::value &&
                                       !std::is_same<std::decay_t<Container<TX>>, std::u16string_view>::value &&
@@ -858,7 +858,7 @@ namespace detail {
 } // namespace detail
 template<class TX,
          template<typename, typename...> class Container = std::vector,
-         std::enable_if_t<hicc::types::is_iterable<Container<TX>>::value &&
+         std::enable_if_t<hicc::traits::is_iterable<Container<TX>>::value &&
                                   !std::is_same<std::decay_t<Container<TX>>, std::string_view>::value &&
                                   !std::is_same<std::decay_t<Container<TX>>, std::wstring_view>::value &&
                                   !std::is_same<std::decay_t<Container<TX>>, std::u16string_view>::value &&
