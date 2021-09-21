@@ -15,7 +15,7 @@ enum class Animal { DOG,
 inline std::ostream &operator<<(std::ostream &os, Animal value) {
     std::string enumName = "Animal";
     std::string str = "DOG, CAT= 100, HORSE = 1000";
-    int len = str.length(), val = -1;
+    int len = (int) str.length(), val = -1;
     std::map<int, std::string> maps;
     std::ostringstream temp;
     for (int i = 0; i < len; i++) {
@@ -58,7 +58,7 @@ void test_awesome_enum() {
     std::cout << dog << '\n';
     std::cout << Animal::HORSE << '\n';
     std::cout << Animal::CAT << '\n';
-    
+
     std::cout << Week::Saturday << '\n';
 }
 
