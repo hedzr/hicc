@@ -8,6 +8,41 @@
 
 #include "hicc/hz-log.hh"
 
+constexpr auto year = 31556952ll; // 格里高利历年的平均秒数
+
+void test_from_cppref() {
+    // https://zh.cppreference.com/w/cpp/chrono/duration
+
+    using shakes = std::chrono::duration<int, std::ratio<1, 100'000'000>>;
+    using jiffies = std::chrono::duration<int, std::centi>;
+    using microfortnights = std::chrono::duration<float, std::ratio<14 * 24 * 60 * 60, 1'000'000>>;
+    using nanocenturies = std::chrono::duration<float, std::ratio<100 * year, 1000'000'000>>;
+
+    std::chrono::seconds sec(1);
+
+    std::cout << "1 second is:\n";
+
+    // 无精度损失的整数尺度转换：无转型
+    std::cout << '\t' << std::chrono::microseconds(sec).count() << " microseconds\n"
+              << '\t' << shakes(sec).count() << " shakes\n"
+              << '\t' << jiffies(sec).count() << " jiffies\n";
+
+    // 有精度损失的整数尺度转换：需要转型
+    std::cout << '\t' << std::chrono::duration_cast<std::chrono::minutes>(sec).count()
+              << " minutes\n";
+
+    // 浮点尺度转换：无转型
+    std::cout << '\t' << microfortnights(sec).count() << " microfortnights\n"
+              << '\t' << nanocenturies(sec).count() << " nanocenturies\n";
+}
+
+void test_traits_is_duration() {
+    static_assert(hicc::chrono::is_duration<std::chrono::milliseconds>::value);
+    static_assert(hicc::chrono::is_duration_v<std::chrono::milliseconds>);
+    
+    static_assert(hicc::chrono::is_duration_v<std::thread::id> == false);
+}
+
 void foo1() {
     hicc_print("foo1 hit.");
 }
@@ -175,7 +210,7 @@ void echo(std::chrono::duration<_Rep, _Period> d) {
 }
 
 void test_format_duration() {
-    using namespace std::literals::chrono_literals;
+    using namespace std::literals::chrono_literals; // c++14 or later
     for (auto d : std::vector<std::chrono::duration<long double, std::ratio<60>>>{
                  3ns,
                  800ms,
@@ -187,6 +222,8 @@ void test_format_duration() {
                  7s,
                  7.2s,
                  1024h,
+                 5min,
+                 5.625min,
                  89.843204843s,
          }) {
         echo(d);
@@ -232,7 +269,7 @@ void test_last_day_at_this_month() {
 #define NOW_CASE(now_str, expected_str, desc, ofs) \
     testcase { desc, ofs, chr::parse_datetime(now_str), chr::parse_datetime(expected_str) }
 
-    for (auto t : {
+    for (auto const &t : {
                  // Month .. Year
                  NOW_CASE("2021-08-05", "2021-08-29", "day -3", 3),
                  NOW_CASE("2021-08-05", "2021-08-22", "day -10", 10),
@@ -272,7 +309,7 @@ void test_last_day_at_this_year() {
 #define NOW_CASE(now_str, expected_str, desc, ofs) \
     testcase { desc, ofs, chr::parse_datetime(now_str), chr::parse_datetime(expected_str) }
 
-    for (auto t : {
+    for (auto const &t : {
                  // Month .. Year
                  NOW_CASE("2021-08-05", "2021-12-29", "day -3", 3),
                  NOW_CASE("2021-08-05", "2021-12-22", "day -10", 10),
@@ -306,6 +343,9 @@ int main() {
 
     HICC_TEST_FOR(test_last_day_at_this_year);
     HICC_TEST_FOR(test_last_day_at_this_month);
+
+    HICC_TEST_FOR(test_from_cppref);
+    HICC_TEST_FOR(test_traits_is_duration);
 
 #ifndef _WIN32
     {
