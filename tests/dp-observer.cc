@@ -2,6 +2,40 @@
 // Created by Hedzr Yeh on 2021/9/14.
 //
 
+#include <algorithm>
+#include <functional>
+#include <memory>
+#include <new>
+#include <random>
+#include <tuple>
+#include <type_traits>
+#include <typeindex>
+#include <typeinfo>
+#include <utility>
+
+#include <atomic>
+#include <condition_variable>
+#include <mutex>
+
+#include <any>
+#include <array>
+#include <chrono>
+#include <deque>
+#include <initializer_list>
+#include <list>
+#include <map>
+#include <set>
+#include <unordered_map>
+#include <vector>
+
+#include <cstdio>
+#include <cstdlib>
+#include <iomanip>
+#include <iostream>
+#include <string>
+
+#include <math.h>
+
 #include "hicc/hz-defs.hh"
 
 #include "hicc/hz-dbg.hh"
@@ -10,18 +44,6 @@
 #include "hicc/hz-string.hh"
 #include "hicc/hz-util.hh"
 #include "hicc/hz-x-test.hh"
-
-#include <math.h>
-
-#include <iostream>
-#include <string>
-
-#include <unordered_map>
-#include <vector>
-
-#include <functional>
-#include <memory>
-#include <random>
 
 namespace hicc::dp::observer::basic {
 
@@ -118,10 +140,10 @@ void test_util_bind() {
         // float(3.0f) to int (the 2nd arg of doit()), the precision 
         // will be lost in narrowing a number.
         moo m;
-        auto fn1 = cmdr::util::bind(&moo::doit, m, _1, 3);
+        auto fn1 = hicc::util::bind(&moo::doit, m, _1, 3);
         std::cout << "fn1: " << fn1(1) << '\n';
 
-        auto fn2 = cmdr::util::bind(doit, _1, 3);
+        auto fn2 = hicc::util::bind(doit, _1, 3);
         std::cout << "fn2: " << fn2(9) << '\n';
 #endif
     }
