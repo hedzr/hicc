@@ -8,8 +8,8 @@
 #include "hicc/hz-x-test.hh"
 
 #include <iostream>
-#include <string>
 #include <math.h>
+#include <string>
 
 namespace tmp1 {
     struct Point {
@@ -24,7 +24,9 @@ namespace tmp1 {
         static std::unique_ptr<Point2D> create_unique() { return std::make_unique<Point2D>(); }
         static Point2D *create() { return new Point2D(); }
         // Point *clone() const override { return new Point2D(*this); }
+        DISABLE_MSVC_WARNINGS(26815)
         const char *name() const override { return hicc::debug::type_name<std::decay_t<decltype(*this)>>().data(); }
+        RESTORE_MSVC_WARNINGS
     };
 
     struct Point3D : Point {
@@ -33,18 +35,20 @@ namespace tmp1 {
         static std::unique_ptr<Point3D> create_unique() { return std::make_unique<Point3D>(); }
         static Point3D *create() { return new Point3D(); }
         // Point *clone() const override { return new Point3D(*this); }
+        DISABLE_MSVC_WARNINGS(26815)
         const char *name() const override { return hicc::debug::type_name<std::decay_t<decltype(*this)>>().data(); }
+        RESTORE_MSVC_WARNINGS
     };
 
     struct factory {
         template<typename T>
         static std::unique_ptr<T> create() { return T::create_unique(); }
     };
-    
-    class MyVars: public hicc::util::singleton<MyVars> {
+
+    class MyVars : public hicc::util::singleton<MyVars> {
     public:
         explicit MyVars(typename hicc::util::singleton<MyVars>::token) {}
-        long var1;
+        long var1{};
     };
 } // namespace tmp1
 
@@ -52,7 +56,7 @@ void test_factory() {
     namespace fct = hicc::util::factory;
 
     hicc_print("%ld\n", hicc::util::singleton<tmp1::MyVars>::instance().var1);
-    
+
     auto pp = tmp1::factory::create<tmp1::Point2D>();
     hicc_print("Point2D = %p", pp.get());
     // pp = tmp1::factory::create<tmp1::Point3D>();
@@ -82,7 +86,7 @@ namespace hicc::dp::factory::classical {
         float x, y;
 
     public:
-        explicit Trunk(double x_, double y_) { x = (float)x_, y = (float)y_; }
+        explicit Trunk(double x_, double y_) { x = (float) x_, y = (float) y_; }
         explicit Trunk(float x_, float y_) { x = x_, y = y_; }
         ~Trunk() = default;
         friend class classical_factory_method;
@@ -94,7 +98,7 @@ namespace hicc::dp::factory::classical {
         float x, y;
 
     public:
-        explicit Ship(double x_, double y_) { x = (float)x_, y = (float)y_; }
+        explicit Ship(double x_, double y_) { x = (float) x_, y = (float) y_; }
         explicit Ship(float x_, float y_) { x = x_, y = y_; }
         ~Ship() = default;
         friend class classical_factory_method;
@@ -107,13 +111,21 @@ namespace hicc::dp::factory::classical {
         static Transport *create_ship(float r_, float theta_) {
             return new Ship{r_ * cos(theta_), r_ * sin(theta_)};
         }
-        static Transport *create_trunk(float x_, float y_) {
-            return new Trunk{x_, y_};
+        static Transport *create_ship(double r_, double theta_) {
+            return new Ship{r_ * cos(theta_), r_ * sin(theta_)};
         }
+        static Transport *create_trunk(float x_, float y_) { return new Trunk{x_, y_}; }
+        static Transport *create_trunk(double x_, double y_) { return new Trunk{x_, y_}; }
         static std::unique_ptr<Ship> create_ship_2(float r_, float theta_) {
             return std::make_unique<Ship>(r_ * cos(theta_), r_ * sin(theta_));
         }
+        static std::unique_ptr<Ship> create_ship_2(double r_, double theta_) {
+            return std::make_unique<Ship>(r_ * cos(theta_), r_ * sin(theta_));
+        }
         static std::unique_ptr<Trunk> create_trunk_2(float x_, float y_) {
+            return std::make_unique<Trunk>(x_, y_);
+        }
+        static std::unique_ptr<Trunk> create_trunk_2(double x_, double y_) {
             return std::make_unique<Trunk>(x_, y_);
         }
 
@@ -166,6 +178,9 @@ namespace hicc::dp::factory::inner {
         static std::unique_ptr<Trunk> create(float x_, float y_) {
             return std::make_unique<Trunk>(x_, y_);
         }
+        static std::unique_ptr<Trunk> create(double x_, double y_) {
+            return std::make_unique<Trunk>(x_, y_);
+        }
     };
 
     class Ship : public Transport {
@@ -178,6 +193,9 @@ namespace hicc::dp::factory::inner {
         void deliver() override { printf("Ship::deliver()\n"); }
         friend std::ostream &operator<<(std::ostream &os, const Ship &o) { return os << "x: " << o.x << " y: " << o.y; }
         static std::unique_ptr<Ship> create(float r_, float theta_) {
+            return std::make_unique<Ship>(r_ * cos(theta_), r_ * sin(theta_));
+        }
+        static std::unique_ptr<Ship> create(double r_, double theta_) {
             return std::make_unique<Ship>(r_ * cos(theta_), r_ * sin(theta_));
         }
     };
@@ -220,7 +238,9 @@ namespace hicc::dp::factory::abstract {
         static std::unique_ptr<Point2D> create_unique() { return std::make_unique<Point2D>(); }
         static Point2D *create() { return new Point2D(); }
         // Point *clone() const override { return new Point2D(*this); }
+        DISABLE_MSVC_WARNINGS(26815)
         const char *name() const override { return hicc::debug::type_name<std::decay_t<decltype(*this)>>().data(); }
+        RESTORE_MSVC_WARNINGS
     };
 
     class Point3D : public Point {
@@ -230,7 +250,9 @@ namespace hicc::dp::factory::abstract {
         static std::unique_ptr<Point3D> create_unique() { return std::make_unique<Point3D>(); }
         static Point3D *create() { return new Point3D(); }
         // Point *clone() const override { return new Point3D(*this); }
+        DISABLE_MSVC_WARNINGS(26815)
         const char *name() const override { return hicc::debug::type_name<std::decay_t<decltype(*this)>>().data(); }
+        RESTORE_MSVC_WARNINGS
     };
 
     struct factory {
