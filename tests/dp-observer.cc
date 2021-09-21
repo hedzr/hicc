@@ -106,12 +106,24 @@ void test_util_bind() {
         auto fn0 = hicc::util::bind([](int a, float b) { std::cout << "\nfn0: " << a << ',' << b << '\n'; }, _1, _2);
         fn0(1, 20.f);
 
+#ifndef _MSC_VER
         moo m;
-        auto fn1 = hicc::util::bind(&moo::doit, m, _1, 3.0f);
+        auto fn1 = cmdr::util::bind(&moo::doit, m, _1, 3.0f);
         std::cout << "fn1: " << fn1(1) << '\n';
 
-        auto fn2 = hicc::util::bind(doit, _1, 3.0f);
+        auto fn2 = cmdr::util::bind(doit, _1, 3.0f);
         std::cout << "fn2: " << fn2(9) << '\n';
+#else
+        // in msvc, C4244 warning will be thrown since it's converting 
+        // float(3.0f) to int (the 2nd arg of doit()), the precision 
+        // will be lost in narrowing a number.
+        moo m;
+        auto fn1 = cmdr::util::bind(&moo::doit, m, _1, 3);
+        std::cout << "fn1: " << fn1(1) << '\n';
+
+        auto fn2 = cmdr::util::bind(doit, _1, 3);
+        std::cout << "fn2: " << fn2(9) << '\n';
+#endif
     }
 
     {
@@ -275,12 +287,21 @@ void test_observer_slots_args() {
     sig.on(obj(), _1, _2, _3, _4);
 
     float f = 1.f;
+#ifdef _MSC_VER
+    int i = 2;
+#else
     short i = 2; // convertible to int
+#endif
     std::string s = "0";
 
-    // emit a signal
+// emit a signal
+#ifdef _MSC_VER
+    sig.emit(std::move(f), std::move(i), false, std::move(s));
+    sig.emit(std::move(f), std::move(i), true, std::move(s));
+#else
     sig.emit(std::move(f), i, false, std::move(s));
     sig.emit(std::move(f), i, true, std::move(s));
+#endif
 }
 
 int main() {
