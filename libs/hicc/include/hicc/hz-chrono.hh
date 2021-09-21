@@ -99,6 +99,9 @@ namespace hicc::chrono {
                     void>> : public std::true_type {
     };
 
+    template<typename T>
+    constexpr bool is_duration_v = is_duration<T>::value;
+
 } // namespace hicc::chrono
 
 // get_system_clock_in_us
@@ -861,8 +864,9 @@ inline std::ostream &operator<<(std::ostream &os, T const &v) {
 template<typename T,
          std::enable_if_t<hicc::chrono::is_duration<T>::value, bool>>
 inline void hicc::chrono::high_res_duration::print_duration(std::ostream &os, T v) {
-    // hicc::chrono::format_duration(os, v);
-    os << "It took " << v << '\n';
+    os << "It took ";
+    hicc::chrono::format_duration(os, v);
+    os << '\n';
 }
 
 template<class _Clock, class _Duration = typename _Clock::duration>
