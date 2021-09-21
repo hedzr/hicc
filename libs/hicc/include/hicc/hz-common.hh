@@ -9,12 +9,21 @@
 
 #include <algorithm>
 #include <functional>
-#include <initializer_list>
 #include <memory>
-#include <mutex>
 #include <tuple>
 #include <type_traits>
 #include <utility>
+
+#include <atomic>
+#include <condition_variable>
+#include <mutex>
+
+#include <deque>
+#include <initializer_list>
+#include <list>
+#include <map>
+#include <set>
+#include <unordered_map>
 #include <vector>
 
 namespace std {
@@ -264,28 +273,30 @@ namespace hicc::traits {
     template<class T>
     struct tag { using type = T; };
 
-    template<std::size_t N, class R, class TL>
-    struct head_n_impl;
+    namespace detail::another_head_n {
+        template<std::size_t N, class R, class TL>
+        struct head_n_impl;
 
-    // have at least one to pop from and need at least one more, so just
-    // move it over
-    template<std::size_t N, class... Ts, class U, class... Us>
-    struct head_n_impl<N, typelist<Ts...>, typelist<U, Us...>>
-        : head_n_impl<N - 1, typelist<Ts..., U>, typelist<Us...>> {};
+        // have at least one to pop from and need at least one more, so just
+        // move it over
+        template<std::size_t N, class... Ts, class U, class... Us>
+        struct head_n_impl<N, typelist<Ts...>, typelist<U, Us...>>
+            : head_n_impl<N - 1, typelist<Ts..., U>, typelist<Us...>> {};
 
-    // we have two base cases for 0 because we need to be more specialized
-    // than the previous case regardless of if we have any elements in the list
-    // left or not
-    template<class... Ts, class... Us>
-    struct head_n_impl<0, typelist<Ts...>, typelist<Us...>>
-        : tag<typelist<Ts...>> {};
+        // we have two base cases for 0 because we need to be more specialized
+        // than the previous case regardless of if we have any elements in the list
+        // left or not
+        template<class... Ts, class... Us>
+        struct head_n_impl<0, typelist<Ts...>, typelist<Us...>>
+            : tag<typelist<Ts...>> {};
 
-    template<class... Ts, class U, class... Us>
-    struct head_n_impl<0, typelist<Ts...>, typelist<U, Us...>>
-        : tag<typelist<Ts...>> {};
+        template<class... Ts, class U, class... Us>
+        struct head_n_impl<0, typelist<Ts...>, typelist<U, Us...>>
+            : tag<typelist<Ts...>> {};
 
-    template<std::size_t N, class TL>
-    using head_n = typename head_n_impl<N, typelist<>, TL>::type;
+        template<std::size_t N, class TL>
+        using head_n = typename head_n_impl<N, typelist<>, TL>::type;
+    } // namespace detail::another_head_n
 
     // ---- first_of_args
 
@@ -293,7 +304,123 @@ namespace hicc::traits {
 
 namespace hicc::traits {
 
-} // namespace hicc::traits
+    template<typename... Pack>
+    struct pack {};
+
+
+    template<typename, typename>
+    struct add_to_pack;
+
+    template<typename A, typename... R>
+    struct add_to_pack<A, pack<R...>> {
+        typedef pack<A, R...> type;
+    };
+
+
+    template<typename>
+    struct convert_to_tuple;
+
+    template<typename... A>
+    struct convert_to_tuple<pack<A...>> {
+        typedef std::tuple<A...> type;
+    };
+
+
+    template<int, typename...>
+    struct take;
+
+    template<int N>
+    struct take<N> {
+        typedef pack<> type;
+    };
+
+    template<int N, typename Head, typename... Tail>
+    struct take<N, Head, Tail...> {
+        typedef
+                typename std::conditional<
+                        (N > 0),
+                        typename add_to_pack<
+                                Head,
+                                typename take<
+                                        N - 1,
+                                        Tail...>::type>::type,
+                        pack<>>::type type;
+    };
+
+
+    template<int, int, typename...>
+    struct head;
+
+    template<int I, int N>
+    struct head<I, N> {
+        typedef pack<> type;
+    };
+
+    template<int I, int N, typename Head, typename... Tail>
+    struct head<I, N, Head, Tail...> {
+        typedef
+                typename std::conditional<
+                        (N > I),
+                        typename add_to_pack<
+                                Head,
+                                typename head<
+                                        I + 1, N,
+                                        Tail...>::type>::type,
+                        pack<>>::type type;
+    };
+
+    /**
+     * @brief drop the tailed Nth elements from variadic template arguments
+     * @tparam N 
+     * @tparam A 
+     * @detail For example:
+     * @code{c++}
+     *   hicc::traits::drop_from_end&lt;3, const char*, double, int, int&gt;::type b{"pi"};
+     *   std::cout &lt;&lt; b &lt;&lt; '\n';
+     *
+     *   hicc::traits::drop_from_end&lt;2, const char*, double, int, int&gt;::type c{"pi", 3.1415};
+     *   detail::print_tuple(std::cout, c) &lt;&lt; '\n';
+     * @endcode
+     */
+    template<int N, typename... A>
+    struct drop_from_end {
+        // Add these asserts if needed.
+        //static_assert(N >= 0,
+        //  "Cannot drop negative number of elements!");
+
+        //static_assert(N <= static_cast<int>(sizeof...(A)),
+        //  "Cannot drop more elements than size of pack!")
+
+        typedef
+                typename convert_to_tuple<
+                        typename take<
+                                static_cast<int>(sizeof...(A)) - N,
+                                A...>::type>::type type;
+    };
+
+    /**
+     * @brief collect/keep the head Nth elements from variadic template arguments
+     * @tparam N 
+     * @tparam A 
+     * @detail For example:
+     * @code{c++}
+     *   hicc::traits::head_n&lt;2, const char*, double, int, int&gt;::type hn{"pi", 3.1415};
+     *   detail::print_tuple(std::cout, hn) &lt;&lt; '\n';
+     *
+     *   hicc::traits::head_n&lt;3, const char*, double, int, int&gt;::type hn3{"pi", 3.1415, 1};
+     *   std::cout &lt;&lt; hn3 &lt;&lt; '\n';
+     * @endcode
+     */
+    template<int N, typename... A>
+    struct head_n {
+        typedef
+                typename convert_to_tuple<
+                        typename head<
+                                0, N,
+                                A...>::type>::type type;
+    };
+
+} // namespace hicc::traits (drop_from_end, head_n)
 
 // ------------------- light-weight bind
 namespace hicc::util {
