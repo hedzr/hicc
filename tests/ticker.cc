@@ -215,7 +215,7 @@ void test_timer() {
             .build();
 
     printf("count.wait()\n");
-    count.wait_for(3s);
+    count.wait_for();
     // t.clear();
     printf("end of %s\n", __FUNCTION_NAME__);
 }
@@ -229,10 +229,8 @@ void test_ticker() {
 #if !HICC_ENABLE_THREAD_POOL_READY_SIGNAL
     std::this_thread::sleep_for(300ms);
 #endif
-
-    {
-        hicc_print("  - start at: %s", hicc::chrono::format_time_point().c_str());
-    }
+    
+    hicc_print("  - start at: %s", hicc::chrono::format_time_point().c_str());
     t->every(1us)
             .on([&count]() {
                 // auto now = hicc::chrono::now();
