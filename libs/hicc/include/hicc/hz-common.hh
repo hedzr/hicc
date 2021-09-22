@@ -656,7 +656,7 @@ namespace hicc::util::cool {
 } // namespace hicc::util::cool
 
 // ------------------- get_template_type_t, return_type_of_t
-namespace hicc::util {
+namespace hicc::traits {
 
     /**
      * @brief 
@@ -666,7 +666,7 @@ namespace hicc::util {
      * class baz{
      * };
      * 
-     * using ret = hicc::util::get_template_type_t<baz>::type;
+     * using ret = hicc::traits::get_template_type_t<baz>::type;
      */
     template<typename C>
     struct get_template_type_t;
@@ -711,7 +711,7 @@ namespace hicc::util {
     R return_type_of(R (*)(Args...));
 
 
-} // namespace hicc::util
+} // namespace hicc::traits
 
 // ------------------- singleton
 namespace hicc::util {
