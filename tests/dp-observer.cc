@@ -136,8 +136,8 @@ void test_util_bind() {
         auto fn2 = hicc::util::bind(doit, _1, 3.0f);
         std::cout << "fn2: " << fn2(9) << '\n';
 #else
-        // in msvc, C4244 warning will be thrown since it's converting 
-        // float(3.0f) to int (the 2nd arg of doit()), the precision 
+        // in msvc, C4244 warning will be thrown since it's converting
+        // float(3.0f) to int (the 2nd arg of doit()), the precision
         // will be lost in narrowing a number.
         moo m;
         auto fn1 = hicc::util::bind(&moo::doit, m, _1, 3);
@@ -207,7 +207,7 @@ void test_observer_cb() {
     store.emit(mouse_move_event{});
 }
 
-namespace hicc::dp::observer::slots {
+namespace hicc::dp::observer::slots::tests {
 
     void f() { std::cout << "free function\n"; }
 
@@ -234,10 +234,11 @@ namespace hicc::dp::observer::slots {
         }
     };
 
-} // namespace hicc::dp::observer::slots
+} // namespace hicc::dp::observer::slots::tests
 
 void test_observer_slots() {
     using namespace hicc::dp::observer::slots;
+    using namespace hicc::dp::observer::slots::tests;
     using namespace std::placeholders;
     {
         std::vector<int> v1 = example::foo(1, 2, 3, 4);
@@ -278,13 +279,18 @@ void test_observer_slots_args() {
         void bar(double d, int i, bool b, std::string &&s) {
             std::cout << "memfn: " << s << (b ? std::to_string(i) : std::to_string(d)) << '\n';
         }
+        static void sbar(double d, int i, bool b, std::string &&s) {
+            std::cout << "memfn: " << s << (b ? std::to_string(i) : std::to_string(d)) << '\n';
+        }
     };
 
     // Function objects can cope with default arguments and overloading.
     // It does not work with static and member functions.
     struct obj {
-        void operator()(float, int, bool, std::string &&, int = 0) {
-            std::cout << "obj.operator(): I was here" << '\n';
+        void operator()(float f, int i, bool b, std::string &&s, int tail = 0) {
+            std::cout << "obj.operator(): I was here: ";
+            std::cout << f << ' ' << i << ' ' << std::boolalpha << b << ' ' << s << ' ' << tail;
+            std::cout << '\n';
         }
 
         // void operator()() {}
@@ -292,7 +298,7 @@ void test_observer_slots_args() {
 
     // a generic lambda that prints its arguments to stdout
     auto printer = [](auto a, auto &&...args) {
-        std::cout << a;
+        std::cout << a << std::boolalpha;
         (void) std::initializer_list<int>{
                 ((void) (std::cout << " " << args), 1)...};
         std::cout << '\n';
@@ -302,11 +308,18 @@ void test_observer_slots_args() {
     hicc::util::signal<float, int, bool, std::string> sig;
 
     // connect the slots
-    sig.connect(printer, _1, _2, _3, _4);
+    // sig.connect(printer, _1, _2, _3, _4);
+    // foo ff;
+    // sig.on(&foo::bar, ff, _1, _2, _3, _4);
+    // sig.on(obj(), _1, _2, _3, _4);
+
+    sig.connect(printer);
     foo ff;
-    sig.on(&foo::bar, ff, _1, _2, _3, _4);
-    // sig.on(&foo::bar, ff);
+    // sig.on(sig.bind(&foo::bar, ff));
+    sig.on(&foo::bar, ff);
+    sig.on(&foo::sbar);
     sig.on(obj(), _1, _2, _3, _4);
+    sig.on(obj());
 
     float f = 1.f;
 #ifdef _MSC_VER
