@@ -1263,13 +1263,13 @@ namespace hicc {
 
 
     template<typename T, typename U>
-    bool operator==(const safe_bool<T> &lhs, const safe_bool<U> &rhs) {
+    bool operator==(const safe_bool<T> &lhs, const safe_bool<U> &) {
         lhs.this_type_does_not_support_comparisons();
         return false;
     }
 
     template<typename T, typename U>
-    bool operator!=(const safe_bool<T> &lhs, const safe_bool<U> &rhs) {
+    bool operator!=(const safe_bool<T> &lhs, const safe_bool<U> &) {
         lhs.this_type_does_not_support_comparisons();
         return false;
     }
