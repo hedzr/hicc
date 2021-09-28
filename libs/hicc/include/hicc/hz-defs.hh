@@ -15,6 +15,7 @@
 
 #include <filesystem>
 
+#include <cctype>
 #include <cstddef>
 #include <cstdint>
 
@@ -213,6 +214,7 @@ inline void UNUSED([[maybe_unused]] Args &&...args) {
 //
 
 
+#ifndef AWESOME_MAKE_ENUM
 /**
  * @brief declare enum class with its string literals.
  * @details For examples:
@@ -240,7 +242,7 @@ inline void UNUSED([[maybe_unused]] Args &&...args) {
         std::map<int, std::string> maps;                            \
         std::ostringstream temp;                                    \
         for (int i = 0; i < len; i++) {                             \
-            if (isspace(str[i])) continue;                          \
+            if (std::isspace(str[i])) continue;                     \
             if (str[i] == ',') {                                    \
                 std::string s0 = temp.str();                        \
                 auto ix = s0.find('=');                             \
@@ -269,6 +271,7 @@ inline void UNUSED([[maybe_unused]] Args &&...args) {
         os << enumName << "::" << maps[(int) value];                \
         return os;                                                  \
     }
+#endif
 
 
 //
