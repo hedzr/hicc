@@ -1,25 +1,32 @@
 ## TPL ## HEAD ##########
-cmake_minimum_required(VERSION 3.9..3.19)
+cmake_minimum_required(VERSION 3.9..3.21)
 set(CMAKE_SCRIPTS "cmake")
-set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/addons;${CMAKE_SOURCE_DIR}/${CMAKE_SCRIPTS}/modules;${CMAKE_SOURCE_DIR}/${CMAKE_SCRIPTS};${CMAKE_SOURCE_DIR};${CMAKE_MODULE_PATH}")
+set(CMAKE_MODULE_PATH
+        ${CMAKE_SOURCE_DIR}/addons
+        ${CMAKE_SOURCE_DIR}/${CMAKE_SCRIPTS}/modules
+        ${CMAKE_SOURCE_DIR}/${CMAKE_SCRIPTS}
+        ${CMAKE_SOURCE_DIR}  # for .version.cmake & .options.cmake
+        ${CMAKE_MODULE_PATH})
 include(prerequisites)
 include(version-def)
 include(add-policies)
 include(detect-systems)
 include(target-dirs)
 include(utils)
+include(dummy-project)
+
 
 #
 # OPTIONS
 #
 
 option(ENABLE_TESTS "Enable tests" ON)
-option(ENABLE_AUTOMATE_TESTS "Enable automated tests at local" ON)
+option(ENABLE_AUTOMATE_TESTS "Enable automated tests at local" OFF)
+option(ENABLE_CMDR_CLI_TEST "Enable cmdr-cli app as a test" OFF)
+
 if (NOT ${CI_RUNNING})
     set(ENABLE_AUTOMATE_TESTS OFF)
 endif ()
-option(ENABLE_CMDR_CLI_TEST "Enable cmdr-cli app as a test" OFF)
-
 
 #
 # MAIN
@@ -55,7 +62,7 @@ add_subdirectory(libs)
 add_subdirectory(src)
 if (ENABLE_TESTS)
     add_subdirectory(tests)
-endif()
+endif ()
 add_subdirectory(docs)
 attach_doxygen_to(hicc)
 
