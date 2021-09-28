@@ -29,8 +29,15 @@ cmake -DENABLE_AUTOMATE_TESTS=OFF -S . -B build/
 # build
 cmake --build build/
 # install
-cmake --build build/ --target install
-# sometimes maybe sudo: sudo cmake --build build/ --target install
+cmake --install build/
+# Or:cmake --build build/ --target install
+#
+# Sometimes sudo it:
+#   sudo cmake --build build/ --target install
+# Or:
+#   cmake --install build/ --prefix ./install --strip
+#   sudo cp -R ./install/include/* /usr/local/include/
+#   sudo cp -R ./install/lib/cmake/fsm_cxx /usr/local/lib/cmake/
 ```
 
 ### ninja, [Optional]
