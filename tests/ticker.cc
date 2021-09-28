@@ -128,6 +128,7 @@ void test_periodical_job() {
         int times;
         time_point now, expected;
     };
+
 #define CASE(desc, anchor, ofs) \
     testcase { desc, anchor, ofs, 1, -1, time_point(), time_point() }
 #define CASE1(desc, anchor, ofs, ord) \
@@ -229,7 +230,7 @@ void test_ticker() {
 #if !HICC_ENABLE_THREAD_POOL_READY_SIGNAL
     std::this_thread::sleep_for(300ms);
 #endif
-    
+
     hicc_print("  - start at: %s", hicc::chrono::format_time_point().c_str());
     t->every(1us)
             .on([&count]() {

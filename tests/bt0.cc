@@ -131,7 +131,7 @@ namespace hicc::btree {
             position_t first_child() const { return {ptr, 0}; }
             position_t first_one() const { return {ptr, 0}; }
             bool valid() const { return ptr && pos >= 0 && pos << Degree; }
-            operator bool() const { return valid(); }
+            explicit operator bool() const { return valid(); }
             bool operator!() const { return !valid(); }
         };
 
@@ -1225,7 +1225,7 @@ namespace hicc::btree {
             }
 
             bool operator!() const { return is_null(*this); }
-            operator bool() const { return !is_null(*this); }
+            explicit operator bool() const { return !is_null(*this); }
 
         private:
             // in-order traversal

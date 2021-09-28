@@ -277,10 +277,10 @@ void test_observer_slots_args() {
         // This is fine because float is convertible to double.
         // 's' is a reference and can thus be modified.
         void bar(double d, int i, bool b, std::string &&s) {
-            std::cout << "memfn: " << s << (b ? std::to_string(i) : std::to_string(d)) << '\n';
+            std::cout << "mem-fn: " << s << (b ? std::to_string(i) : std::to_string(d)) << '\n';
         }
         static void sbar(double d, int i, bool b, std::string &&s) {
-            std::cout << "memfn: " << s << (b ? std::to_string(i) : std::to_string(d)) << '\n';
+            std::cout << "static mem-fn: " << s << (b ? std::to_string(i) : std::to_string(d)) << '\n';
         }
     };
 
@@ -320,7 +320,7 @@ void test_observer_slots_args() {
     sig.on(&foo::sbar);
     sig.on(obj(), _1, _2, _3, _4);
     sig.on(obj());
-
+hicc::to_string(sig)
     float f = 1.f;
 #ifdef _MSC_VER
     int i = 2;

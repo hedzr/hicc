@@ -8,6 +8,8 @@
 #pragma once
 
 #include "hicc-version.hh"
+#include "hicc-config-base.hh"
+
 
 #include "hz-defs.hh"
 
