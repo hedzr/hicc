@@ -20,13 +20,13 @@ if (NOT TARGET hicc::hicc)
   include("${CMAKE_CURRENT_LIST_DIR}/hiccTargets.cmake")
 
   # These are IMPORTED targets created by hiccTargets.cmake
-  set(CMDR11_LIBRARIES "hicc::hicc")
+  set(HICC_LIBRARIES "hicc::hicc")
 
-  if (EXISTS ${CMDR11_INCLUDE_DIR}/hicc/hicc.hh)
-    set(CMDR11_FOUND ON)
+  if (EXISTS ${HICC_INCLUDE_DIR}/hicc/hicc.hh)
+    set(HICC_FOUND ON)
 
-    set(CMDR11_INCLUDE_DIRS ${CMDR11_INCLUDE_DIR})
-    get_filename_component(CMDR11_LIBRARY_DIR "${HICC_CMAKE_DIR}/../../../lib" REALPATH)
+    set(HICC_INCLUDE_DIRS ${HICC_INCLUDE_DIR})
+    get_filename_component(HICC_LIBRARY_DIR "${HICC_CMAKE_DIR}/../../../lib" REALPATH)
     set(HICC_LIBRARY_DIRS ${HICC_LIBRARY_DIR})
 
     file(READ "${HICC_INCLUDE_DIR}/hicc/hicc-version.hh" ver)
@@ -40,10 +40,10 @@ if (NOT TARGET hicc::hicc)
     string(REGEX MATCH "PATCH_NUMBER ([0-9]*)" _ ${ver})
     set(HICC_VERSION_PATCH ${CMAKE_MATCH_1})
 
-    string(REGEX MATCH "CMDR_VERSION_STRING xT\\(\\\"([0-9.]+)\\\"\\)" _ ${ver})
+    string(REGEX MATCH "HICC_VERSION_STRING xT\\(\\\"([0-9.]+)\\\"\\)" _ ${ver})
     set(HICC_VERSION_STRING ${CMAKE_MATCH_1})
 
-    string(REGEX MATCH "CMDR_GIT_COMMIT_HASH xT\\(\\\"([0-9a-f.-]+)\\\"\\)" _ ${ver})
+    string(REGEX MATCH "HICC_GIT_COMMIT_HASH xT\\(\\\"([0-9a-f.-]+)\\\"\\)" _ ${ver})
     set(HICC_VERSION_GIT_HASH ${CMAKE_MATCH_1})
     
     message(">=< HICC_VERSION        = ${HICC_VERSION_MAJOR}.${HICC_VERSION_MINOR}.${HICC_VERSION_PATCH}")

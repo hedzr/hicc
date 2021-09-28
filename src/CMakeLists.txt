@@ -53,14 +53,14 @@ endif ()
 
 ####
 
-if (ENABLE_CMDR_CLI_TEST)
-    project(cmdr-cli
+if (ENABLE_HICC_CLI_TEST)
+    project(hicc-cli
             VERSION ${VERSION}
-            DESCRIPTION "cmdr test cli project here"
-            HOMEPAGE_URL "https://github.com/hedzr/cmdr-cxx"
+            DESCRIPTION "hicc test cli project here"
+            HOMEPAGE_URL "https://github.com/hedzr/hicc"
             LANGUAGES CXX)
 
-    add_executable(${PROJECT_NAME} cmdr_main.cc)
+    add_executable(${PROJECT_NAME} hicc_main.cc)
     target_include_directories(${PROJECT_NAME} PRIVATE
             $<BUILD_INTERFACE:${CMAKE_GENERATED_DIR}>
             )

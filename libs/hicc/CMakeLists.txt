@@ -125,9 +125,9 @@ target_include_directories(${PROJECT_NAME}
         )
 target_include_directories(${PROJECT_NAME} SYSTEM INTERFACE $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include>)
 target_compile_definitions(${PROJECT_NAME} INTERFACE
-        HICC_ENABLE_ASSERTIONS=${_cmdr_enable_assertions}
-        HICC_ENABLE_PRECONDITION_CHECKS=${_cmdr_enable_precondition_checks}
-        HICC_ENABLE_WRAPPER=${_cmdr_enable_wrapper})
+        HICC_ENABLE_ASSERTIONS=${_hicc_enable_assertions}
+        HICC_ENABLE_PRECONDITION_CHECKS=${_hicc_enable_precondition_checks}
+        HICC_ENABLE_WRAPPER=${_hicc_enable_wrapper})
 if (${HICC_ENABLE_VERBOSE_LOG})
     target_compile_definitions(${PROJECT_NAME} INTERFACE
             HICC_ENABLE_VERBOSE_LOG=1)
@@ -154,9 +154,9 @@ if (ENABLE_HICC_CLI_APP)
     add_executable(${CLI_NAME} src/main.cc)
     target_compile_definitions(${CLI_NAME} PRIVATE
             HICC_ENABLE_AUTO_COMPLETION_LOGFILE=1
-            HICC_ENABLE_ASSERTIONS=${_cmdr_enable_assertions}
-            HICC_ENABLE_PRECONDITION_CHECKS=${_cmdr_enable_precondition_checks}
-            HICC_ENABLE_WRAPPER=${_cmdr_enable_wrapper})
+            HICC_ENABLE_ASSERTIONS=${_hicc_enable_assertions}
+            HICC_ENABLE_PRECONDITION_CHECKS=${_hicc_enable_precondition_checks}
+            HICC_ENABLE_WRAPPER=${_hicc_enable_wrapper})
     target_include_directories(${CLI_NAME} PRIVATE $<BUILD_INTERFACE:${CMAKE_GENERATED_DIR}>)
     target_link_libraries(${CLI_NAME} PRIVATE libs::hicc)
     set_target_properties(${CLI_NAME}

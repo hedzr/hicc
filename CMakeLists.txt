@@ -22,7 +22,7 @@ include(dummy-project)
 
 option(ENABLE_TESTS "Enable tests" ON)
 option(ENABLE_AUTOMATE_TESTS "Enable automated tests at local" OFF)
-option(ENABLE_CMDR_CLI_TEST "Enable cmdr-cli app as a test" OFF)
+option(ENABLE_HICC_CLI_TEST "Enable hicc-cli app as a test" OFF)
 
 if (NOT ${CI_RUNNING})
     set(ENABLE_AUTOMATE_TESTS OFF)
