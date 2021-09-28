@@ -38,9 +38,9 @@ trim_trailing_whitespace = false
 insert_final_newline = false
 
 [*.{h,hh,hpp,hxx,c,cc,cpp,cxx,inl}]
-indent_size = 2
+indent_size = 4
 indent_style = space
-tab_width = 2
+tab_width = 4
 
 [*.go]
 indent_size = 4
