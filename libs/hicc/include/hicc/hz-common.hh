@@ -655,6 +655,28 @@ namespace hicc::util::cool {
 
 } // namespace hicc::util::cool
 
+// ------------------- cool::lock_guard
+namespace fsm_cxx::util::cool {
+    template<typename _Mutex>
+    class lock_guard {
+    public:
+        _Mutex _m;
+        lock_guard() { _m.lock(); }
+        ~lock_guard() { _m.unlock(); }
+        void lock() { _m.lock(); }
+        void unlock() { _m.unlock(); }
+    };
+
+    template<>
+    class lock_guard<void> {
+    public:
+        lock_guard() {}
+        ~lock_guard() {}
+        void lock() {}
+        void unlock() {}
+    };
+} // namespace fsm_cxx::util::cool
+
 // ------------------- get_template_type_t, return_type_of_t
 namespace hicc::traits {
 
@@ -1137,6 +1159,7 @@ namespace hicc::util {
 
 } // namespace hicc::util
 
+// ------------------- compare_vector_values
 namespace hicc::util {
     template<class T>
     inline bool compare_vector_values(std::vector<T> const &v1, std::vector<T> const &v2) {
