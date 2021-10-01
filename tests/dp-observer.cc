@@ -320,7 +320,7 @@ void test_observer_slots_args() {
     sig.on(&foo::sbar);
     sig.on(obj(), _1, _2, _3, _4);
     sig.on(obj());
-hicc::to_string(sig)
+
     float f = 1.f;
 #ifdef _MSC_VER
     int i = 2;
