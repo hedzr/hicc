@@ -139,10 +139,6 @@ define_test_program(process process.cc)
 
 define_test_program(ticker ticker.cc)
 
-define_test_program(drawing drawing.cc)
-
-define_test_program(tiny-socket-svr tiny-socket-svr.cc)
-define_test_program(tiny-socket-cli tiny-socket-cli.cc)
 
 #define_test_program(any-1 any_1.cc)
 #define_test_program(visit-any
