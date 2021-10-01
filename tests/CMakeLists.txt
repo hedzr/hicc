@@ -112,6 +112,7 @@ define_test_program(chrono chrono.cc)
 define_test_program(typename typename.cc)  # typename
 define_test_program(awesome-enum awesome-enum.cc)
 
+define_test_program(dp-state dp-state.cc)
 define_test_program(dp-factory dp-factory.cc)     # factory
 define_test_program(dp-builder dp-builder.cc)     # builder
 define_test_program(dp-flyweight dp-flyweight.cc) # flyweight
@@ -137,6 +138,11 @@ define_test_program(pool pool.cc native-handle.cc)
 define_test_program(process process.cc)
 
 define_test_program(ticker ticker.cc)
+
+define_test_program(drawing drawing.cc)
+
+define_test_program(tiny-socket-svr tiny-socket-svr.cc)
+define_test_program(tiny-socket-cli tiny-socket-cli.cc)
 
 #define_test_program(any-1 any_1.cc)
 #define_test_program(visit-any
