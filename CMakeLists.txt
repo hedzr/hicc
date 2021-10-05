@@ -8,11 +8,6 @@ set(CMAKE_MODULE_PATH
         ${CMAKE_SOURCE_DIR}  # for .version.cmake & .options.cmake
         ${CMAKE_MODULE_PATH})
 include(prerequisites)
-include(version-def)
-include(add-policies)
-include(detect-systems)
-include(target-dirs)
-include(utils)
 include(dummy-project)
 
 
@@ -27,6 +22,7 @@ option(ENABLE_HICC_CLI_TEST "Enable hicc-cli app as a test" OFF)
 if (NOT ${CI_RUNNING})
     set(ENABLE_AUTOMATE_TESTS OFF)
 endif ()
+
 
 #
 # MAIN

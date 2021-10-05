@@ -77,18 +77,28 @@ mark_as_advanced(CMAKE_BUILD_NAME)
 # CCache
 #
 
-option(ENABLE_CCACHE "enable ccache optimizations" ON)
+#option(ENABLE_CCACHE "enable ccache optimizations" ON)
+#if (ENABLE_CCACHE)
+#    find_program(CCACHE_PROGRAM ccache)
+#    if (CCACHE_PROGRAM)
+#        message(STATUS "Set up ccache ...")
+#        set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
+#        set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
+#    endif ()
+#endif ()
+option(ENABLE_CCACHE "Use ccache for build" ON)
 if (ENABLE_CCACHE)
-    find_program(CCACHE_PROGRAM ccache)
-    if (CCACHE_PROGRAM)
-        message(STATUS "Set up ccache ...")
-        set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
-        set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
+    find_program(CCACHE ccache)
+    if (CCACHE)
+        message(STATUS "ccache found and enabled")
+        set(CMAKE_C_COMPILER_LAUNCHER ${CCACHE})
+        set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE})
+    else ()
+        message(WARNING "ccache enabled, but not found")
     endif ()
+else ()
+    message(STATUS "ccache disabled")
 endif ()
-
-
-option(ENABLE_HICC_CLI_APP "Enable hicc cli app" ON)
 
 
 # ############################## for testing
@@ -127,20 +137,11 @@ endif ()
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-option(USE_CCACHE "Use ccache for build" ON)
-if (USE_CCACHE)
-    find_program(CCACHE ccache)
-    if (CCACHE)
-        message(STATUS "ccache found and enabled")
-        set(CMAKE_C_COMPILER_LAUNCHER ${CCACHE})
-        set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE})
-    else ()
-        message(WARNING "ccache enabled, but not found")
-    endif ()
-else ()
-    message(STATUS "ccache disabled")
-endif ()
-
 
 # ############################## include .options.cmake
-include(options)
+include(options-def)
+include(version-def)
+include(add-policies)
+include(detect-systems)
+include(target-dirs)
+include(utils)
