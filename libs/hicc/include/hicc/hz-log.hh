@@ -8,14 +8,13 @@
 #include "hz-defs.hh"
 
 #include "hz-terminal.hh"
-#include "hz-util.hh"
+#include "hz-common.hh"
 
 #include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
 #include <tuple>
-
 
 namespace hicc::log {
 

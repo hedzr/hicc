@@ -5,6 +5,8 @@
 #ifndef HICC_CXX_HZ_DEFS_HH
 #define HICC_CXX_HZ_DEFS_HH
 
+#include "hicc-version.hh"
+#include "hicc-config-base.hh"
 
 #include <initializer_list>
 #include <iostream>
@@ -26,6 +28,10 @@
 #include <windows.h>
 #else
 #include <unistd.h>
+#endif
+
+#if !defined(DEBUG) && defined(USE_DEBUG) && USE_DEBUG
+#define DEBUG
 #endif
 
 #if !defined(_DEBUG) && defined(DEBUG)
@@ -498,6 +504,16 @@ namespace std {
 
 
 // PORTABILITY MACROS --------------------------------
+
+#ifndef __FUNCTION_NAME__
+#ifdef __clang__
+#define __FUNCTION_NAME__ __PRETTY_FUNCTION__
+#elif defined(__GNUC__)
+#define __FUNCTION_NAME__ __PRETTY_FUNCTION__
+#elif defined(_MSC_VER)
+#define __FUNCTION_NAME__ __FUNCSIG__
+#endif
+#endif
 
 #if defined(__GNUC__)
 #define HICC_EXPORT __attribute__((__visibility__("default")))
