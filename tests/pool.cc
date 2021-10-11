@@ -187,7 +187,7 @@ void test_cv() {
         }
         std::cout << "wait for cv" << '\n';
         cv.wait(); // waiting for all threads ended.
-        
+
         std::cout << "end of cv test, join ..." << '\n';
         for (auto it = waits.begin(); it != waits.end(); it++) {
             auto &t = (*it);
@@ -226,6 +226,12 @@ void test_thread_basics() {
     t.join();
     std::cout << "- after joining, joinable: " << t.joinable()
               << '\n';
+}
+
+void test_pool_x() {
+    hicc::pool::thread_pool_lite pool(5);
+    auto result = pool.enqueue([](int answer) { return answer; }, 42);
+    std::cout << result.get() << std::endl;
 }
 
 void test_pool() {
@@ -273,9 +279,8 @@ int main() {
 
     HICC_TEST_FOR(test_cv_0);
     // HICC_TEST_FOR(test_cv_1);
-    
+
     HICC_TEST_FOR(test_pool);
 
     HICC_TEST_FOR(test_mq);
-
 }

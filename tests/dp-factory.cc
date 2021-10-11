@@ -5,6 +5,7 @@
 #include "hicc/hz-defs.hh"
 #include "hicc/hz-log.hh"
 #include "hicc/hz-pipeable.hh"
+#include "hicc/hz-util.hh"
 #include "hicc/hz-x-test.hh"
 
 #include <iostream>
