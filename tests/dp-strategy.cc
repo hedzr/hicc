@@ -116,30 +116,9 @@ void test_strategy_basic() {
     rg.guide_it(s);
 }
 
-void test_traits_head_n() {
-    using namespace hicc::dp::strategy::basic;
-
-    hicc::traits::drop_from_end<3, const char *, double, int, int>::type b{"pi"};
-    std::cout << b << '\n';
-
-    hicc::traits::drop_from_end<2, const char *, double, int, int>::type c{"pi", 3.1415};
-    detail::print_tuple(std::cout, c) << '\n';
-
-    hicc::traits::head_n<2, const char *, double, int, int>::type hn{"pi", 3.1415};
-    detail::print_tuple(std::cout, hn) << '\n';
-    hicc::traits::head_n<3, const char *, double, int, int>::type hn3{"pi", 3.1415, 1};
-    detail::print_tuple(std::cout, hn3) << '\n';
-
-    // **NOTE**
-    // compiling passed means head_n/drop_from_end is ok.
-
-    // static_assert();
-}
-
 int main() {
 
     HICC_TEST_FOR(test_strategy_basic);
-    HICC_TEST_FOR(test_traits_head_n);
 
     return 0;
 }
