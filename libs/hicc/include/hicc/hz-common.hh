@@ -7,6 +7,8 @@
 
 #include "hz-defs.hh"
 
+#include "hz-if.hh"
+
 #include <algorithm>
 #include <functional>
 #include <memory>
@@ -609,6 +611,92 @@ namespace hicc::util {
     }
 } // namespace hicc::util
 
+// ------------------- partial_t & partial
+namespace hicc::util::cool {
+    template<typename F, typename... Args>
+    class partial_t {
+    public:
+        constexpr partial_t(F &&f, Args &&...args)
+            : f_(std::forward<F>(f))
+            , args_(std::forward_as_tuple(args...)) {
+        }
+
+        template<typename... RestArgs>
+        constexpr decltype(auto) operator()(RestArgs &&...rest_args) {
+            return std::apply(f_, std::tuple_cat(args_,
+                                                 std::forward_as_tuple(std::forward<RestArgs>(rest_args)...)));
+        }
+
+    private:
+        F f_;
+        std::tuple<Args...> args_;
+    };
+
+    /**
+     * @brief partial bind version of std::bind
+     * @tparam Fn 
+     * @tparam Args 
+     * @param fn 
+     * @param args 
+     * @return 
+     * @details For example:
+     * @code{c++}
+     * auto f = partial(test, 5, 3);
+     * std::cout << f(7) << '\n';
+     * 
+     * std::cout << partial(test)(5, 3, 7) << '\n';
+     * std::cout << partial(test, 5)(3, 7) << '\n';
+     * std::cout << partial(test, 5, 3)(7) << '\n';
+     * @endcode
+     */
+    template<typename Fn, typename... Args>
+    constexpr decltype(auto) partial(Fn &&fn, Args &&...args) {
+        return partial_t<Fn, Args...>(std::forward<Fn>(fn), std::forward<Args>(args)...);
+    }
+} // namespace hicc::util::cool
+
+// ------------------- cool::curry
+namespace hicc::util::cool {
+#if defined(__TRAITS_IS_DETECTED_DEFINED)
+    using traits::is_detected;
+#else
+    using std::experimental::is_detected;
+#endif
+
+    template<class T, typename... Args>
+    using can_invoke_t = decltype(std::declval<T>()(std::declval<Args>()...));
+
+    template<typename T, typename... Args>
+    using can_invoke = is_detected<can_invoke_t, T, Args...>;
+
+    template<typename F, typename... Arguments>
+    struct curry_t {
+        template<typename... Args>
+        constexpr decltype(auto) operator()(Args &&...a) const {
+            curry_t<F, Arguments..., Args...> cur = {f_,
+                                                     std::tuple_cat(args_, std::make_tuple(std::forward<Args>(a)...))};
+
+            if constexpr (!can_invoke<F, Arguments..., Args...>::value) {
+                return cur;
+            } else {
+                return cur();
+            }
+        }
+
+        constexpr decltype(auto) operator()() const {
+            return std::apply(f_, args_);
+        }
+
+        F f_;
+        std::tuple<Arguments...> args_;
+    };
+
+    template<typename F>
+    constexpr curry_t<F> curry(F &&f) {
+        return {std::forward<F>(f)};
+    }
+} // namespace hicc::util::cool
+
 // ------------------- cool::bind_tie
 namespace hicc::util::cool {
 
@@ -656,7 +744,7 @@ namespace hicc::util::cool {
 } // namespace hicc::util::cool
 
 // ------------------- cool::lock_guard
-namespace fsm_cxx::util::cool {
+namespace hicc::util::cool {
     template<typename _Mutex>
     class lock_guard {
     public:
@@ -675,7 +763,7 @@ namespace fsm_cxx::util::cool {
         void lock() {}
         void unlock() {}
     };
-} // namespace fsm_cxx::util::cool
+} // namespace hicc::util::cool
 
 // ------------------- get_template_type_t, return_type_of_t
 namespace hicc::traits {
