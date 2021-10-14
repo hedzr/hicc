@@ -11,13 +11,13 @@
 
 /*  NB: this file is parsed by automatic tools so don't change its format! */
 
-#define CMDR_CPU                    xT("@CMAKE_SYSTEM_PROCESSOR@")
-#define CMDR_CPU_ARCH               xT("@CPU_ARCH@")
-#define CMDR_CPU_ARCH_NAME          xT("@CPU_ARCH_NAME@")
+#define HICC_CPU                    xT("@CMAKE_SYSTEM_PROCESSOR@")
+#define HICC_CPU_ARCH               xT("@CPU_ARCH@")
+#define HICC_CPU_ARCH_NAME          xT("@CPU_ARCH_NAME@")
 
 #cmakedefine01 USE_DEBUG_MALLOC
 #cmakedefine01 USE_DEBUG           
 
-#define CMDR_BUILD_NAME             xT("@CMAKE_BUILD_NAME@")
+#define HICC_BUILD_NAME             xT("@CMAKE_BUILD_NAME@")
 
 #endif //___CONFIG_BASE_H

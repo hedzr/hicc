@@ -120,6 +120,7 @@ define_test_program(dp-visitor dp-visitor.cc)
 define_test_program(dp-observer dp-observer.cc)
 define_test_program(dp-slot dp-slot.cc)
 define_test_program(dp-strategy dp-strategy.cc)
+define_test_program(dp-memento dp-memento.cc)
 define_test_program(dp-rx dp-rx.cc)
 
 define_test_program(btree btree.cc)

@@ -1,0 +1,64 @@
+@startuml
+skinparam backgroundcolor transparent
+skinparam class {
+    BackgroundColor PaleGreen
+    ArrowColor SeaGreen
+    BorderColor SpringGreen
+BackgroundColor<<Foo>> Wheat
+BorderColor<<Foo>> Tomato
+}
+skinparam stereotypeCBackgroundColor YellowGreen
+skinparam stereotypeCBackgroundColor<< Foo >> DimGray
+
+
+class editor{
+-state
+#void new_snapshot();
++void undo();
++void redo();
+}
+
+
+class snapshot {
+-state
++snapshot(state&);
++restore();
+}
+
+
+class command{
+- backup: snapshot
++ void execute()
+# void {abstract} do_execute()
+}
+
+class undo_command extends command {
+# void {abstract} do_execute()
++void undo();
+}
+
+class redo_command extends command {
+# void {abstract} do_execute()
++void redo();
+}
+
+editor -right-> snapshot: <color:gray><<use>></color> >
+editor -right-> command: <color:gray><<use>></color> >
+snapshot <-right-* command: <color:gray><<use>></color>
+'command <|--- undo_command
+'command <|--- redo_command
+
+'editor left of: snapshot
+
+class state {
+#text
+#cursor_position
+#selection
+#font
+#color
+#background_color
+}
+
+editor --[dashed]-- state
+
+@enduml
