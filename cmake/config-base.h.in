@@ -15,8 +15,12 @@
 #define HICC_CPU_ARCH               xT("@CPU_ARCH@")
 #define HICC_CPU_ARCH_NAME          xT("@CPU_ARCH_NAME@")
 
+#ifndef USE_DEBUG_MALLOC
 #cmakedefine01 USE_DEBUG_MALLOC
-#cmakedefine01 USE_DEBUG           
+#endif
+#ifndef DEBUG
+#cmakedefine01 DEBUG
+#endif
 
 #define HICC_BUILD_NAME             xT("@CMAKE_BUILD_NAME@")
 
