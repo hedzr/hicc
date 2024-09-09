@@ -4,14 +4,18 @@
 
 #include <math.h>
 
+#include <cstdio>
 #include <functional>
 #include <iostream>
 #include <memory>
 #include <random>
 #include <string>
+#include <string_view>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
+#include "hicc/hz-common.hh"
 #include "hicc/hz-dbg.hh"
 #include "hicc/hz-defs.hh"
 #include "hicc/hz-log.hh"
@@ -34,6 +38,13 @@ namespace hicc::dp::visitor::basic {
     draw_id id() const { return _id; }
     void id(draw_id id_) { _id = id_; }
 
+    friend std::ostream &operator<<(std::ostream &os, drawable_base const &o) {
+      return os << '<' << o.type_name() << '#' << o.id() << '>';
+    }
+    constexpr std::string_view type_name() const {
+      return hicc::debug::type_name<drawable_base>();
+    }
+
   private:
     draw_id _id;
   };
@@ -42,10 +53,15 @@ namespace hicc::dp::visitor::basic {
   struct drawable : public drawable_base {
     ~drawable() override = default;
     using base_type = drawable<Papa>;
+    using drawable_t = std::unique_ptr<drawable_base>;
+    using drawables_t = std::unordered_map<draw_id, drawable_t>;
     drawable() = default;
+
     using drawable_base::drawable_base;
+
     Papa &This() { return static_cast<Papa &>(*this); }
     Papa const &This() const { return static_cast<Papa const &>(*this); }
+
     friend std::ostream &operator<<(std::ostream &os, Papa const &o) {
       return os << '<' << o.type_name() << '#' << o.id() << '>';
     }
@@ -57,11 +73,14 @@ namespace hicc::dp::visitor::basic {
     virtual std::ostream &write(std::ostream &os) = 0;
   };
 
-#define MAKE_DRAWABLE(T)      \
-  using base_type::base_type; \
-  T() = default;              \
-  ~T() override = default;    \
-  std::ostream &write(std::ostream &os) override { return os; }
+#define MAKE_DRAWABLE(T)                            \
+  using base_type::base_type;                       \
+  T() = default;                                    \
+  ~T() override = default;                          \
+  std::ostream &write(std::ostream &os) override {  \
+    os << std::string(hicc::debug::type_name<T>()); \
+    return os;                                      \
+  }
 
   //@formatter:off
   struct point : public drawable<point> {
@@ -96,27 +115,23 @@ namespace hicc::dp::visitor::basic {
   // polygon)
 
   struct group : public drawable<group>
-      , public visitable<drawable<group>> {
+      , public visitable<drawable<group>::drawable_t> {
     MAKE_DRAWABLE(group)
-    using drawable_t = std::unique_ptr<drawable>;
-    using drawables_t = std::unordered_map<draw_id, drawable_t>;
     drawables_t drawables;
     void add(drawable_t &&t) { drawables.emplace(t->id(), std::move(t)); }
-    return_t accept(visitor_t const &guest) override {
+    return_t accept(visitor_t const &guest) const override {
       for (auto const &[did, dr] : drawables) {
-        guest.visit(dr);
+        guest.visit(*dr);
         UNUSED(did);
       }
     }
   };
 
   struct layer : public drawable<layer>
-      , public visitable<drawable<layer>> {
+      , public visitable<drawable<layer>::drawable_t> {
     MAKE_DRAWABLE(layer)
     // more: attrs, ...
 
-    using drawable_t = std::unique_ptr<drawable>;
-    using drawables_t = std::unordered_map<draw_id, drawable_t>;
     drawables_t drawables;
     void add(drawable_t &&t) { drawables.emplace(t->id(), std::move(t)); }
 
@@ -124,10 +139,12 @@ namespace hicc::dp::visitor::basic {
     using groups_t = std::unordered_map<draw_id, group_t>;
     groups_t groups;
     void add(group_t &&t) { groups.emplace(t->id(), std::move(t)); }
+    group_t &group(draw_id id) { return groups[id]; }
+    group_t const &group(draw_id id) const { return groups.at(id); }
 
-    return_t accept(visitor_t const &guest) override {
+    return_t accept(visitor_t const &guest) const override {
       for (auto const &[did, dr] : drawables) {
-        guest.visit(dr);
+        guest.visit(*dr);
         UNUSED(did);
       }
       for (auto const &[did, dr] : groups) {
@@ -137,7 +154,9 @@ namespace hicc::dp::visitor::basic {
     }
   };
 
-  struct canvas : public visitable<drawable<canvas>> {
+  struct canvas : public drawable<canvas>
+      , public visitable<drawable<canvas>::drawable_t> {
+    MAKE_DRAWABLE(canvas)
     using layer_t = std::unique_ptr<layer>;
     using layers_t = std::unordered_map<draw_id, layer_t>;
     layers_t layers;
@@ -145,29 +164,36 @@ namespace hicc::dp::visitor::basic {
     layer_t &get(draw_id id) { return layers[id]; }
     layer_t &operator[](draw_id id) { return layers[id]; }
 
-    return_t accept(visitor_t const &guest) override {
+    return_t accept(visitor_t const &guest) const override {
       // dbg_debug("[canva] visiting for: %s", to_string(guest).c_str());
       for (auto const &[lid, ly] : layers) {
-        ly->accept(guest);
+        // ly->accept(guest);
+        guest.visit(*ly);
       }
       return;
     }
   };
 
-  struct screen : public visitor<drawable<screen>> {
-    return_t visit(visited_t const &visited) override {
-      dbg_debug("[screen][draw] for: %s", to_string(visited.get()).c_str());
-      UNUSED(visited);
+  /**
+   * @brief a screen is abstracted from Monitors, LCDs and its software drivers.
+   */
+  struct screen : public visitor<drawable<canvas>::drawable_t> {
+    return_t visit(visitee_t const &visitee) const override {
+      dbg_debug("[screen][draw] for: %s", to_string(visitee).c_str());
+      UNUSED(visitee);
     }
-    friend std::ostream &operator<<(std::ostream &os, screen const &) {
-      return os << "[screen] ";
+    friend std::ostream &operator<<(std::ostream &os, screen const & /* scr */) {
+      return os << "[screen] "; // << scr
     }
   };
 
-  struct printer : public visitor<drawable<printer>> {
-    return_t visit(visited_t const &visited) override {
-      dbg_debug("[printer][draw] for: %s", to_string(visited.get()).c_str());
-      UNUSED(visited);
+  /**
+   * @brief a printer is abstracted from physical devices such as Printers, Papers, ....
+   */
+  struct printer : public visitor<drawable<canvas>::drawable_t> {
+    return_t visit(visitee_t const &visitee) const override {
+      dbg_debug("[printer][draw] for: %s", to_string(visitee).c_str());
+      UNUSED(visitee);
     }
     friend std::ostream &operator<<(std::ostream &os, printer const &) {
       return os << "[printer] ";
@@ -184,12 +210,15 @@ void test_visitor_basic() {
   canvas c;
   static draw_id id = 0, did = 0;
   c.add(++id);
-  auto layer0 = c[1];
+  auto &layer0 = c[1];
   layer0->add(std::make_unique<line>(++did));
   layer0->add(std::make_unique<line>(++did));
   layer0->add(std::make_unique<rect>(++did));
+  layer0->add(std::make_unique<arc>(++did));
+  layer0->add(std::make_unique<ellipse>(++did));
+  layer0->add(std::make_unique<star>(++did));
 
-  screen scr;
+  screen const scr;
   c.accept(scr);
 }
 

@@ -15,7 +15,7 @@
 #include <condition_variable>
 #include <cstdio>
 #include <cstdlib>
-#include <cstring>  // std::strcmp, ...
+#include <cstring> // std::strcmp, ...
 #include <deque>
 #include <functional>
 #include <initializer_list>
@@ -42,46 +42,46 @@
 
 namespace std {
 
-template <typename T>
-inline unique_ptr<T> to_unique(T *ptr) {
-  return unique_ptr<T>(ptr);
-}
-template <typename T>
-inline unique_ptr<T> to_unique(shared_ptr<T> &&ptr) {
-  auto p = ptr.get();
-  ptr.reset();
-  auto pnew = unique_ptr<T>(p);
-  return pnew;
-}
-template <typename T>
-inline unique_ptr<T> to_unique(unique_ptr<T> &&ptr) {
-  auto p = ptr.get();
-  ptr.release();
-  auto pnew = unique_ptr<T>(p);
-  return pnew;
-}
+  template<typename T>
+  inline unique_ptr<T> to_unique(T *ptr) {
+    return unique_ptr<T>(ptr);
+  }
+  template<typename T>
+  inline unique_ptr<T> to_unique(shared_ptr<T> &&ptr) {
+    auto p = ptr.get();
+    ptr.reset();
+    auto pnew = unique_ptr<T>(p);
+    return pnew;
+  }
+  template<typename T>
+  inline unique_ptr<T> to_unique(unique_ptr<T> &&ptr) {
+    auto p = ptr.get();
+    ptr.release();
+    auto pnew = unique_ptr<T>(p);
+    return pnew;
+  }
 
-template <typename T>
-inline shared_ptr<T> to_shared(T *ptr) {
-  return shared_ptr<T>(ptr);
-}
-template <typename T>
-inline shared_ptr<T> to_shared(shared_ptr<T> const &ptr) {
-  return ptr;
-}
-template <typename T>
-inline shared_ptr<T> to_shared(unique_ptr<T> &&ptr) {
-  return ptr;
-}
+  template<typename T>
+  inline shared_ptr<T> to_shared(T *ptr) {
+    return shared_ptr<T>(ptr);
+  }
+  template<typename T>
+  inline shared_ptr<T> to_shared(shared_ptr<T> const &ptr) {
+    return ptr;
+  }
+  template<typename T>
+  inline shared_ptr<T> to_shared(unique_ptr<T> &&ptr) {
+    return ptr;
+  }
 
-}  // namespace std
+} // namespace std
 
 // ------------------- arg-count, mem-arg-count, ...
 namespace hicc::traits {
 
-// https://stackoverflow.com/questions/36797770/get-function-parameters-count
+  // https://stackoverflow.com/questions/36797770/get-function-parameters-count
 
-/**
+  /**
  * @brief
  * @tparam R
  * @tparam Types
@@ -93,13 +93,13 @@ namespace hicc::traits {
  * size_t count = args_count(foo2);
  * @endcode
  */
-template <typename R, typename... Types>
-constexpr size_t args_count(R (*f)(Types...)) {
-  UNUSED(f);
-  return sizeof...(Types);
-}
+  template<typename R, typename... Types>
+  constexpr size_t args_count(R (*f)(Types...)) {
+    UNUSED(f);
+    return sizeof...(Types);
+  }
 
-/**
+  /**
  * @brief
  * @tparam R
  * @tparam T
@@ -112,13 +112,13 @@ constexpr size_t args_count(R (*f)(Types...)) {
  * };
  * const int c3 = hicc::traits::member_args_count(&s::m).value;
  */
-template <typename R, typename T, typename... Types>
-constexpr std::integral_constant<unsigned, sizeof...(Types)> member_args_count(
-    R (T::*)(Types...)) {
-  return std::integral_constant<unsigned, sizeof...(Types)>{};
-}
+  template<typename R, typename T, typename... Types>
+  constexpr std::integral_constant<unsigned, sizeof...(Types)> member_args_count(
+      R (T::*)(Types...)) {
+    return std::integral_constant<unsigned, sizeof...(Types)>{};
+  }
 
-/**
+  /**
  * @brief
  * @tparam R
  * @tparam Args
@@ -129,12 +129,12 @@ constexpr std::integral_constant<unsigned, sizeof...(Types)> member_args_count(
  * size_t count = argCounter(foo1);
  * @endcode
  */
-template <class R, class... Args>
-constexpr auto argCounter(R(Args...)) {
-  return sizeof...(Args);
-}
+  template<class R, class... Args>
+  constexpr auto argCounter(R(Args...)) {
+    return sizeof...(Args);
+  }
 
-/**
+  /**
  * @brief
  * @tparam function
  * @details For example:
@@ -143,15 +143,15 @@ constexpr auto argCounter(R(Args...)) {
  * size_t count = argCount<foo1>;
  * @endcode
  */
-template <auto function>
-inline constexpr auto argCount = argCounter(function);
+  template<auto function>
+  inline constexpr auto argCount = argCounter(function);
 
-template <class R, class... ARGS>
-struct function_ripper {
-  static constexpr size_t n_args = sizeof...(ARGS);
-};
+  template<class R, class... ARGS>
+  struct function_ripper {
+    static constexpr size_t n_args = sizeof...(ARGS);
+  };
 
-/**
+  /**
  * @brief
  * @tparam R
  * @tparam ARGS
@@ -165,12 +165,12 @@ struct function_ripper {
  * }
  * @endcode
  */
-template <class R, class... ARGS>
-auto constexpr make_ripper(R(ARGS...)) {
-  return function_ripper<R, ARGS...>();
-}
+  template<class R, class... ARGS>
+  auto constexpr make_ripper(R(ARGS...)) {
+    return function_ripper<R, ARGS...>();
+  }
 
-/**
+  /**
  * @brief
  * @tparam func
  * @details For example:
@@ -182,38 +182,38 @@ auto constexpr make_ripper(R(ARGS...)) {
  * }
  * @endcode
  */
-template <auto func>
-constexpr size_t n_args = decltype(make_ripper(func))::n_args;
+  template<auto func>
+  constexpr size_t n_args = decltype(make_ripper(func))::n_args;
 
-// -------------------
+  // -------------------
 
-template <typename Function>
-struct function_traits
-    : public function_traits<decltype(&Function::operator())> {};
+  template<typename Function>
+  struct function_traits
+      : public function_traits<decltype(&Function::operator())> {};
 
-template <typename ClassType, typename ReturnType, typename... Args>
-struct function_traits<ReturnType (ClassType::*)(Args...) const> {
-  typedef ReturnType (*pointer)(Args...);
-  typedef const std::function<ReturnType(Args...)> function;
-};
+  template<typename ClassType, typename ReturnType, typename... Args>
+  struct function_traits<ReturnType (ClassType::*)(Args...) const> {
+    typedef ReturnType (*pointer)(Args...);
+    typedef const std::function<ReturnType(Args...)> function;
+  };
 
-template <typename Function>
-inline typename function_traits<Function>::function to_function(
-    Function &lambda) {
-  return static_cast<typename function_traits<Function>::function>(lambda);
-}
-
-template <class L>
-struct overload_lambda : L {
-  overload_lambda(L l) : L(l) {}
-  template <typename... T>
-  void operator()(T &&...values) {
-    // here you can access the target std::function with
-    to_function (*(L *)this)(std::forward<T>(values)...);
+  template<typename Function>
+  inline typename function_traits<Function>::function to_function(
+      Function &lambda) {
+    return static_cast<typename function_traits<Function>::function>(lambda);
   }
-};
 
-/**
+  template<class L>
+  struct overload_lambda : L {
+    overload_lambda(L l) : L(l) {}
+    template<typename... T>
+    void operator()(T &&...values) {
+      // here you can access the target std::function with
+      to_function (*(L *) this)(std::forward<T>(values)...);
+    }
+  };
+
+  /**
  * @brief convert a lambda to std::function
  * @tparam L
  * @param l
@@ -224,166 +224,166 @@ struct overload_lambda : L {
  * &vec){...}); fn(vec);
  * @endcode
  */
-template <class L>
-inline overload_lambda<L> lambda(L l) {
-  return overload_lambda<L>(l);
-}
+  template<class L>
+  inline overload_lambda<L> lambda(L l) {
+    return overload_lambda<L>(l);
+  }
 
-// -------------------
+  // -------------------
 
-template <typename T>
-struct memfun_type {
-  using type = void;
-};
+  template<typename T>
+  struct memfun_type {
+    using type = void;
+  };
 
-template <typename Ret, typename Class, typename... Args>
-struct memfun_type<Ret (Class::*)(Args...) const> {
-  using type = std::function<Ret(Args...)>;
-};
+  template<typename Ret, typename Class, typename... Args>
+  struct memfun_type<Ret (Class::*)(Args...) const> {
+    using type = std::function<Ret(Args...)>;
+  };
 
-/**
+  /**
  * @brief wrap a lambda as a std::function<...>
  * @tparam F
  * @param func
  * @return
  * @see https://stackoverflow.com/a/24068396/6375060
  */
-template <typename F>
-typename memfun_type<decltype(&F::operator())>::type inline lambda_to_function(
-    F const &func) {
-  return func;
-}
-template <typename F>
-typename memfun_type<decltype(&F::operator())>::type inline l2f(F const &func) {
-  return func;
-}
+  template<typename F>
+  typename memfun_type<decltype(&F::operator())>::type inline lambda_to_function(
+      F const &func) {
+    return func;
+  }
+  template<typename F>
+  typename memfun_type<decltype(&F::operator())>::type inline l2f(F const &func) {
+    return func;
+  }
 
-}  // namespace hicc::traits
+} // namespace hicc::traits
 
 // ------------------- iterate, first_of, typelist, tag
 namespace hicc::traits {
 
-// ---------------------------
+  // ---------------------------
 
-template <std::size_t N, class = std::make_index_sequence<N>>
-struct iterate;
+  template<std::size_t N, class = std::make_index_sequence<N>>
+  struct iterate;
 
-template <std::size_t N, std::size_t... Is>
-struct iterate<N, std::index_sequence<Is...>> {
-  template <class Lambda>
-  auto operator()(Lambda lambda) {
-    return lambda(std::integral_constant<std::size_t, Is>{}...);
+  template<std::size_t N, std::size_t... Is>
+  struct iterate<N, std::index_sequence<Is...>> {
+    template<class Lambda>
+    auto operator()(Lambda lambda) {
+      return lambda(std::integral_constant<std::size_t, Is>{}...);
+    }
+  };
+
+  template<size_t... Is>
+  struct first_of_A {};
+
+  template<size_t N, size_t... Is>
+  auto first_of() {
+    return iterate<N>{}([](auto... ps) {
+      using type = std::tuple<std::integral_constant<std::size_t, Is>...>;
+      return first_of_A<std::tuple_element_t<ps, type>{}...>{};
+    });
   }
-};
 
-template <size_t... Is>
-struct first_of_A {};
+  // ----------------------------
 
-template <size_t N, size_t... Is>
-auto first_of() {
-  return iterate<N>{}([](auto... ps) {
-    using type = std::tuple<std::integral_constant<std::size_t, Is>...>;
-    return first_of_A<std::tuple_element_t<ps, type>{}...>{};
-  });
-}
+  template<class... Ts>
+  struct typelist {
+    using type = typelist;
+    static constexpr std::size_t size = sizeof...(Ts);
+  };
 
-// ----------------------------
+  template<class T>
+  struct tag {
+    using type = T;
+  };
 
-template <class... Ts>
-struct typelist {
-  using type = typelist;
-  static constexpr std::size_t size = sizeof...(Ts);
-};
+  namespace detail::another_head_n {
+    template<std::size_t N, class R, class TL>
+    struct head_n_impl;
 
-template <class T>
-struct tag {
-  using type = T;
-};
+    // have at least one to pop from and need at least one more, so just
+    // move it over
+    template<std::size_t N, class... Ts, class U, class... Us>
+    struct head_n_impl<N, typelist<Ts...>, typelist<U, Us...>>
+        : head_n_impl<N - 1, typelist<Ts..., U>, typelist<Us...>> {};
 
-namespace detail::another_head_n {
-template <std::size_t N, class R, class TL>
-struct head_n_impl;
+    // we have two base cases for 0 because we need to be more specialized
+    // than the previous case regardless of if we have any elements in the list
+    // left or not
+    template<class... Ts, class... Us>
+    struct head_n_impl<0, typelist<Ts...>, typelist<Us...>> : tag<typelist<Ts...>> {
+    };
 
-// have at least one to pop from and need at least one more, so just
-// move it over
-template <std::size_t N, class... Ts, class U, class... Us>
-struct head_n_impl<N, typelist<Ts...>, typelist<U, Us...>>
-    : head_n_impl<N - 1, typelist<Ts..., U>, typelist<Us...>> {};
+    template<class... Ts, class U, class... Us>
+    struct head_n_impl<0, typelist<Ts...>, typelist<U, Us...>>
+        : tag<typelist<Ts...>> {};
 
-// we have two base cases for 0 because we need to be more specialized
-// than the previous case regardless of if we have any elements in the list
-// left or not
-template <class... Ts, class... Us>
-struct head_n_impl<0, typelist<Ts...>, typelist<Us...>> : tag<typelist<Ts...>> {
-};
+    template<std::size_t N, class TL>
+    using head_n = typename head_n_impl<N, typelist<>, TL>::type;
+  } // namespace detail::another_head_n
 
-template <class... Ts, class U, class... Us>
-struct head_n_impl<0, typelist<Ts...>, typelist<U, Us...>>
-    : tag<typelist<Ts...>> {};
+  // ---- first_of_args
 
-template <std::size_t N, class TL>
-using head_n = typename head_n_impl<N, typelist<>, TL>::type;
-}  // namespace detail::another_head_n
-
-// ---- first_of_args
-
-}  // namespace hicc::traits
+} // namespace hicc::traits
 
 // ------------------- head_n, drop_from_end
 namespace hicc::traits {
 
-template <typename... Pack>
-struct pack {};
+  template<typename... Pack>
+  struct pack {};
 
-template <typename, typename>
-struct add_to_pack;
+  template<typename, typename>
+  struct add_to_pack;
 
-template <typename A, typename... R>
-struct add_to_pack<A, pack<R...>> {
-  typedef pack<A, R...> type;
-};
+  template<typename A, typename... R>
+  struct add_to_pack<A, pack<R...>> {
+    typedef pack<A, R...> type;
+  };
 
-template <typename>
-struct convert_to_tuple;
+  template<typename>
+  struct convert_to_tuple;
 
-template <typename... A>
-struct convert_to_tuple<pack<A...>> {
-  typedef std::tuple<A...> type;
-};
+  template<typename... A>
+  struct convert_to_tuple<pack<A...>> {
+    typedef std::tuple<A...> type;
+  };
 
-template <int, typename...>
-struct take;
+  template<int, typename...>
+  struct take;
 
-template <int N>
-struct take<N> {
-  typedef pack<> type;
-};
+  template<int N>
+  struct take<N> {
+    typedef pack<> type;
+  };
 
-template <int N, typename Head, typename... Tail>
-struct take<N, Head, Tail...> {
-  typedef typename std::conditional<
-      (N > 0),
-      typename add_to_pack<Head, typename take<N - 1, Tail...>::type>::type,
-      pack<>>::type type;
-};
+  template<int N, typename Head, typename... Tail>
+  struct take<N, Head, Tail...> {
+    typedef typename std::conditional<
+        (N > 0),
+        typename add_to_pack<Head, typename take<N - 1, Tail...>::type>::type,
+        pack<>>::type type;
+  };
 
-template <int, int, typename...>
-struct head;
+  template<int, int, typename...>
+  struct head;
 
-template <int I, int N>
-struct head<I, N> {
-  typedef pack<> type;
-};
+  template<int I, int N>
+  struct head<I, N> {
+    typedef pack<> type;
+  };
 
-template <int I, int N, typename Head, typename... Tail>
-struct head<I, N, Head, Tail...> {
-  typedef typename std::conditional<
-      (N > I),
-      typename add_to_pack<Head, typename head<I + 1, N, Tail...>::type>::type,
-      pack<>>::type type;
-};
+  template<int I, int N, typename Head, typename... Tail>
+  struct head<I, N, Head, Tail...> {
+    typedef typename std::conditional<
+        (N > I),
+        typename add_to_pack<Head, typename head<I + 1, N, Tail...>::type>::type,
+        pack<>>::type type;
+  };
 
-/**
+  /**
  * @brief drop the tailed Nth elements from variadic template arguments
  * @tparam N
  * @tparam A
@@ -396,20 +396,20 @@ struct head<I, N, Head, Tail...> {
  * c{"pi", 3.1415}; detail::print_tuple(std::cout, c) &lt;&lt; '\n';
  * @endcode
  */
-template <int N, typename... A>
-struct drop_from_end {
-  // Add these asserts if needed.
-  // static_assert(N >= 0,
-  //  "Cannot drop negative number of elements!");
+  template<int N, typename... A>
+  struct drop_from_end {
+    // Add these asserts if needed.
+    // static_assert(N >= 0,
+    //  "Cannot drop negative number of elements!");
 
-  // static_assert(N <= static_cast<int>(sizeof...(A)),
-  //   "Cannot drop more elements than size of pack!")
+    // static_assert(N <= static_cast<int>(sizeof...(A)),
+    //   "Cannot drop more elements than size of pack!")
 
-  typedef typename convert_to_tuple<
-      typename take<static_cast<int>(sizeof...(A)) - N, A...>::type>::type type;
-};
+    typedef typename convert_to_tuple<
+        typename take<static_cast<int>(sizeof...(A)) - N, A...>::type>::type type;
+  };
 
-/**
+  /**
  * @brief collect/keep the head Nth elements from variadic template arguments
  * @tparam N
  * @tparam A
@@ -422,87 +422,85 @@ struct drop_from_end {
  * hn3{"pi", 3.1415, 1}; std::cout &lt;&lt; hn3 &lt;&lt; '\n';
  * @endcode
  */
-template <int N, typename... A>
-struct head_n {
-  typedef typename convert_to_tuple<typename head<0, N, A...>::type>::type type;
-};
+  template<int N, typename... A>
+  struct head_n {
+    typedef typename convert_to_tuple<typename head<0, N, A...>::type>::type type;
+  };
 
-}  // namespace hicc::traits
+} // namespace hicc::traits
 
 // ------------------- cxx20 head/tail/slice
 namespace hicc::traits {
 
 #if __cplusplus >= 202001
 
-namespace detail {
-template <typename T, auto Start, auto Step, T... Is>
-constexpr auto make_cons_helper_impl_(std::integer_sequence<T, Is...>) {
-  auto eval_ = [](const T &I) consteval->T { return Start + Step * I; };
-  return std::integer_sequence<T, eval_(Is)...>{};
-}
+  namespace detail {
+    template<typename T, auto Start, auto Step, T... Is>
+    constexpr auto make_cons_helper_impl_(std::integer_sequence<T, Is...>) {
+      auto eval_ = [](const T &I) consteval -> T { return Start + Step * I; };
+      return std::integer_sequence<T, eval_(Is)...>{};
+    }
 
-template <typename T, auto Start, auto Count, auto Step>
-constexpr auto make_cons_impl_() {
-  return make_cons_helper_impl_<T, Start, Step>(
-      std::make_integer_sequence<T, Count>{});
-}
-}  // namespace detail
+    template<typename T, auto Start, auto Count, auto Step>
+    constexpr auto make_cons_impl_() {
+      return make_cons_helper_impl_<T, Start, Step>(
+          std::make_integer_sequence<T, Count>{});
+    }
+  } // namespace detail
 
-template <std::integral T, auto Start, auto Count, auto Step = 1>
-using make_consecutive_integer_sequence =
-    decltype(detail::make_cons_impl_<T, Start, Count, Step>());
+  template<std::integral T, auto Start, auto Count, auto Step = 1>
+  using make_consecutive_integer_sequence =
+      decltype(detail::make_cons_impl_<T, Start, Count, Step>());
 
-template <auto Start, auto Count, auto Step = 1>
-using make_consecutive_index_sequence =
-    make_consecutive_integer_sequence<std::size_t, Start, Count, Step>;
+  template<auto Start, auto Count, auto Step = 1>
+  using make_consecutive_index_sequence =
+      make_consecutive_integer_sequence<std::size_t, Start, Count, Step>;
 
-template <std::size_t N>
-using make_first_n_index_sequence = make_consecutive_index_sequence<0, N>;
+  template<std::size_t N>
+  using make_first_n_index_sequence = make_consecutive_index_sequence<0, N>;
 
-template <std::size_t N, std::size_t S>
-using make_last_n_index_sequence = make_consecutive_index_sequence<S - N, N>;
+  template<std::size_t N, std::size_t S>
+  using make_last_n_index_sequence = make_consecutive_index_sequence<S - N, N>;
 
-template <std::size_t B, std::size_t E>
-using make_slice_index_sequence = make_consecutive_index_sequence<B, E - B>;
-template <typename... Ts, std::size_t... Is>
-constexpr auto get_subpack_by_seq(std::index_sequence<Is...>, Ts &&...args) {
-  return std::make_tuple(std::get<Is>(std::forward_as_tuple(args...))...);
-}
+  template<std::size_t B, std::size_t E>
+  using make_slice_index_sequence = make_consecutive_index_sequence<B, E - B>;
+  template<typename... Ts, std::size_t... Is>
+  constexpr auto get_subpack_by_seq(std::index_sequence<Is...>, Ts &&...args) {
+    return std::make_tuple(std::get<Is>(std::forward_as_tuple(args...))...);
+  }
 
-template <std::size_t N, typename... Ts>
-  requires(N <= sizeof...(Ts))
-constexpr auto head(Ts &&...args) {
-  return get_subpack_by_seq(make_first_n_index_sequence<N>{},
-                            std::forward<Ts>(args)...);
-}
+  template<std::size_t N, typename... Ts>
+    requires(N <= sizeof...(Ts))
+  constexpr auto head(Ts &&...args) {
+    return get_subpack_by_seq(make_first_n_index_sequence<N>{},
+                              std::forward<Ts>(args)...);
+  }
 
-template <std::size_t N, typename... Ts>
-  requires(N <= sizeof...(Ts))
-constexpr auto tail(Ts &&...args) {
-  return get_subpack_by_seq(make_last_n_index_sequence<N, sizeof...(Ts)>{},
-                            std::forward<Ts>(args)...);
-}
+  template<std::size_t N, typename... Ts>
+    requires(N <= sizeof...(Ts))
+  constexpr auto tail(Ts &&...args) {
+    return get_subpack_by_seq(make_last_n_index_sequence<N, sizeof...(Ts)>{},
+                              std::forward<Ts>(args)...);
+  }
 
-template <std::size_t B, std::size_t E, typename... Ts>
-  requires(B < E && B <= sizeof...(Ts) && E <= sizeof...(Ts))
-constexpr auto slice(Ts &&...args) {
-  return get_subpack_by_seq(make_slice_index_sequence<B, E>{},
-                            std::forward<Ts>(args)...);
-}
+  template<std::size_t B, std::size_t E, typename... Ts>
+    requires(B < E && B <= sizeof...(Ts) && E <= sizeof...(Ts))
+  constexpr auto slice(Ts &&...args) {
+    return get_subpack_by_seq(make_slice_index_sequence<B, E>{},
+                              std::forward<Ts>(args)...);
+  }
 
-static_assert(head<3>(1, 2.0f, "three", '4') ==
-              std::make_tuple(1, 2.0f, "three"));
-static_assert(tail<2>(1, 2.0f, "three", '4') == std::make_tuple("three", '4'));
-static_assert(slice<1, 3>(1, 2.0f, "three", '4') ==
-              std::make_tuple(2.0f, "three"));
+  static_assert(head<3>(1, 2.0f, "three", '4') == std::make_tuple(1, 2.0f, "three"));
+  static_assert(tail<2>(1, 2.0f, "three", '4') == std::make_tuple("three", '4'));
+  static_assert(slice<1, 3>(1, 2.0f, "three", '4') == std::make_tuple(2.0f, "three"));
 
-#endif  // C++20 or later
-}  // namespace hicc::traits
+#endif // C++20 or later
+} // namespace hicc::traits
 
 // ------------------- light-weight bind
 namespace hicc::util {
 
-/**
+  /**
  * @brief bind a lambda or function into std::function<...>
  * @tparam _Callable
  * @tparam _Args
@@ -528,113 +526,112 @@ namespace hicc::util {
  *   std::cout &lt;&lt; '\n' &lt;&lt; fn2(9);
  * @endcode
  */
-template <typename _Callable, typename... _Args>
-inline auto bind(_Callable &&f, _Args &&...args) {
-  auto fn = std::bind(std::forward<_Callable>(f), std::forward<_Args>(args)...);
-  return fn;
-}
+  template<typename _Callable, typename... _Args>
+  inline auto bind(_Callable &&f, _Args &&...args) {
+    auto fn = std::bind(std::forward<_Callable>(f), std::forward<_Args>(args)...);
+    return fn;
+  }
 
-}  // namespace hicc::util
+} // namespace hicc::util
 
 // ------------------- indices
 namespace hicc::traits {
-// @see http://loungecpp.wikidot.com/tips-and-tricks:indices
+  // @see http://loungecpp.wikidot.com/tips-and-tricks:indices
 
-template <std::size_t... Is>
-struct indices {};
+  template<std::size_t... Is>
+  struct indices {};
 
-template <std::size_t N, std::size_t... Is>
-struct build_indices : build_indices<N - 1, N - 1, Is...> {};
+  template<std::size_t N, std::size_t... Is>
+  struct build_indices : build_indices<N - 1, N - 1, Is...> {};
 
-template <std::size_t... Is>
-struct build_indices<0, Is...> : indices<Is...> {};
+  template<std::size_t... Is>
+  struct build_indices<0, Is...> : indices<Is...> {};
 
-template <typename T>
-using Bare =
-    typename std::remove_cv<typename std::remove_reference<T>::type>::type;
+  template<typename T>
+  using Bare =
+      typename std::remove_cv<typename std::remove_reference<T>::type>::type;
 
-template <typename Tuple>
-using IndicesFor = build_indices<std::tuple_size<Bare<Tuple>>::value>;
+  template<typename Tuple>
+  using IndicesFor = build_indices<std::tuple_size<Bare<Tuple>>::value>;
 
-template <typename Tuple, std::size_t... Indices>
-std::array<int, std::tuple_size<Tuple>::value> f_them_all(Tuple &&t,
-                                                          indices<Indices...>) {
-  return std::array<int, std::tuple_size<Tuple>::value>{
-      {f(std::get<Indices>(std::forward<Tuple>(t)))...}};
-}
-}  // namespace hicc::traits
+  template<typename Tuple, std::size_t... Indices>
+  std::array<int, std::tuple_size<Tuple>::value> f_them_all(Tuple &&t,
+                                                            indices<Indices...>) {
+    return std::array<int, std::tuple_size<Tuple>::value>{
+        {f(std::get<Indices>(std::forward<Tuple>(t)))...}};
+  }
+} // namespace hicc::traits
 
 namespace hicc::traits {
-template <int I>
-struct placeholder {};
-}  // namespace hicc::traits
+  template<int I>
+  struct placeholder {};
+} // namespace hicc::traits
 
 namespace std {
-template <int I>
-struct is_placeholder<hicc::traits::placeholder<I>>
-    : std::integral_constant<int, I> {};
-}  // namespace std
+  template<int I>
+  struct is_placeholder<hicc::traits::placeholder<I>>
+      : std::integral_constant<int, I> {};
+} // namespace std
 
 // ------------------- easy_bind, bind_this
 namespace hicc::util {
-// ------------------- easy bind
-using namespace hicc::traits;
-namespace detail {
-template <std::size_t... Is, class F, class... Args>
-inline auto easy_bind(indices<Is...>, F const &f, Args &&...args)
-    -> decltype(std::bind(f, std::forward<Args>(args)...,
-                          placeholder<Is + 1>{}...)) {
-  return std::bind(f, std::forward<Args>(args)..., placeholder<Is + 1>{}...);
-}
-}  // namespace detail
+  // ------------------- easy bind
+  using namespace hicc::traits;
+  namespace detail {
+    template<std::size_t... Is, class F, class... Args>
+    inline auto easy_bind(indices<Is...>, F const &f, Args &&...args)
+        -> decltype(std::bind(f, std::forward<Args>(args)...,
+                              placeholder<Is + 1>{}...)) {
+      return std::bind(f, std::forward<Args>(args)..., placeholder<Is + 1>{}...);
+    }
+  } // namespace detail
 
-template <class R, class... FArgs, class... Args>
-inline auto easy_bind(std::function<R(FArgs...)> const &f, Args &&...args)
-    -> decltype(detail::easy_bind(
-        build_indices<sizeof...(FArgs) - sizeof...(Args)>{}, f,
-        std::forward<Args>(args)...)) {
-  return detail::easy_bind(build_indices<sizeof...(FArgs) - sizeof...(Args)>{},
-                           f, std::forward<Args>(args)...);
-}
+  template<class R, class... FArgs, class... Args>
+  inline auto easy_bind(std::function<R(FArgs...)> const &f, Args &&...args)
+      -> decltype(detail::easy_bind(
+          build_indices<sizeof...(FArgs) - sizeof...(Args)>{}, f,
+          std::forward<Args>(args)...)) {
+    return detail::easy_bind(build_indices<sizeof...(FArgs) - sizeof...(Args)>{},
+                             f, std::forward<Args>(args)...);
+  }
 
-// ------------------- bind_this
-template <class C, typename Ret, typename... Ts>
-inline std::function<Ret(Ts...)> bind_this(C *c, Ret (C::*m)(Ts...)) {
-  return [=](auto &&...args) {
-    return (c->*m)(std::forward<decltype(args)>(args)...);
-  };
-}
+  // ------------------- bind_this
+  template<class C, typename Ret, typename... Ts>
+  inline std::function<Ret(Ts...)> bind_this(C *c, Ret (C::*m)(Ts...)) {
+    return [=](auto &&...args) {
+      return (c->*m)(std::forward<decltype(args)>(args)...);
+    };
+  }
 
-template <class C, typename Ret, typename... Ts>
-inline std::function<Ret(Ts...)> bind_this(const C *c,
-                                           Ret (C::*m)(Ts...) const) {
-  return [=](auto &&...args) {
-    return (c->*m)(std::forward<decltype(args)>(args)...);
-  };
-}
-}  // namespace hicc::util
+  template<class C, typename Ret, typename... Ts>
+  inline std::function<Ret(Ts...)> bind_this(const C *c,
+                                             Ret (C::*m)(Ts...) const) {
+    return [=](auto &&...args) {
+      return (c->*m)(std::forward<decltype(args)>(args)...);
+    };
+  }
+} // namespace hicc::util
 
 // ------------------- partial_t & partial
 namespace hicc::util::cool {
-template <typename F, typename... Args>
-class partial_t {
- public:
-  constexpr partial_t(F &&f, Args &&...args)
-      : f_(std::forward<F>(f)), args_(std::forward_as_tuple(args...)) {}
+  template<typename F, typename... Args>
+  class partial_t {
+  public:
+    constexpr partial_t(F &&f, Args &&...args)
+        : f_(std::forward<F>(f)), args_(std::forward_as_tuple(args...)) {}
 
-  template <typename... RestArgs>
-  constexpr decltype(auto) operator()(RestArgs &&...rest_args) {
-    return std::apply(
-        f_, std::tuple_cat(args_, std::forward_as_tuple(
-                                      std::forward<RestArgs>(rest_args)...)));
-  }
+    template<typename... RestArgs>
+    constexpr decltype(auto) operator()(RestArgs &&...rest_args) {
+      return std::apply(
+          f_, std::tuple_cat(args_, std::forward_as_tuple(std::forward<RestArgs>(rest_args)...)));
+    }
 
- private:
-  F f_;
-  std::tuple<Args...> args_;
-};
+  private:
+    F f_;
+    std::tuple<Args...> args_;
+  };
 
-/**
+  /**
  * @brief partial bind version of std::bind
  * @tparam Fn
  * @tparam Args
@@ -651,130 +648,130 @@ class partial_t {
  * std::cout << partial(test, 5, 3)(7) << '\n';
  * @endcode
  */
-template <typename Fn, typename... Args>
-constexpr decltype(auto) partial(Fn &&fn, Args &&...args) {
-  return partial_t<Fn, Args...>(std::forward<Fn>(fn),
-                                std::forward<Args>(args)...);
-}
-}  // namespace hicc::util::cool
+  template<typename Fn, typename... Args>
+  constexpr decltype(auto) partial(Fn &&fn, Args &&...args) {
+    return partial_t<Fn, Args...>(std::forward<Fn>(fn),
+                                  std::forward<Args>(args)...);
+  }
+} // namespace hicc::util::cool
 
 // ------------------- cool::curry
 namespace hicc::util::cool {
 #if defined(__TRAITS_IS_DETECTED_DEFINED)
-using traits::is_detected;
+  using traits::is_detected;
 #else
-using std::experimental::is_detected;
+  using std::experimental::is_detected;
 #endif
 
-template <class T, typename... Args>
-using can_invoke_t = decltype(std::declval<T>()(std::declval<Args>()...));
+  template<class T, typename... Args>
+  using can_invoke_t = decltype(std::declval<T>()(std::declval<Args>()...));
 
-template <typename T, typename... Args>
-using can_invoke = is_detected<can_invoke_t, T, Args...>;
+  template<typename T, typename... Args>
+  using can_invoke = is_detected<can_invoke_t, T, Args...>;
 
-template <typename F, typename... Arguments>
-struct curry_t {
-  template <typename... Args>
-  constexpr decltype(auto) operator()(Args &&...a) const {
-    curry_t<F, Arguments..., Args...> cur = {
-        f_, std::tuple_cat(args_, std::make_tuple(std::forward<Args>(a)...))};
+  template<typename F, typename... Arguments>
+  struct curry_t {
+    template<typename... Args>
+    constexpr decltype(auto) operator()(Args &&...a) const {
+      curry_t<F, Arguments..., Args...> cur = {
+          f_, std::tuple_cat(args_, std::make_tuple(std::forward<Args>(a)...))};
 
-    if constexpr (!can_invoke<F, Arguments..., Args...>::value) {
-      return cur;
-    } else {
-      return cur();
+      if constexpr (!can_invoke<F, Arguments..., Args...>::value) {
+        return cur;
+      } else {
+        return cur();
+      }
     }
+
+    constexpr decltype(auto) operator()() const { return std::apply(f_, args_); }
+
+    F f_;
+    std::tuple<Arguments...> args_;
+  };
+
+  template<typename F>
+  constexpr curry_t<F> curry(F &&f) {
+    return {std::forward<F>(f)};
   }
-
-  constexpr decltype(auto) operator()() const { return std::apply(f_, args_); }
-
-  F f_;
-  std::tuple<Arguments...> args_;
-};
-
-template <typename F>
-constexpr curry_t<F> curry(F &&f) {
-  return {std::forward<F>(f)};
-}
-}  // namespace hicc::util::cool
+} // namespace hicc::util::cool
 
 // ------------------- cool::bind_tie
 namespace hicc::util::cool {
 
-template <typename _Callable, typename... _Args>
-auto bind(_Callable &&f, _Args &&...args) {
-  return std::bind(std::forward<_Callable>(f), std::forward<_Args>(args)...);
-}
+  template<typename _Callable, typename... _Args>
+  auto bind(_Callable &&f, _Args &&...args) {
+    return std::bind(std::forward<_Callable>(f), std::forward<_Args>(args)...);
+  }
 
-template <typename Function, typename Tuple, size_t... I>
-auto bind_N(Function &&f, Tuple &&t, std::index_sequence<I...>) {
-  return std::bind(f, std::get<I>(t)...);
-}
-template <int N, typename Function, typename Tuple>
-auto bind_N(Function &&f, Tuple &&t) {
-  // static constexpr auto size = std::tuple_size<Tuple>::value;
-  return bind_N(f, t, std::make_index_sequence<N>{});
-}
+  template<typename Function, typename Tuple, size_t... I>
+  auto bind_N(Function &&f, Tuple &&t, std::index_sequence<I...>) {
+    return std::bind(f, std::get<I>(t)...);
+  }
+  template<int N, typename Function, typename Tuple>
+  auto bind_N(Function &&f, Tuple &&t) {
+    // static constexpr auto size = std::tuple_size<Tuple>::value;
+    return bind_N(f, t, std::make_index_sequence<N>{});
+  }
 
-template <int N, typename _Callable, typename... _Args,
-          std::enable_if_t<!std::is_member_function_pointer_v<_Callable>,
-                           bool> = true>
-auto bind_tie(_Callable &&f, _Args &&...args) {
-  return bind_N<N>(f, std::make_tuple(args...));
-}
+  template<int N, typename _Callable, typename... _Args,
+           std::enable_if_t<!std::is_member_function_pointer_v<_Callable>,
+                            bool> = true>
+  auto bind_tie(_Callable &&f, _Args &&...args) {
+    return bind_N<N>(f, std::make_tuple(args...));
+  }
 
-template <typename Function, typename _Instance, typename Tuple, size_t... I>
-auto bind_N_mem(Function &&f, _Instance &&ii, Tuple &&t,
-                std::index_sequence<I...>) {
-  return std::bind(f, ii, std::get<I>(t)...);
-}
-template <int N, typename Function, typename _Instance, typename Tuple>
-auto bind_N_mem(Function &&f, _Instance &&ii, Tuple &&t) {
-  return bind_N_mem(f, ii, t, std::make_index_sequence<N>{});
-}
+  template<typename Function, typename _Instance, typename Tuple, size_t... I>
+  auto bind_N_mem(Function &&f, _Instance &&ii, Tuple &&t,
+                  std::index_sequence<I...>) {
+    return std::bind(f, ii, std::get<I>(t)...);
+  }
+  template<int N, typename Function, typename _Instance, typename Tuple>
+  auto bind_N_mem(Function &&f, _Instance &&ii, Tuple &&t) {
+    return bind_N_mem(f, ii, t, std::make_index_sequence<N>{});
+  }
 
-template <
-    int N, typename _Callable, typename _Instance, typename... _Args,
-    std::enable_if_t<std::is_member_function_pointer_v<_Callable>, bool> = true>
-auto bind_tie_mem(_Callable &&f, _Instance &&ii, _Args &&...args) {
-  return bind_N_mem<N>(f, ii, std::make_tuple(args...));
-}
-template <
-    int N, typename _Callable, typename... _Args,
-    std::enable_if_t<std::is_member_function_pointer_v<_Callable>, bool> = true>
-auto bind_tie(_Callable &&f, _Args &&...args) {
-  return bind_tie_mem<N>(std::forward<_Callable>(f),
-                         std::forward<_Args>(args)...);
-}
+  template<
+      int N, typename _Callable, typename _Instance, typename... _Args,
+      std::enable_if_t<std::is_member_function_pointer_v<_Callable>, bool> = true>
+  auto bind_tie_mem(_Callable &&f, _Instance &&ii, _Args &&...args) {
+    return bind_N_mem<N>(f, ii, std::make_tuple(args...));
+  }
+  template<
+      int N, typename _Callable, typename... _Args,
+      std::enable_if_t<std::is_member_function_pointer_v<_Callable>, bool> = true>
+  auto bind_tie(_Callable &&f, _Args &&...args) {
+    return bind_tie_mem<N>(std::forward<_Callable>(f),
+                           std::forward<_Args>(args)...);
+  }
 
-}  // namespace hicc::util::cool
+} // namespace hicc::util::cool
 
 // ------------------- cool::lock_guard
 namespace hicc::util::cool {
-template <typename _Mutex>
-class lock_guard {
- public:
-  _Mutex _m;
-  lock_guard() { _m.lock(); }
-  ~lock_guard() { _m.unlock(); }
-  void lock() { _m.lock(); }
-  void unlock() { _m.unlock(); }
-};
+  template<typename _Mutex>
+  class lock_guard {
+  public:
+    _Mutex _m;
+    lock_guard() { _m.lock(); }
+    ~lock_guard() { _m.unlock(); }
+    void lock() { _m.lock(); }
+    void unlock() { _m.unlock(); }
+  };
 
-template <>
-class lock_guard<void> {
- public:
-  lock_guard() {}
-  ~lock_guard() {}
-  void lock() {}
-  void unlock() {}
-};
-}  // namespace hicc::util::cool
+  template<>
+  class lock_guard<void> {
+  public:
+    lock_guard() {}
+    ~lock_guard() {}
+    void lock() {}
+    void unlock() {}
+  };
+} // namespace hicc::util::cool
 
 // ------------------- get_template_type_t, return_type_of_t
 namespace hicc::traits {
 
-/**
+  /**
  * @brief
  * @tparam C
  * @code{c++}
@@ -784,14 +781,14 @@ namespace hicc::traits {
  *
  * using ret = hicc::traits::get_template_type_t<baz>::type;
  */
-template <typename C>
-struct get_template_type_t;
-template <template <typename> class C, typename T>
-struct get_template_type_t<C<T>> {
-  using type = T;
-};
+  template<typename C>
+  struct get_template_type_t;
+  template<template<typename> class C, typename T>
+  struct get_template_type_t<C<T>> {
+    using type = T;
+  };
 
-/**
+  /**
  * @brief
  * @code{c++}
  * int foo(int a, int b, int c, int d) {
@@ -810,11 +807,11 @@ struct get_template_type_t<C<T>> {
  * using ReturnTypeOfBaz = return_type_of_t<decltype(baz)>;
  * @endcode
  */
-template <typename Callable>
-using return_type_of_t =
-    typename decltype(std::function{std::declval<Callable>()})::result_type;
+  template<typename Callable>
+  using return_type_of_t =
+      typename decltype(std::function{std::declval<Callable>()})::result_type;
 
-/**
+  /**
  * @brief
  * @tparam R
  * @tparam Args
@@ -823,80 +820,80 @@ using return_type_of_t =
  * using ReturnTypeOfFoo = decltype(return_type_of(foo));
  * @endcode
  */
-template <typename R, typename... Args>
-R return_type_of(R (*)(Args...));
+  template<typename R, typename... Args>
+  R return_type_of(R (*)(Args...));
 
-}  // namespace hicc::traits
+} // namespace hicc::traits
 
 // ------------------- singleton
 namespace hicc::util {
 
-template <typename T>
-class singleton {
- public:
-  static T &instance();
+  template<typename T>
+  class singleton {
+  public:
+    static T &instance();
 
-  singleton(const singleton &) = delete;
-  singleton &operator=(const singleton) = delete;
+    singleton(const singleton &) = delete;
+    singleton &operator=(const singleton) = delete;
 
- protected:
-  struct token {};
-  singleton() = default;
-};
+  protected:
+    struct token {};
+    singleton() = default;
+  };
 
-template <typename T>
-inline T &singleton<T>::instance() {
-  static std::unique_ptr<T> instance{new T{token{}}};
-  return *instance;
-}
-
-// template<typename T>
-// using hus = hicc::util::singleton<T>;
-
-template <typename C, typename... Args>
-class singleton_with_optional_construction_args {
- private:
-  singleton_with_optional_construction_args() = default;
-  static C *_instance;
-
- public:
-  ~singleton_with_optional_construction_args() {
-    delete _instance;
-    _instance = nullptr;
+  template<typename T>
+  inline T &singleton<T>::instance() {
+    static std::unique_ptr<T> instance{new T{token{}}};
+    return *instance;
   }
-  static C &instance(Args... args) {
-    if (_instance == nullptr) _instance = new C(args...);
-    return *_instance;
-  }
-};
 
-template <typename C, typename... Args>
-C *singleton_with_optional_construction_args<C, Args...>::_instance = nullptr;
+  // template<typename T>
+  // using hus = hicc::util::singleton<T>;
+
+  template<typename C, typename... Args>
+  class singleton_with_optional_construction_args {
+  private:
+    singleton_with_optional_construction_args() = default;
+    static C *_instance;
+
+  public:
+    ~singleton_with_optional_construction_args() {
+      delete _instance;
+      _instance = nullptr;
+    }
+    static C &instance(Args... args) {
+      if (_instance == nullptr) _instance = new C(args...);
+      return *_instance;
+    }
+  };
+
+  template<typename C, typename... Args>
+  C *singleton_with_optional_construction_args<C, Args...>::_instance = nullptr;
 
 #if defined(_DEBUG) && defined(NEVER_USED)
-inline void test_singleton_with_optional_construction_args() {
-  int &i = singleton_with_optional_construction_args<int, int>::instance(1);
-  UTEST_CHECK(i == 1);
+  inline void test_singleton_with_optional_construction_args() {
+    int &i = singleton_with_optional_construction_args<int, int>::instance(1);
+    UTEST_CHECK(i == 1);
 
-  tester1 &t1 =
-      singleton_with_optional_construction_args<tester1, int>::instance(1);
-  UTEST_CHECK(t1.result() == 1);
+    tester1 &t1 =
+        singleton_with_optional_construction_args<tester1, int>::instance(1);
+    UTEST_CHECK(t1.result() == 1);
 
-  tester2 &t2 =
-      singleton_with_optional_construction_args<tester2, int, int>::instance(1,
-                                                                             2);
-  UTEST_CHECK(t2.result() == 3);
-}
-#endif  // defined(NEVER_USED)
+    tester2 &t2 =
+        singleton_with_optional_construction_args<tester2, int, int>::instance(1,
+                                                                               2);
+    UTEST_CHECK(t2.result() == 3);
+  }
+#endif // defined(NEVER_USED)
 
-}  // namespace hicc::util
+} // namespace hicc::util
 
 #define HICC_SINGLETON(t) hicc::util::singleton<t>
 
 // ------------------- defer
 namespace hicc::util {
 
-/**
+  /**
  * @brief defer&lt;T&gt; provides a RAII wrapper for your lambda function.
  * @tparam T is a class which has a member function: <code>void close();</code>
  * @details For example:
@@ -916,24 +913,24 @@ namespace hicc::util {
  * std::ofstream::out); *ofs.get() &lt;&lt; "1";
  * @endcode
  */
-template <class T = bool, class _D = std::default_delete<T>>
-class defer final {
- public:
-  defer(T &c, _D const &fn = _D{}) : _c(c), _fn(fn) {}
-  defer(_D const &fn, T &c = T{}) : _c(c), _fn(fn) {}
-  ~defer() {
-    _c.close();
-    if (_fn) {
-      _fn();
+  template<class T = bool, class _D = std::default_delete<T>>
+  class defer final {
+  public:
+    defer(T &c, _D const &fn = _D{}) : _c(c), _fn(fn) {}
+    defer(_D const &fn, T &c = T{}) : _c(c), _fn(fn) {}
+    ~defer() {
+      _c.close();
+      if (_fn) {
+        _fn();
+      }
     }
-  }
 
- private:
-  T &_c;
-  _D _fn;
-};
+  private:
+    T &_c;
+    _D _fn;
+  };
 
-/**
+  /**
  * @brief defer provides a RAII wrapper for your lambda function.
  * @details For example:
  * @code{c++}
@@ -942,210 +939,234 @@ class defer final {
  *     });
  * @endcode
  */
-template <>
-class defer<bool> final {
- public:
-  defer(std::function<void()> const &fn, bool = false) : _fn(fn) {}
-  ~defer() {
-    if (_fn) {
-      _fn();
+  template<>
+  class defer<bool> final {
+  public:
+    defer(std::function<void()> const &fn, bool = false) : _fn(fn) {}
+    ~defer() {
+      if (_fn) {
+        _fn();
+      }
     }
-  }
 
- private:
-  std::function<void()> _fn;
-};
+  private:
+    std::function<void()> _fn;
+  };
 
-}  // namespace hicc::util
+} // namespace hicc::util
 
 // ------------------- visitor A
 namespace hicc::dp::visitor {
 
-struct base_visitor {
-  virtual ~base_visitor() = default;
-};
-struct base_visitable {
-  virtual ~base_visitable() = default;
-};
+  struct base_visitor {
+    virtual ~base_visitor() = default;
+  };
+  struct base_visitable {
+    virtual ~base_visitable() = default;
+  };
 
-template <typename Visited, typename ReturnType = void>
-class visitor : public base_visitor {
- public:
-  ~visitor() override = default;
-  using return_t = ReturnType;
-  using visited_t = std::unique_ptr<Visited>;
-  virtual return_t visit(visited_t const &visited) const = 0;
-};
+  template<typename SP>
+  struct strip_smart_ptr {
+    using type = SP;
+  };
+  template<typename T>
+  struct strip_smart_ptr<std::unique_ptr<T, std::default_delete<T>>> {
+    using type = T;
+  };
+  template<typename T>
+  struct strip_smart_ptr<std::shared_ptr<T>> {
+    using type = T;
+  };
 
-template <typename Visited, typename ReturnType = void>
-class visitable : public base_visitable {
- public:
-  ~visitable() override = default;
-  using return_t = ReturnType;
-  using visitor_t = visitor<Visited, return_t>;
-  virtual return_t accept(visitor_t const &guest) = 0;
-};
+  template<typename Visitee, typename ReturnType = void>
+  class visitor : public base_visitor {
+  public:
+    ~visitor() override = default;
+    using return_t = ReturnType;
+    // using visitee_t = std::unique_ptr<Visitee>;
+    using visitee_t = typename strip_smart_ptr<Visitee>::type;
+    virtual return_t visit(visitee_t const &visitee) const = 0;
+  };
 
-}  // namespace hicc::dp::visitor
+  template<typename Visitor, typename ReturnType = void>
+  class visitable : public base_visitable {
+  public:
+    ~visitable() override = default;
+    using return_t = ReturnType;
+    using visitor_t = visitor<Visitor, return_t>;
+    virtual return_t accept(visitor_t const &guest) const = 0;
+  };
+
+} // namespace hicc::dp::visitor
 
 // ------------------- visitor B - with context & factory
 namespace hicc::util {
 
-template <typename Visitor>
-struct context {
-  std::shared_ptr<Visitor> visitor;
-};
+  template<typename Visitor>
+  struct context {
+    std::shared_ptr<Visitor> visitor;
+  };
 
-struct base_visitor {
-  virtual ~base_visitor() {}
-};
-struct base_visitable {
-  virtual ~base_visitable() {}
-};
+  struct base_visitor {
+    virtual ~base_visitor() {}
+  };
+  struct base_visitable {
+    virtual ~base_visitable() {}
+  };
 
-template <typename ReturnType = void>
-class visitor : public base_visitor {
- public:
-  ~visitor() override = default;
-  using return_t = ReturnType;
-  using context_t = context<visitor>;
-  virtual return_t visit() = 0;
-};
+  template<typename ReturnType = void>
+  class visitor : public base_visitor {
+  public:
+    ~visitor() override = default;
+    using return_t = ReturnType;
+    using context_t = context<visitor>;
+    virtual return_t visit() = 0;
+  };
 
-template <typename Visitor, typename Context = context<Visitor>,
-          typename ReturnType = void>
-class visitable : public base_visitable {
- public:
-  ~visitable() override = default;
-  using return_t = ReturnType;
-  using context_t = Context;
-  virtual return_t accept(context_t &ctx) = 0;
-};
+  template<typename Visitor, typename Context = context<Visitor>,
+           typename ReturnType = void>
+  class visitable : public base_visitable {
+  public:
+    ~visitable() override = default;
+    using return_t = ReturnType;
+    using context_t = Context;
+    virtual return_t accept(context_t &ctx) = 0;
+  };
 
-namespace demo {
+  namespace demo {
 
-using visitor_base = visitor<>;
-using context_t = context<visitor_base>;
+    using visitor_base = visitor<>;
+    using context_t = context<visitor_base>;
 
-struct elem : public visitable<visitor_base> {
-  ~elem() override = default;
-  return_t accept(context_t &ctx) override {
-    ctx.visitor->visit();
-    return;
-  }
-};
+    struct elem : public visitable<visitor_base> {
+      ~elem() override = default;
+      return_t accept(context_t &ctx) override {
+        ctx.visitor->visit();
+        return;
+      }
+    };
 
-struct guest : public visitor<> {
-  ~guest() override = default;
-  return_t visit() override {}
-};
+    struct guest : public visitor<> {
+      ~guest() override = default;
+      return_t visit() override {}
+    };
 
-struct factory {
-  using ElemSP = std::shared_ptr<elem>;
-  using ElemWP = std::weak_ptr<elem>;
-  std::vector<ElemSP> coll;
+    struct factory {
+      using ElemSP = std::shared_ptr<elem>;
+      using ElemWP = std::weak_ptr<elem>;
+      std::vector<ElemSP> coll;
 
-  template <typename... Args>
-  ElemSP create(Args &&...args) {
-    auto sp = std::make_shared<elem>(std::forward<Args>(args)...);
-    coll.push_back(sp);
-    return sp;
-  }
+      template<typename... Args>
+      ElemSP create(Args &&...args) {
+        auto sp = std::make_shared<elem>(std::forward<Args>(args)...);
+        coll.push_back(sp);
+        return sp;
+      }
 
-  using Visitor = std::shared_ptr<guest>;
-  void walk(Visitor v) {
-    context_t ctx{v};
-    for (auto &el : coll) {
-      el->accept(ctx);
-    }
-  }
-};
+      using Visitor = std::shared_ptr<guest>;
+      void walk(Visitor v) {
+        context_t ctx{v};
+        for (auto &el : coll) {
+          el->accept(ctx);
+        }
+      }
+    };
 
-struct canvas : public factory {};
+    struct canvas : public factory {};
 
-}  // namespace demo
+  } // namespace demo
 
-}  // namespace hicc::util
+} // namespace hicc::util
 
 // ------------------- visitor C - GoF
-namespace hicc::visitor::gof {}
+namespace hicc::visitor::gof {
+}
 
 // ------------------- observer
 namespace hicc::util {
 
-template <typename S>
-class observer {
- public:
-  virtual ~observer() {}
-  using subject_t = S;
-  virtual void observe(subject_t const &e) = 0;
-};
+  template<typename S>
+  class observer {
+  public:
+    virtual ~observer() {}
+    using subject_t = S;
+    virtual void observe(subject_t const &e) = 0;
+  };
 
-/**
+  /**
  * @brief an observable object which allows an observer registered.
  * @tparam S         subject or event
  * @tparam Observer
  * @tparam AutoLock  thread-safe even if modifying observers chain dynamically
  * @tparam CNS       use Copy-and-Swap to shorten locking time.
  */
-template <typename S, bool AutoLock = false, bool CNS = true,
-          typename Observer = observer<S>>
-class observable {
- public:
-  virtual ~observable() { clear(); }
-  using subject_t = S;
-  using observer_t_nacked = Observer;
-  using observer_t = std::weak_ptr<observer_t_nacked>;
-  using observer_t_shared = std::shared_ptr<observer_t_nacked>;
-  observable &add_observer(observer_t const &o) {
-    if (AutoLock) {
-      if (CNS) {
-        auto copy = _observers;
-        copy.push_back(o);
-        std::lock_guard _l(_m);
-        _observers.swap(copy);
-      } else {
-        std::lock_guard _l(_m);
+  template<typename S, bool AutoLock = false, bool CNS = true,
+           typename Observer = observer<S>>
+  class observable {
+  public:
+    virtual ~observable() { clear(); }
+    using subject_t = S;
+    using observer_t_nacked = Observer;
+    using observer_t = std::weak_ptr<observer_t_nacked>;
+    using observer_t_shared = std::shared_ptr<observer_t_nacked>;
+    observable &add_observer(observer_t const &o) {
+      if (AutoLock) {
+        if (CNS) {
+          auto copy = _observers;
+          copy.push_back(o);
+          std::lock_guard _l(_m);
+          _observers.swap(copy);
+        } else {
+          std::lock_guard _l(_m);
+          _observers.push_back(o);
+        }
+      } else
         _observers.push_back(o);
-      }
-    } else
-      _observers.push_back(o);
-    return (*this);
-  }
-  observable &add_observer(observer_t_shared &o) {
-    observer_t wp = o;
-    if (AutoLock) {
-      if (CNS) {
-        auto copy = _observers;
-        copy.push_back(wp);
-        std::lock_guard _l(_m);
-        _observers.swap(copy);
-      } else {
-        std::lock_guard _l(_m);
+      return (*this);
+    }
+    observable &add_observer(observer_t_shared &o) {
+      observer_t wp = o;
+      if (AutoLock) {
+        if (CNS) {
+          auto copy = _observers;
+          copy.push_back(wp);
+          std::lock_guard _l(_m);
+          _observers.swap(copy);
+        } else {
+          std::lock_guard _l(_m);
+          _observers.push_back(wp);
+        }
+      } else
         _observers.push_back(wp);
-      }
-    } else
-      _observers.push_back(wp);
-    return (*this);
-  }
-  observable &remove_observer(observer_t_shared &o) {
-    return remove_observer(o.get());
-  }
-  observable &remove_observer(observer_t_nacked *o) {
-    if (AutoLock) {
-      if (CNS) {
-        auto copy = _observers;
-        copy.erase(std::remove_if(copy.begin(), copy.end(),
-                                  [o](observer_t const &rhs) {
-                                    if (auto spt = rhs.lock())
-                                      return spt.get() == o;
-                                    return false;
-                                  }),
-                   copy.end());
-        std::lock_guard _l(_m);
-        _observers.swap(copy);
-      } else {
-        std::lock_guard _l(_m);
+      return (*this);
+    }
+    observable &remove_observer(observer_t_shared &o) {
+      return remove_observer(o.get());
+    }
+    observable &remove_observer(observer_t_nacked *o) {
+      if (AutoLock) {
+        if (CNS) {
+          auto copy = _observers;
+          copy.erase(std::remove_if(copy.begin(), copy.end(),
+                                    [o](observer_t const &rhs) {
+                                      if (auto spt = rhs.lock())
+                                        return spt.get() == o;
+                                      return false;
+                                    }),
+                     copy.end());
+          std::lock_guard _l(_m);
+          _observers.swap(copy);
+        } else {
+          std::lock_guard _l(_m);
+          _observers.erase(std::remove_if(_observers.begin(), _observers.end(),
+                                          [o](observer_t const &rhs) {
+                                            if (auto spt = rhs.lock())
+                                              return spt.get() == o;
+                                            return false;
+                                          }),
+                           _observers.end());
+        }
+      } else
         _observers.erase(std::remove_if(_observers.begin(), _observers.end(),
                                         [o](observer_t const &rhs) {
                                           if (auto spt = rhs.lock())
@@ -1153,191 +1174,182 @@ class observable {
                                           return false;
                                         }),
                          _observers.end());
-      }
-    } else
-      _observers.erase(std::remove_if(_observers.begin(), _observers.end(),
-                                      [o](observer_t const &rhs) {
-                                        if (auto spt = rhs.lock())
-                                          return spt.get() == o;
-                                        return false;
-                                      }),
-                       _observers.end());
-    return (*this);
-  }
-  friend observable &operator+(observable &lhs, observer_t_shared &o) {
-    return lhs.add_observer(o);
-  }
-  friend observable &operator+(observable &lhs, observer_t const &o) {
-    return lhs.add_observer(o);
-  }
-  friend observable &operator-(observable &lhs, observer_t_shared &o) {
-    return lhs.remove_observer(o);
-  }
-  friend observable &operator-(observable &lhs, observer_t_nacked *o) {
-    return lhs.remove_observer(o);
-  }
-  observable &operator+=(observer_t_shared &o) { return add_observer(o); }
-  observable &operator+=(observer_t const &o) { return add_observer(o); }
-  observable &operator-=(observer_t_shared &o) { return remove_observer(o); }
-  observable &operator-=(observer_t_nacked *o) { return remove_observer(o); }
+      return (*this);
+    }
+    friend observable &operator+(observable &lhs, observer_t_shared &o) {
+      return lhs.add_observer(o);
+    }
+    friend observable &operator+(observable &lhs, observer_t const &o) {
+      return lhs.add_observer(o);
+    }
+    friend observable &operator-(observable &lhs, observer_t_shared &o) {
+      return lhs.remove_observer(o);
+    }
+    friend observable &operator-(observable &lhs, observer_t_nacked *o) {
+      return lhs.remove_observer(o);
+    }
+    observable &operator+=(observer_t_shared &o) { return add_observer(o); }
+    observable &operator+=(observer_t const &o) { return add_observer(o); }
+    observable &operator-=(observer_t_shared &o) { return remove_observer(o); }
+    observable &operator-=(observer_t_nacked *o) { return remove_observer(o); }
 
- public:
-  /**
+  public:
+    /**
    * @brief fire an event along the observers chain.
    * @param event_or_subject
    */
-  void emit(subject_t const &event_or_subject) {
-    if (AutoLock) {
-      std::lock_guard _l(_m);
-      for (auto const &wp : _observers)
-        if (auto spt = wp.lock()) spt->observe(event_or_subject);
-    } else {
-      for (auto const &wp : _observers)
-        if (auto spt = wp.lock()) spt->observe(event_or_subject);
+    void emit(subject_t const &event_or_subject) {
+      if (AutoLock) {
+        std::lock_guard _l(_m);
+        for (auto const &wp : _observers)
+          if (auto spt = wp.lock()) spt->observe(event_or_subject);
+      } else {
+        for (auto const &wp : _observers)
+          if (auto spt = wp.lock()) spt->observe(event_or_subject);
+      }
     }
-  }
 
- private:
-  void clear() {
-    if (AutoLock) {
-      std::lock_guard _l(_m);
-      _observers.clear();
+  private:
+    void clear() {
+      if (AutoLock) {
+        std::lock_guard _l(_m);
+        _observers.clear();
+      }
     }
-  }
 
- private:
-  std::vector<observer_t> _observers{};
-  std::mutex _m{};
-};
+  private:
+    std::vector<observer_t> _observers{};
+    std::mutex _m{};
+  };
 
-template <typename S, bool AutoLock = false, bool CNS = true,
-          typename Observer = observer<S>>
-struct registerer {
-  using _Observable = observable<S, AutoLock, CNS, Observer>;
-  _Observable &_observable;
-  typename _Observable::observer_t_shared &_observer;
-  registerer(_Observable &observable,
-             typename _Observable::observer_t_shared &observer)
-      : _observable(observable), _observer(observer) {
-    _observable += _observer;
-  }
-  ~registerer() { _observable -= _observer; }
-};
+  template<typename S, bool AutoLock = false, bool CNS = true,
+           typename Observer = observer<S>>
+  struct registerer {
+    using _Observable = observable<S, AutoLock, CNS, Observer>;
+    _Observable &_observable;
+    typename _Observable::observer_t_shared &_observer;
+    registerer(_Observable &observable,
+               typename _Observable::observer_t_shared &observer)
+        : _observable(observable), _observer(observer) {
+      _observable += _observer;
+    }
+    ~registerer() { _observable -= _observer; }
+  };
 
-/**
+  /**
  * @brief an observable object, which allows a lambda or a function to be bound
  * as the observer.
  * @tparam S subject or event will be emitted to all bound observers.
  *
  */
-template <typename S>
-class observable_bindable {
- public:
-  virtual ~observable_bindable() { clear(); }
-  using subject_t = S;
-  using FN = std::function<void(subject_t const &)>;
+  template<typename S>
+  class observable_bindable {
+  public:
+    virtual ~observable_bindable() { clear(); }
+    using subject_t = S;
+    using FN = std::function<void(subject_t const &)>;
 
-  template <typename _Callable, typename... _Args>
-  observable_bindable &add_callback(_Callable &&f, _Args &&...args) {
-    FN fn = std::bind(std::forward<_Callable>(f), std::forward<_Args>(args)...,
-                      std::placeholders::_1);
-    _callbacks.push_back(fn);
-    return (*this);
-  }
-  template <typename _Callable, typename... _Args>
-  observable_bindable &on(_Callable &&f, _Args &&...args) {
-    return add_callback(f, args...);
-  }
+    template<typename _Callable, typename... _Args>
+    observable_bindable &add_callback(_Callable &&f, _Args &&...args) {
+      FN fn = std::bind(std::forward<_Callable>(f), std::forward<_Args>(args)...,
+                        std::placeholders::_1);
+      _callbacks.push_back(fn);
+      return (*this);
+    }
+    template<typename _Callable, typename... _Args>
+    observable_bindable &on(_Callable &&f, _Args &&...args) {
+      return add_callback(f, args...);
+    }
 
-  /**
+    /**
    * @brief fire an event along the observers chain.
    * @param event_or_subject
    */
-  void emit(subject_t const &event_or_subject) {
-    for (auto &fn : _callbacks) fn(event_or_subject);
-  }
+    void emit(subject_t const &event_or_subject) {
+      for (auto &fn : _callbacks) fn(event_or_subject);
+    }
 
- private:
-  void clear() {}
+  private:
+    void clear() {}
 
- private:
-  std::vector<FN> _callbacks{};
-};
+  private:
+    std::vector<FN> _callbacks{};
+  };
 
-}  // namespace hicc::util
+} // namespace hicc::util
 
 // ------------------- signal & slot
 namespace hicc::util {
 
-/**
+  /**
  * @brief A covered pure C++ implementation for QT signal-slot mechanism
  * @tparam SignalSubjects
  */
-template <typename... SignalSubjects>
-class signal {
- public:
-  virtual ~signal() { clear(); }
-  using FN = std::function<void(SignalSubjects &&...)>;
-  static constexpr std::size_t SubjectCount = sizeof...(SignalSubjects);
+  template<typename... SignalSubjects>
+  class signal {
+  public:
+    virtual ~signal() { clear(); }
+    using FN = std::function<void(SignalSubjects &&...)>;
+    static constexpr std::size_t SubjectCount = sizeof...(SignalSubjects);
 
-  template <typename _Callable, typename... _Args>
-  signal &connect(_Callable &&f, _Args &&...args) {
-    using namespace std::placeholders;
-    FN fn = cool::bind_tie<SubjectCount>(std::forward<_Callable>(f),
-                                         std::forward<_Args>(args)..., _1, _2,
-                                         _3, _4, _5, _6, _7, _8, _9);
-    _callbacks.push_back(fn);
-    return (*this);
-  }
-  template <typename _Callable, typename... _Args>
-  signal &on(_Callable &&f, _Args &&...args) {
-    using namespace std::placeholders;
-    FN fn = util::cool::bind_tie<SubjectCount>(std::forward<_Callable>(f),
-                                               std::forward<_Args>(args)..., _1,
-                                               _2, _3, _4, _5, _6, _7, _8, _9);
-    _callbacks.push_back(fn);
-    return (*this);
-  }
+    template<typename _Callable, typename... _Args>
+    signal &connect(_Callable &&f, _Args &&...args) {
+      using namespace std::placeholders;
+      FN fn = cool::bind_tie<SubjectCount>(std::forward<_Callable>(f),
+                                           std::forward<_Args>(args)..., _1, _2,
+                                           _3, _4, _5, _6, _7, _8, _9);
+      _callbacks.push_back(fn);
+      return (*this);
+    }
+    template<typename _Callable, typename... _Args>
+    signal &on(_Callable &&f, _Args &&...args) {
+      using namespace std::placeholders;
+      FN fn = util::cool::bind_tie<SubjectCount>(std::forward<_Callable>(f),
+                                                 std::forward<_Args>(args)..., _1,
+                                                 _2, _3, _4, _5, _6, _7, _8, _9);
+      _callbacks.push_back(fn);
+      return (*this);
+    }
 
-  /**
+    /**
    * @brief fire an event along the observers chain.
    * @param event_or_subject
    */
-  signal &emit(SignalSubjects &&...event_or_subjects) {
-    for (auto &fn : _callbacks) fn(std::move(event_or_subjects)...);
-    return (*this);
-  }
-  signal &operator()(SignalSubjects &&...event_or_subjects) {
-    return emit(event_or_subjects...);
-  }
+    signal &emit(SignalSubjects &&...event_or_subjects) {
+      for (auto &fn : _callbacks) fn(std::move(event_or_subjects)...);
+      return (*this);
+    }
+    signal &operator()(SignalSubjects &&...event_or_subjects) {
+      return emit(event_or_subjects...);
+    }
 
- private:
-  void clear() {}
+  private:
+    void clear() {}
 
- private:
-  std::vector<FN> _callbacks{};
-};
+  private:
+    std::vector<FN> _callbacks{};
+  };
 
-}  // namespace hicc::util
+} // namespace hicc::util
 
 // ------------------- detect_shell_env
 namespace hicc::util {
 
-inline std::string detect_shell_env() {
-  auto *str = std::getenv("SHELL");
-  if (str != nullptr) {
-    auto path = std::filesystem::path(str);
-    return path.filename().u8string();
+  inline std::string detect_shell_env() {
+    auto *str = std::getenv("SHELL");
+    if (str != nullptr) {
+      auto path = std::filesystem::path(str);
+      return path.filename().u8string();
+    }
+    return "unknown";
   }
-  return "unknown";
-}
 
-}  // namespace hicc::util
+} // namespace hicc::util
 
 // ------------------- is_in
 namespace hicc::util {
 
-/**
+  /**
  * @brief
  * @tparam First
  * @tparam T
@@ -1348,48 +1360,48 @@ namespace hicc::util {
  * if (is_in(s1, s2, s3, s4)) // ...
  * @endcode
  */
-template <typename First, typename... T>
-inline bool is_in(First &&first, T &&...t) {
-  return ((first == t) || ...);
-}
+  template<typename First, typename... T>
+  inline bool is_in(First &&first, T &&...t) {
+    return ((first == t) || ...);
+  }
 
-}  // namespace hicc::util
+} // namespace hicc::util
 
 // ------------------- compare_vector_values
 namespace hicc::util {
-template <class T>
-inline bool compare_vector_values(std::vector<T> const &v1,
-                                  std::vector<T> const &v2) {
-  bool not_ok = false;
-  if (v1.size() == v2.size()) {
-    for (std::size_t i = 0; i < v1.size(); i++) {
-      if (std::strcmp(v1[i], v2[i]) != 0) {
-        not_ok = true;
-        break;
+  template<class T>
+  inline bool compare_vector_values(std::vector<T> const &v1,
+                                    std::vector<T> const &v2) {
+    bool not_ok = false;
+    if (v1.size() == v2.size()) {
+      for (std::size_t i = 0; i < v1.size(); i++) {
+        if (std::strcmp(v1[i], v2[i]) != 0) {
+          not_ok = true;
+          break;
+        }
       }
-    }
-  } else
-    not_ok = true;
-  return (not_ok == false);
-}
-}  // namespace hicc::util
+    } else
+      not_ok = true;
+    return (not_ok == false);
+  }
+} // namespace hicc::util
 
 // ------------------- safe_bool
 namespace hicc {
-class safe_bool_base {
- public:
-  typedef void (safe_bool_base::*bool_type)() const;
-  void this_type_does_not_support_comparisons() const {}
+  class safe_bool_base {
+  public:
+    typedef void (safe_bool_base::*bool_type)() const;
+    void this_type_does_not_support_comparisons() const {}
 
- protected:
-  safe_bool_base() {}
-  safe_bool_base(const safe_bool_base &) {}
-  safe_bool_base &operator=(const safe_bool_base &) { return *this; }
-  ~safe_bool_base() {}
-};
+  protected:
+    safe_bool_base() {}
+    safe_bool_base(const safe_bool_base &) {}
+    safe_bool_base &operator=(const safe_bool_base &) { return *this; }
+    ~safe_bool_base() {}
+  };
 
-// For testability without virtual function.
-/**
+  // For testability without virtual function.
+  /**
  * @brief
  * @tparam T
  * @note For C++11 or later, use explicit keyword, for instance:
@@ -1438,95 +1450,95 @@ class safe_bool_base {
  * }
  * @endcode
  */
-template <typename T = void>
-class safe_bool : private safe_bool_base {
-  // private or protected inheritance is very important here as it triggers the
-  // access control violation in main.
- public:
-  operator bool_type() const {
-    return (static_cast<const T *>(this))->boolean_test()
-               ? &safe_bool_base::this_type_does_not_support_comparisons
-               : 0;
+  template<typename T = void>
+  class safe_bool : private safe_bool_base {
+    // private or protected inheritance is very important here as it triggers the
+    // access control violation in main.
+  public:
+    operator bool_type() const {
+      return (static_cast<const T *>(this))->boolean_test()
+          ? &safe_bool_base::this_type_does_not_support_comparisons
+          : 0;
+    }
+
+  protected:
+    ~safe_bool() {}
+  };
+
+  // For testability with a virtual function.
+  template<>
+  class safe_bool<void> : private safe_bool_base {
+    // private or protected inheritance is very important here as it triggers the
+    // access control violation in main.
+  public:
+    operator bool_type() const {
+      return boolean_test()
+          ? &safe_bool_base::this_type_does_not_support_comparisons
+          : 0;
+    }
+
+  protected:
+    virtual bool boolean_test() const = 0;
+    virtual ~safe_bool() {}
+  };
+
+  template<typename T>
+  bool operator==(const safe_bool<T> &lhs, bool b) {
+    return b == static_cast<bool>(lhs);
   }
 
- protected:
-  ~safe_bool() {}
-};
-
-// For testability with a virtual function.
-template <>
-class safe_bool<void> : private safe_bool_base {
-  // private or protected inheritance is very important here as it triggers the
-  // access control violation in main.
- public:
-  operator bool_type() const {
-    return boolean_test()
-               ? &safe_bool_base::this_type_does_not_support_comparisons
-               : 0;
+  template<typename T>
+  bool operator==(bool b, const safe_bool<T> &rhs) {
+    return b == static_cast<bool>(rhs);
   }
 
- protected:
-  virtual bool boolean_test() const = 0;
-  virtual ~safe_bool() {}
-};
+  template<typename T, typename U>
+  bool operator==(const safe_bool<T> &lhs, const safe_bool<U> &) {
+    lhs.this_type_does_not_support_comparisons();
+    return false;
+  }
 
-template <typename T>
-bool operator==(const safe_bool<T> &lhs, bool b) {
-  return b == static_cast<bool>(lhs);
-}
-
-template <typename T>
-bool operator==(bool b, const safe_bool<T> &rhs) {
-  return b == static_cast<bool>(rhs);
-}
-
-template <typename T, typename U>
-bool operator==(const safe_bool<T> &lhs, const safe_bool<U> &) {
-  lhs.this_type_does_not_support_comparisons();
-  return false;
-}
-
-template <typename T, typename U>
-bool operator!=(const safe_bool<T> &lhs, const safe_bool<U> &) {
-  lhs.this_type_does_not_support_comparisons();
-  return false;
-}
-}  // namespace hicc
+  template<typename T, typename U>
+  bool operator!=(const safe_bool<T> &lhs, const safe_bool<U> &) {
+    lhs.this_type_does_not_support_comparisons();
+    return false;
+  }
+} // namespace hicc
 
 // ------------------- heap_only, no_heap
 namespace hicc {
 
-template <typename T>
-class heap_only {
- public:
-  heap_only() {}
+  template<typename T>
+  class heap_only {
+  public:
+    heap_only() {}
 
-  void destroy() const { delete this; }
-  static T *create() { return new T{}; }
+    void destroy() const { delete this; }
+    static T *create() { return new T{}; }
 
- protected:
-  ~heap_only() {}
-};
+  protected:
+    ~heap_only() {}
+  };
 
-class VO : public heap_only<VO> {
- public:
-  ~VO() {}
-};
+  class VO : public heap_only<VO> {
+  public:
+    ~VO() {}
+  };
 
-class no_heap {
- protected:
-  static void *operator new(
-      std::size_t);  // #1: To prevent allocation of scalar objects
-  static void *operator new[](
-      std::size_t);  // #2: To prevent allocation of array of objects
-};
+  class no_heap {
+  protected:
+    static void *operator new(
+        std::size_t); // #1: To prevent allocation of scalar objects
+    static void *operator new[](
+        std::size_t); // #2: To prevent allocation of array of objects
+  };
 
-}  // namespace hicc
+} // namespace hicc
 
 // ------------------- non_copyable
 namespace hicc {
 
-/**
+  /**
  * @brief To prevent objects of a class from being copy-constructed or assigned
  * to each other.
  * @code{c++}
@@ -1534,19 +1546,19 @@ namespace hicc {
  * @endcode
  * @see macro CLAZZ_NON_COPYABLE(clz) and CLAZZ_NON_MOVEABLE(clz)
  */
-template <class T>
-class non_copyable {
- public:
-  non_copyable(const non_copyable &) = delete;
-  // non_copyable &operator=(const non_copyable &) = delete;
-  T &operator=(const T &) = delete;
+  template<class T>
+  class non_copyable {
+  public:
+    non_copyable(const non_copyable &) = delete;
+    // non_copyable &operator=(const non_copyable &) = delete;
+    T &operator=(const T &) = delete;
 
- protected:
-  non_copyable() = default;
-  ~non_copyable() = default;  /// Protected non-virtual destructor
-};
+  protected:
+    non_copyable() = default;
+    ~non_copyable() = default; /// Protected non-virtual destructor
+  };
 
-/**
+  /**
  * @brief To prevent RVO or pass-and-copy value as function parameter
  * @code{c++}
  * no_implicit_copy foo() { // Compiler error because copy-constructor must be
@@ -1558,11 +1570,11 @@ class non_copyable {
  * }
  * @endcode
  */
-struct no_implicit_copy {
-  no_implicit_copy() = default;
-  explicit no_implicit_copy(const no_implicit_copy &) = default;
-};
+  struct no_implicit_copy {
+    no_implicit_copy() = default;
+    explicit no_implicit_copy(const no_implicit_copy &) = default;
+  };
 
-}  // namespace hicc
+} // namespace hicc
 
-#endif  // HICC_CXX_HZ_COMMON_HH
+#endif // HICC_CXX_HZ_COMMON_HH
