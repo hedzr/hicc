@@ -132,14 +132,14 @@ namespace hicc::process {
                                     (DWORD) bufsize,
                                     &n,
                                     nullptr);
-                            // hicc_verbose_debug("STDERR: Success:%d n:%d\n", success, (int) n);
+                            // dbg_verbose_debug("STDERR: Success:%d n:%d\n", success, (int) n);
                             if (!success || n == 0)
                                 break;
                             std::string s(buffer, n);
-                            // hicc_verbose_debug("STDOUT:(%s)\n", s.c_str());
+                            // dbg_verbose_debug("STDOUT:(%s)\n", s.c_str());
                             lst_stdout += s;
                         }
-                        // hicc_verbose_debug("STDOUT:BREAK!\n");
+                        // dbg_verbose_debug("STDOUT:BREAK!\n");
                     });
                 }
 
@@ -156,11 +156,11 @@ namespace hicc::process {
                                     (DWORD) bufsize,
                                     &n,
                                     nullptr);
-                            // hicc_verbose_debug("STDERR: Success:%d n:%d\n", success, (int) n);
+                            // dbg_verbose_debug("STDERR: Success:%d n:%d\n", success, (int) n);
                             if (!success || n == 0)
                                 break;
                             std::string s(buffer, n);
-                            // hicc_verbose_debug("STDERR:(%s)\n", s.c_str());
+                            // dbg_verbose_debug("STDERR:(%s)\n", s.c_str());
                             lst_stderr += s;
                         }
                         // hiccverbose_debug("STDERR:BREAK!\n");
@@ -205,7 +205,7 @@ namespace hicc::process {
 #else // try POSIX
                 tmpfile_stderr = path::tmpname_for_stderr();
                 std::array<char, 512> cmd;
-                std::sprintf(cmd.data(), "%s 2>%s", command, tmpfile_stderr.c_str());
+                std::snprintf(cmd.data(), cmd.size(), "%s 2>%s", command, tmpfile_stderr.c_str());
                 // std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(command, "r"), pclose);
                 std::unique_ptr<FILE, std::function<void(FILE *)>> pipe(popen(cmd.data(), "r"), [this](FILE *f) {
                     _rc = pclose(f);

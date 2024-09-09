@@ -103,16 +103,16 @@ std::function<void()> foo(unsigned int OD, blocked_ring_buf &rb) {
 
     if ((OD & 1) == 0) {
         return [&rb, wait_time, OD]() {
-            hicc_debug("~ thread #%02d [enqueue]", OD);
+            dbg_debug("~ thread #%02d [enqueue]", OD);
             for (int i = 0; i < 16; i++) {
                 std::stringstream ss;
                 ss << "item " << OD * 64 + i;
                 auto str = ss.str();
                 auto str1 = str;
                 if (rb.enqueue(std::move(str)))
-                    hicc_debug("  - T%02d: put '%s', '%s' ok: rb.size=%u, rb.free=%u, rb.qty=%u", OD, str1.c_str(), str.c_str(), rb.capacity(), rb.free(), rb.qty());
+                    dbg_debug("  - T%02d: put '%s', '%s' ok: rb.size=%u, rb.free=%u, rb.qty=%u", OD, str1.c_str(), str.c_str(), rb.capacity(), rb.free(), rb.qty());
                 else
-                    hicc_debug("  - T%02d: enqueue '%s', '%s' failed: rb.size=%u, rb.free=%u, rb.qty=%u", OD, str1.c_str(), str.c_str(), rb.capacity(), rb.free(), rb.qty());
+                    dbg_debug("  - T%02d: enqueue '%s', '%s' failed: rb.size=%u, rb.free=%u, rb.qty=%u", OD, str1.c_str(), str.c_str(), rb.capacity(), rb.free(), rb.qty());
                 std::this_thread::yield();
                 // std::this_thread::sleep_for(300ms);
                 std::this_thread::sleep_for(std::chrono::milliseconds{wait_time});
@@ -122,15 +122,15 @@ std::function<void()> foo(unsigned int OD, blocked_ring_buf &rb) {
     }
 
     return [&rb, wait_time, OD]() {
-        hicc_debug("~ thread #%02d [dequeue]", OD);
+        dbg_debug("~ thread #%02d [dequeue]", OD);
         for (int i = 0; i < 16; i++) {
             auto ret = rb.dequeue();
             if (ret.has_value()) {
                 std::string &str = ret.value();
-                hicc_debug("  - T%02d: got '%s' ok: rb.size=%u, rb.free=%u, rb.qty=%u", OD, str.c_str(), rb.capacity(), rb.free(), rb.qty());
+                dbg_debug("  - T%02d: got '%s' ok: rb.size=%u, rb.free=%u, rb.qty=%u", OD, str.c_str(), rb.capacity(), rb.free(), rb.qty());
                 UNUSED(str);
             } else
-                hicc_debug("  - T%02d: dequeue failed: rb.size=%u, rb.free=%u, rb.qty=%u", OD, rb.capacity(), rb.free(), rb.qty());
+                dbg_debug("  - T%02d: dequeue failed: rb.size=%u, rb.free=%u, rb.qty=%u", OD, rb.capacity(), rb.free(), rb.qty());
             std::this_thread::yield();
             // std::this_thread::sleep_for(300ms);
             std::this_thread::sleep_for(std::chrono::milliseconds{wait_time});
@@ -150,18 +150,18 @@ void test_ringbuf() {
             auto str = ss.str();
             auto str1 = str;
             if (rb.enqueue(std::move(str)))
-                hicc_debug("  - T%02d: put '%s', '%s' ok: rb.size=%u, rb.free=%u, rb.qty=%u", i, str1.c_str(), str.c_str(), rb.capacity(), rb.free(), rb.qty());
+                dbg_debug("  - T%02d: put '%s', '%s' ok: rb.size=%u, rb.free=%u, rb.qty=%u", i, str1.c_str(), str.c_str(), rb.capacity(), rb.free(), rb.qty());
             else
-                hicc_debug("  - T%02d: enqueue '%s', '%s' failed: rb.size=%u, rb.free=%u, rb.qty=%u", i, str1.c_str(), str.c_str(), rb.capacity(), rb.free(), rb.qty());
+                dbg_debug("  - T%02d: enqueue '%s', '%s' failed: rb.size=%u, rb.free=%u, rb.qty=%u", i, str1.c_str(), str.c_str(), rb.capacity(), rb.free(), rb.qty());
         }
         for (int i = 0; i < 16; i++) {
             auto ret = rb.dequeue();
             if (ret.has_value()) {
                 std::string &str = ret.value();
-                hicc_debug("  - T%02d: got '%s' ok: rb.size=%u, rb.free=%u, rb.qty=%u", i, str.c_str(), rb.capacity(), rb.free(), rb.qty());
+                dbg_debug("  - T%02d: got '%s' ok: rb.size=%u, rb.free=%u, rb.qty=%u", i, str.c_str(), rb.capacity(), rb.free(), rb.qty());
                 UNUSED(str);
             } else
-                hicc_debug("  - T%02d: dequeue failed: rb.size=%u, rb.free=%u, rb.qty=%u", i, rb.capacity(), rb.free(), rb.qty());
+                dbg_debug("  - T%02d: dequeue failed: rb.size=%u, rb.free=%u, rb.qty=%u", i, rb.capacity(), rb.free(), rb.qty());
         }
     }
 
@@ -182,7 +182,7 @@ void test_ringbuf() {
             threads.queue_task(foo(ti, rb));
         }
         printf("\nwaiting...\n\n");
-        // hicc_debug("waiting...");
+        // dbg_debug("waiting...");
         threads.join();
     }
 

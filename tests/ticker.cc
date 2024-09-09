@@ -110,7 +110,7 @@ void test_thread_basics() {
 }
 
 void foo1() {
-    hicc_print("foo1 hit.");
+    dbg_print("foo1 hit.");
 }
 
 void test_periodical_job() {
@@ -180,12 +180,12 @@ void test_periodical_job() {
         else
             pj.last_pt = now;
         auto pt = pj.next_time_point(now);
-        hicc_print("%40s: %s -> %s", t.desc, hicc::chrono::format_time_point_to_local(now).c_str(), hicc::chrono::format_time_point_to_local(pt).c_str());
+        dbg_print("%40s: %s -> %s", t.desc, hicc::chrono::format_time_point_to_local(now).c_str(), hicc::chrono::format_time_point_to_local(pt).c_str());
 
         auto tmp = t.expected;
         if (!chr::duration_is_zero(tmp)) {
             if (hicc::chrono::compare_date_part(pt, tmp) != 0) {
-                hicc_print("%40s: ERROR: expecting %s but got %s", " ", hicc::chrono::format_time_point_to_local(tmp).c_str(), hicc::chrono::format_time_point_to_local(pt).c_str());
+                dbg_print("%40s: ERROR: expecting %s but got %s", " ", hicc::chrono::format_time_point_to_local(tmp).c_str(), hicc::chrono::format_time_point_to_local(pt).c_str());
                 exit(-1);
             }
         }
@@ -204,7 +204,7 @@ void test_timer() {
     std::this_thread::sleep_for(300ms);
 #endif
 
-    hicc_print("  - start at: %s", hicc::chrono::format_time_point().c_str());
+    dbg_print("  - start at: %s", hicc::chrono::format_time_point().c_str());
     t->after(1us)
             .on([&count] {
                 auto now = hicc::chrono::now();
@@ -231,7 +231,7 @@ void test_ticker() {
     std::this_thread::sleep_for(300ms);
 #endif
 
-    hicc_print("  - start at: %s", hicc::chrono::format_time_point().c_str());
+    dbg_print("  - start at: %s", hicc::chrono::format_time_point().c_str());
     t->every(1us)
             .on([&count]() {
                 // auto now = hicc::chrono::now();
@@ -250,7 +250,7 @@ void test_ticker_interval() {
     hicc::debug::X x_local_var;
 
     hicc::pool::conditional_wait_for_int count2{4};
-    auto t = hicc::chrono::ticker<>::get([] { hicc_print("  - start at: %s", hicc::chrono::format_time_point().c_str()); });
+    auto t = hicc::chrono::ticker<>::get([] { dbg_print("  - start at: %s", hicc::chrono::format_time_point().c_str()); });
     t->interval(200ms)
             .on([&count2] {
                 hicc::pool::cw_setter cws(count2);

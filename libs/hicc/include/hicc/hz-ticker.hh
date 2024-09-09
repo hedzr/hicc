@@ -533,7 +533,7 @@ namespace hicc::chrono {
             __copy(o);
         }
         virtual ~timer() {
-            hicc_debug("[timer] dtor...");
+            dbg_debug("[timer] dtor...");
             clear();
         }
         void clear() { stop(); }
@@ -588,28 +588,28 @@ namespace hicc::chrono {
         void build() {
             std::shared_ptr<Job> t = std::make_shared<ConcreteJob>(std::move(_f));
             // auto next_time = t->next_time_point();
-            // hicc_debug("next_time: %s", format_time_point(next_time).c_str());
+            // dbg_debug("next_time: %s", format_time_point(next_time).c_str());
             add_task(_tp, std::move(t));
         }
 
     private:
         void stop() {
-            hicc_debug("[runner] stopping...");
+            dbg_debug("[runner] stopping...");
             _t.detach();
             _tk.kill();
             // if (_t.joinable()) _t.join();
             _ended.wait();
-            hicc_debug("[runner] stopped.");
+            dbg_debug("[runner] stopped.");
         }
         void start() {
             {
                 std::unique_lock<std::mutex> l(_l_twl);
-                hicc_trace("[runner] starting...");
+                dbg_trace("[runner] starting...");
             }
             _t = std::thread(runner, this);
             _started.wait();
             // t.detach();
-            hicc_trace("[runner] started.");
+            dbg_trace("[runner] started.");
         }
 
         static void runner(timer *_this) { _this->runner_loop(); }
@@ -622,10 +622,10 @@ namespace hicc::chrono {
             std::size_t hit{0}, loop{0};
 #endif
             _started.set();
-            hicc_trace("[runner] ready...");
+            dbg_trace("[runner] ready...");
             while ((ret = _tk.wait_for(d)) != _tk.ConditionMatched) {
                 // std::this_thread::sleep_for(d);
-                hicc_debug("[runner] waked up. (_tk.terminated() == %d, ret=%d)", _tk.terminated(), ret);
+                dbg_debug("[runner] waked up. (_tk.terminated() == %d, ret=%d)", _tk.terminated(), ret);
                 d = _larger_gap;
 
                 TP picked;
@@ -633,11 +633,11 @@ namespace hicc::chrono {
                 {
                     auto [itp, itn, found] = find_next();
                     if (!found) {
-                        hicc_debug("[runner] find_next() returned not found");
+                        dbg_debug("[runner] find_next() returned not found");
                         continue;
                     }
 
-                    hicc_debug("[runner] found a time-point");
+                    dbg_debug("[runner] found a time-point");
                     // got a picked point
                     std::unique_lock<std::mutex> l(_l_twl);
                     (*itp).second.swap(jobs);
@@ -705,7 +705,7 @@ namespace hicc::chrono {
                         d -= _wastage;
                 }
             }
-            hicc_debug("[runner] timer::runner ended (_tk.terminated() == %d, ret = %d).", _tk.terminated(), ret);
+            dbg_debug("[runner] timer::runner ended (_tk.terminated() == %d, ret = %d).", _tk.terminated(), ret);
             _ended.set();
         }
         std::tuple<typename TimingWheel::iterator, typename TimingWheel::iterator, bool>
@@ -829,7 +829,7 @@ namespace hicc::chrono {
             auto copy_fn = super::_f;
             std::shared_ptr<typename super::Job> t = std::make_shared<ConcreteJob>(_dur, std::move(copy_fn));
             auto next_time = t->next_time_point();
-            hicc_debug("next_time: %s", format_time_point(next_time).c_str());
+            dbg_debug("next_time: %s", format_time_point(next_time).c_str());
             if (_interval)
                 super::add_task(Clock::now(), std::move(t));
             else
@@ -889,7 +889,7 @@ namespace hicc::chrono {
         void build() {
             std::shared_ptr<typename super::Job> t = std::make_shared<ConcreteJob>(_anchor, _ordinal, _offset, _times, std::move(super::_f));
             auto next_time = t->next_time_point();
-            hicc_debug("anchor: %d, count: %d, next_time: %s", _anchor, _ordinal, format_time_point(next_time).c_str());
+            dbg_debug("anchor: %d, count: %d, next_time: %s", _anchor, _ordinal, format_time_point(next_time).c_str());
             super::add_task(next_time, std::move(t));
         }
 

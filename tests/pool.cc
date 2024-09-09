@@ -203,11 +203,11 @@ void test_mq() {
     hicc::debug::X x1("aa");
     {
         xmq.emplace_back(std::move(x1));
-        hicc_debug("  xmq.emplace_back(std::move(x1)) DONE. AND, xmq.pop_front() ...");
+        dbg_debug("  xmq.emplace_back(std::move(x1)) DONE. AND, xmq.pop_front() ...");
         std::optional<hicc::debug::X> vv = xmq.pop_front();
-        hicc_debug("vv (%p): '%s'", (void *) &vv, vv.value().c_str());
+        dbg_debug("vv (%p): '%s'", (void *) &vv, vv.value().c_str());
     }
-    hicc_debug("x1 (%p): '%s'", (void *) &x1, x1.c_str());
+    dbg_debug("x1 (%p): '%s'", (void *) &x1, x1.c_str());
 }
 
 void foo() {
@@ -246,7 +246,7 @@ void test_pool() {
             using namespace std::literals;
             // std::this_thread::sleep_for(i * 1ms);
             messages.emplace_back(ss.str());
-            hicc_print("%s", ss.str().c_str());
+            dbg_print("%s", ss.str().c_str());
             std::this_thread::yield();
         });
     }

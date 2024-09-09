@@ -102,7 +102,7 @@ void test_wait_for_key() {
     printf("END\n");
 
 #else
-    hicc_print("unsupported OSes: non-win and non-poxis.");
+    dbg_print("unsupported OSes: non-win and non-poxis.");
 #endif
 
 #elif defined(WAIT_FOR_KEY_1)
@@ -111,7 +111,7 @@ void test_wait_for_key() {
                   << "Press a key to continue...";
     } while (std::cin.get() != '\n');
 #else
-    hicc_print("unsupported ...");
+    dbg_print("unsupported ...");
 #endif
 }
 
@@ -122,11 +122,11 @@ void test_piped() {
         auto add = piped([](int x, int y) { return x + y; });
         auto mul = piped([](int x, int y) -> int { return x * y; });
         int y1 = 5 | add(2) | mul(5) | add(1);
-        hicc_print("    y1 = %d", y1);
+        dbg_print("    y1 = %d", y1);
 
         int y2 = 5 | add(2) | piped([](int x, int y) { return x * y; })(5) | piped([](int x) { return x + 1; })();
         // Output: 36
-        hicc_print("    y2 = %d", y2);
+        dbg_print("    y2 = %d", y2);
     }
 }
 

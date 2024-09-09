@@ -42,9 +42,11 @@ namespace hicc::traits {
 #else
     // template<class...>
     // using void_t = void;
-    
+
     template<typename... T>
-    struct make_void { using type = void; };
+    struct make_void {
+        using type = void;
+    };
     template<typename... T>
     using void_t = typename make_void<T...>::type;
 #endif
@@ -200,6 +202,19 @@ namespace hicc::traits {
     template<typename T>
     constexpr bool has_to_string = is_detected_v<to_string_t, T>;
 
+#if 0
+    namespace detail {
+        struct AA {
+            std::string to_string() const { return ""; }
+        };
+
+        struct BB{};
+        
+        static_assert(has_to_string<AA>, "");
+        static_assert(!has_to_string<BB>, "");
+    }; // namespace detail
+#endif
+
 } // namespace hicc::traits
 
 // ------------------------- has_member
@@ -288,7 +303,7 @@ namespace hicc::traits {
     template<typename T, typename Ret, typename Index>
     using subscript_t = std::integral_constant < Ret (T::*)(Index),
           &T::operator[]>;
-    
+
     template<typename T, typename Ret, typename Index>
     using has_subscript = std::experimental::is_detected<subscript_t, T, Ret, Index>;
 
@@ -351,7 +366,7 @@ namespace hicc::traits {
 
 
     template<class T, class = void>
-    constexpr bool has_pop_v{false};
+    constexpr inline bool has_pop_v{false};
 
     template<class T>
     constexpr bool has_pop_v<T, void_t<decltype(std::declval<T>().pop())>>{true};
@@ -464,7 +479,7 @@ namespace hicc::traits {
 // is_container, is_stl_container, is_generic_container,
 // is_streamable,
 namespace hicc::traits {
-    
+
 
     // template<class T, typename=void>
     // struct is_duration :std::false_type {

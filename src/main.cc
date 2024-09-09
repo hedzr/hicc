@@ -14,7 +14,7 @@ int main() {
     std::string s1("a string", 2, 3);
     std::cout << "Hello, World!" << s1 << '\n';
 
-    hicc_debug("ok");
+    dbg_debug("ok");
     
     return 0;
 }

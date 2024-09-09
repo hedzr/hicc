@@ -44,7 +44,7 @@ void test_traits_is_duration() {
 }
 
 void foo1() {
-    hicc_print("foo1 hit.");
+    dbg_print("foo1 hit.");
 }
 
 void test_c_style(struct timeval &tv) {
@@ -245,7 +245,7 @@ void test_try_parse_by() {
         typename Clock::time_point tp;
         if (hicc::chrono::try_parse_by(tm, time_str, "%H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y/%m/%d %H:%M:%S")) {
             tp = hicc::chrono::tm_2_time_point(&tm);
-            hicc_print("  - time '%s' parsed: tp = %s",
+            dbg_print("  - time '%s' parsed: tp = %s",
                        time_str,
                        // _twl.size(), hit, loop,
                        // hicc::chrono::format_duration(d).c_str(),
@@ -281,12 +281,12 @@ void test_last_day_at_this_month() {
         std::tm tm = chr::time_point_2_tm(now);
         tm = chr::last_day_at_this_month(tm, t.offset, 1);
         auto pt = chr::tm_2_time_point(tm);
-        hicc_print("%40s: %s -> %s", t.desc, chr::format_time_point_to_local(now).c_str(), chr::format_time_point_to_local(pt).c_str());
+        dbg_print("%40s: %s -> %s", t.desc, chr::format_time_point_to_local(now).c_str(), chr::format_time_point_to_local(pt).c_str());
 
         auto tmp = t.expected;
         if (!chr::duration_is_zero(tmp)) {
             if (chr::compare_date_part(pt, tmp) != 0) {
-                hicc_print("%40s: ERROR: expecting %s but got %s", " ", chr::format_time_point_to_local(tmp).c_str(), chr::format_time_point_to_local(pt).c_str());
+                dbg_print("%40s: ERROR: expecting %s but got %s", " ", chr::format_time_point_to_local(tmp).c_str(), chr::format_time_point_to_local(pt).c_str());
                 exit(-1);
             }
         }
@@ -322,12 +322,12 @@ void test_last_day_at_this_year() {
         std::tm tm = chr::time_point_2_tm(now);
         tm = chr::last_day_at_this_year(tm, t.offset);
         auto pt = chr::tm_2_time_point(tm);
-        hicc_print("%40s: %s -> %s", t.desc, chr::format_time_point_to_local(now).c_str(), chr::format_time_point_to_local(pt).c_str());
+        dbg_print("%40s: %s -> %s", t.desc, chr::format_time_point_to_local(now).c_str(), chr::format_time_point_to_local(pt).c_str());
 
         auto tmp = t.expected;
         if (!chr::duration_is_zero(tmp)) {
             if (chr::compare_date_part(pt, tmp) != 0) {
-                hicc_print("%40s: ERROR: expecting %s but got %s", " ", chr::format_time_point_to_local(tmp).c_str(), chr::format_time_point_to_local(pt).c_str());
+                dbg_print("%40s: ERROR: expecting %s but got %s", " ", chr::format_time_point_to_local(tmp).c_str(), chr::format_time_point_to_local(pt).c_str());
                 exit(-1);
             }
         }

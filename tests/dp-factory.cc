@@ -56,21 +56,21 @@ namespace tmp1 {
 void test_factory() {
     namespace fct = hicc::util::factory;
 
-    hicc_print("%ld\n", hicc::util::singleton<tmp1::MyVars>::instance().var1);
+    dbg_print("%ld\n", hicc::util::singleton<tmp1::MyVars>::instance().var1);
 
     auto pp = tmp1::factory::create<tmp1::Point2D>();
-    hicc_print("Point2D = %p", pp.get());
+    dbg_print("Point2D = %p", pp.get());
     // pp = tmp1::factory::create<tmp1::Point3D>();
-    // hicc_print("Point2D = %p", pp.get());
+    // dbg_print("Point2D = %p", pp.get());
 
     using shape_factory = fct::factory<tmp1::Point, tmp1::Point2D, tmp1::Point3D>;
     auto *ptr = shape_factory::create_nacked_ptr("tmp1::Point2D");
-    hicc_print("shape_factory: Point2D = %p, %s", ptr, ptr->name());
+    dbg_print("shape_factory: Point2D = %p, %s", ptr, ptr->name());
     ptr = shape_factory::create_nacked_ptr("tmp1::Point3D");
-    hicc_print("shape_factory: Point3D = %p, %s", ptr, ptr->name());
+    dbg_print("shape_factory: Point3D = %p, %s", ptr, ptr->name());
 
     std::unique_ptr<tmp1::Point> smt = std::make_unique<tmp1::Point3D>();
-    hicc_print("name = %s", smt->name()); // ok
+    dbg_print("name = %s", smt->name()); // ok
 }
 
 namespace hicc::dp::factory::classical {
@@ -228,13 +228,13 @@ namespace hicc::dp::factory::abstract {
 
     class Point {
     public:
-        virtual ~Point() { hicc_debug("~Point::dtor()"); }
+        virtual ~Point() { dbg_debug("~Point::dtor()"); }
         virtual const char *name() const = 0;
     };
 
     class Point2D : public Point {
     public:
-        virtual ~Point2D() { hicc_debug("~Point2D::dtor()"); }
+        virtual ~Point2D() { dbg_debug("~Point2D::dtor()"); }
         Point2D() = default;
         static std::unique_ptr<Point2D> create_unique() { return std::make_unique<Point2D>(); }
         static Point2D *create() { return new Point2D(); }
@@ -246,7 +246,7 @@ namespace hicc::dp::factory::abstract {
 
     class Point3D : public Point {
     public:
-        virtual ~Point3D() { hicc_debug("~Point3D::dtor()"); }
+        virtual ~Point3D() { dbg_debug("~Point3D::dtor()"); }
         // Point3D() = default;
         static std::unique_ptr<Point3D> create_unique() { return std::make_unique<Point3D>(); }
         static Point3D *create() { return new Point3D(); }
@@ -266,9 +266,9 @@ namespace hicc::dp::factory::abstract {
 void test_factory_abstract() {
     using namespace hicc::dp::factory::abstract;
     auto p1 = factory::create<Point2D>();
-    hicc_print("factory: Point2D = %p, %s", p1.get(), p1->name());
+    dbg_print("factory: Point2D = %p, %s", p1.get(), p1->name());
     auto p2 = factory::create<Point3D>();
-    hicc_print("factory: Point3D = %p, %s", p2.get(), p2->name());
+    dbg_print("factory: Point3D = %p, %s", p2.get(), p2->name());
 }
 
 int main() {

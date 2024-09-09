@@ -61,7 +61,7 @@ namespace hicc::dp::observer::basic {
         virtual ~Customer() {}
         bool operator==(const Customer &r) const { return this == &r; }
         void observe(const subject_t &) override {
-            hicc_debug("event raised: %s", debug::type_name<subject_t>().data());
+            dbg_debug("event raised: %s", debug::type_name<subject_t>().data());
         }
     };
 
@@ -72,10 +72,13 @@ void test_observer_basic() {
 
     Store store;
     Store::observer_t_shared c = std::make_shared<Customer>(); // uses Store::observer_t_shared rather than 'auto'
+    auto c1 = std::make_shared<Customer>(); // uses Store::observer_t_shared rather than 'auto'
 
     store += c;
+    store += c1;
     store.emit(event{});
     store -= c;
+    store.emit(event{});
 
     hicc::util::registerer<event, true> __r(store, c);
     store.emit(mouse_move_event{});
@@ -155,7 +158,7 @@ void test_util_bind() {
         std::vector<std::string> vec{"aa", "bb", "cc"};
         std::function<void(std::vector<std::string> const &)> x = fn;
         x(vec);
-        hicc_print("lambda fn: %s", std::string(hicc::debug::type_name<decltype(x)>()).c_str());
+        dbg_print("lambda fn: %s", std::string(hicc::debug::type_name<decltype(x)>()).c_str());
     }
 }
 
@@ -174,7 +177,7 @@ namespace hicc::dp::observer::cb {
 } // namespace hicc::dp::observer::cb
 
 void fntest(hicc::dp::observer::cb::event const &e) {
-    hicc_print("event CB regular function: %s", e.to_string().c_str());
+    dbg_print("event CB regular function: %s", e.to_string().c_str());
 }
 
 void test_observer_cb() {
@@ -184,19 +187,19 @@ void test_observer_cb() {
     Store store;
 
     auto fn = [](event const &e) {
-        hicc_print("event: %s", e.to_string().c_str());
+        dbg_print("event: %s", e.to_string().c_str());
     };
-    hicc_print("lambda: %s", std::string(hicc::debug::type_name<decltype(fn)>()).c_str());
+    dbg_print("lambda: %s", std::string(hicc::debug::type_name<decltype(fn)>()).c_str());
 
     store.add_callback([](event const &e) {
-        hicc_print("event CB lamdba: %s", e.to_string().c_str());
+        dbg_print("event CB lamdba: %s", e.to_string().c_str());
     });
     struct eh1 {
         void cb(event const &e) {
-            hicc_print("event CB member fn: %s", e.to_string().c_str());
+            dbg_print("event CB member fn: %s", e.to_string().c_str());
         }
         void operator()(event const &e) {
-            hicc_print("event CB member operator() fn: %s", e.to_string().c_str());
+            dbg_print("event CB member operator() fn: %s", e.to_string().c_str());
         }
     };
     store.on(&eh1::cb, eh1{});

@@ -175,7 +175,7 @@ namespace hicc::btree {
                 if (_degree > 0) {
 #if defined(_DEBUG)
                     auto str = to_string();
-                    hicc_verbose_debug("    ~node() for %p, %d payloads: [%s]", this, _count, str.c_str());
+                    dbg_verbose_debug("    ~node() for %p, %d payloads: [%s]", this, _count, str.c_str());
 #endif
                     // const int max_payloads = _degree - 1;
                     // const int min_payloads = max_payloads / 2;
@@ -186,7 +186,7 @@ namespace hicc::btree {
                     delete[] _pointers;
                     delete[] _payloads;
 #if defined(_DEBUG)
-                    hicc_verbose_debug("    ~node() for %p, %d payloads: [%s] END", this, _count, str.c_str());
+                    dbg_verbose_debug("    ~node() for %p, %d payloads: [%s] END", this, _count, str.c_str());
 #endif
                 }
             }
@@ -200,7 +200,7 @@ namespace hicc::btree {
 
         public:
             void insert_non_full(elem_ptr el) {
-                hicc_debug("    insert_non_full(%s) for node [%s]", elem_to_string(el).c_str(), to_string().c_str());
+                dbg_debug("    insert_non_full(%s) for node [%s]", elem_to_string(el).c_str(), to_string().c_str());
                 int idx = _count - 1;
                 if (is_leaf()) {
                     while (idx >= 0 && is_less_than(el, _payloads[idx])) {
@@ -228,7 +228,7 @@ namespace hicc::btree {
                 const int _M = _degree / 2;
                 assert(_M == min_payloads + 1);
 
-                hicc_debug("    _split_child(%d) for node [%s]", idx, y->to_string().c_str());
+                dbg_debug("    _split_child(%d) for node [%s]", idx, y->to_string().c_str());
 
                 node_ptr z = new node(y->_degree);
                 z->_count = min_payloads;
@@ -266,7 +266,7 @@ namespace hicc::btree {
                 UNUSED(min_payloads, max_payloads);
 
                 int idx = first_of_insertion_position(el);
-                hicc_debug("    _remove(%s) from node [%s] | pos found: %d | D=%d, _M=%d, [%d, %d]", elem_to_string(el).c_str(), to_string().c_str(), idx, _degree, _M, min_payloads, max_payloads);
+                dbg_debug("    _remove(%s) from node [%s] | pos found: %d | D=%d, _M=%d, [%d, %d]", elem_to_string(el).c_str(), to_string().c_str(), idx, _degree, _M, min_payloads, max_payloads);
 
                 // while the key to be removed is present in this node
                 if (idx < _count && is_equal_to(el, _payloads[idx])) {
@@ -311,10 +311,10 @@ namespace hicc::btree {
              */
             elem_ptr _remove_at(int idx) {
                 elem_ptr removing = get_el_ptr(idx);
-                hicc_verbose_debug("    _remove_at(%d) (target=%s) for node [%s], cnt=%d", idx, elem_to_string(removing).c_str(), to_string().c_str(), _count);
+                dbg_verbose_debug("    _remove_at(%d) (target=%s) for node [%s], cnt=%d", idx, elem_to_string(removing).c_str(), to_string().c_str(), _count);
                 for (int i = idx + 1; i < _count; ++i) _payloads[i - 1] = _payloads[i];
                 _payloads[_count-- - 1] = nullptr;
-                hicc_verbose_debug("    _remove_at(%d) (target=%s) END. node [%s], cnt=%d", idx, elem_to_string(removing).c_str(), to_string().c_str(), _count);
+                dbg_verbose_debug("    _remove_at(%d) (target=%s) END. node [%s], cnt=%d", idx, elem_to_string(removing).c_str(), to_string().c_str(), _count);
                 return removing;
             }
 
@@ -331,7 +331,7 @@ namespace hicc::btree {
                 UNUSED(min_payloads, max_payloads);
 
                 elem_ptr k = _payloads[idx];
-                hicc_debug("    _remove_from_internal_node(%d) [target=%s] for node [%s]", idx, elem_to_string(k).c_str(), to_string().c_str());
+                dbg_debug("    _remove_from_internal_node(%d) [target=%s] for node [%s]", idx, elem_to_string(k).c_str(), to_string().c_str());
 
                 if (node_ptr p = _pointers[idx]; p->_count >= _M) {
                     // If the child that precedes k (Children[idx]) has at least
@@ -404,7 +404,7 @@ namespace hicc::btree {
 
                 node_ptr child = _pointers[idx];
                 node_ptr sibling = _pointers[idx + 1];
-                hicc_debug("    _merge(%d) for node [%s] and sibling [%s]", idx, child->to_string().c_str(), sibling->to_string().c_str());
+                dbg_debug("    _merge(%d) for node [%s] and sibling [%s]", idx, child->to_string().c_str(), sibling->to_string().c_str());
 
                 assert(child->_count == _M - 1);
                 child->_payloads[_M - 1] = _payloads[idx];
@@ -435,7 +435,7 @@ namespace hicc::btree {
                 assert(_M == min_payloads + 1);
                 UNUSED(min_payloads, max_payloads);
 
-                hicc_debug("    _fill(%d) for node [%s]", idx, to_string().c_str());
+                dbg_debug("    _fill(%d) for node [%s]", idx, to_string().c_str());
 
                 if (idx != 0 && _pointers[idx - 1]->_count >= _M)
                     _rotate_from_left(idx);
@@ -457,7 +457,7 @@ namespace hicc::btree {
             void _rotate_from_left(int idx) {
                 node_ptr child = _pointers[idx];
                 node_ptr sibling = _pointers[idx - 1];
-                hicc_debug("    _rotate_from_left(%d) for node [%s] and sibling [%s]", idx, child->to_string().c_str(), sibling->to_string().c_str());
+                dbg_debug("    _rotate_from_left(%d) for node [%s] and sibling [%s]", idx, child->to_string().c_str(), sibling->to_string().c_str());
 
                 for (int i = child->_count - 1; i >= 0; --i)
                     child->_payloads[i + 1] = child->_payloads[i];
@@ -489,7 +489,7 @@ namespace hicc::btree {
             void _rotate_from_right(int idx) {
                 node_ptr child = _pointers[idx];
                 node_ptr sibling = _pointers[idx + 1];
-                hicc_debug("    _rotate_from_right(%d) for node [%s] and sibling [%s]", idx, child->to_string().c_str(), sibling->to_string().c_str());
+                dbg_debug("    _rotate_from_right(%d) for node [%s] and sibling [%s]", idx, child->to_string().c_str(), sibling->to_string().c_str());
 
                 child->_payloads[(child->_count)] = _payloads[idx];
 
@@ -705,7 +705,7 @@ namespace hicc::btree {
                 int saved{index};
                 walk([&res, &index, saved](traversal_context const &ctx) -> bool {
                     if (index == ctx.abs_index) {
-                        hicc_verbose_debug("find_by_index(%d) -> node(%s) index(%d)",
+                        dbg_verbose_debug("find_by_index(%d) -> node(%s) index(%d)",
                                            saved, ctx.curr.to_string().c_str(), ctx.index);
                         res = &ctx.curr;
                         index = ctx.index;
@@ -1113,7 +1113,7 @@ namespace hicc::btree {
     private:
         void _insert(elem_ptr el) {
             auto el_str = node::elem_to_string(el);
-            hicc_debug("insert '%s' ...", el_str.c_str());
+            dbg_debug("insert '%s' ...", el_str.c_str());
             if (_root == nullptr) {
                 _root = new node(_degree);
                 _root->set_el(0, el);
@@ -1164,7 +1164,7 @@ namespace hicc::btree {
     private:
         void _remove(const_elem_ref el) {
             auto el_str = node::elem_to_string(el);
-            hicc_debug("remove '%s' ...", el_str.c_str());
+            dbg_debug("remove '%s' ...", el_str.c_str());
             if (_root == nullptr)
                 return;
             elem_ptr removed = _root->remove(el);
@@ -1174,7 +1174,7 @@ namespace hicc::btree {
         }
         void _remove(const_elem_ptr el) {
             auto el_str = node::elem_to_string(el);
-            hicc_debug("remove '%s' ...", el_str.c_str());
+            dbg_debug("remove '%s' ...", el_str.c_str());
             if (_root == nullptr)
                 return;
             elem_ptr removed = _root->remove(el);

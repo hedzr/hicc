@@ -312,7 +312,7 @@ namespace hicc::btree {
                 int saved{index};
                 walk([&res, &index, saved](traversal_context const &ctx) -> bool {
                     if (index == ctx.abs_index) {
-                        hicc_verbose_debug("find_by_index(%d) -> node(%s) index(%d)",
+                        dbg_verbose_debug("find_by_index(%d) -> node(%s) index(%d)",
                                            saved, ctx.curr.to_string().c_str(), ctx.index);
                         res = &ctx.curr;
                         index = ctx.index;
@@ -367,7 +367,7 @@ namespace hicc::btree {
                 std::ostringstream orig, elem;
                 orig << to_string();
                 elem << elem_to_string(a);
-                hicc_debug("insert '%s' to %s", elem.str().c_str(), orig.str().c_str());
+                dbg_debug("insert '%s' to %s", elem.str().c_str(), orig.str().c_str());
 #endif
                 if (IS_ODD)
                     this->_insert_node_for_odd_tree(bt._root, a);
@@ -531,7 +531,7 @@ namespace hicc::btree {
                 int fix = ix == MID ? 1 : 0;
                 node_ptr nr = new node(left, pos - fix + 1, Degree - 1);
                 elem_ptr mid = fix ? el : left->get_el_ptr(pos);
-                hicc_debug("  split node %s, move mid '%s' up to parent %s", left->to_string().c_str(), elem_to_string(mid).c_str(), to_string().c_str());
+                dbg_debug("  split node %s, move mid '%s' up to parent %s", left->to_string().c_str(), elem_to_string(mid).c_str(), to_string().c_str());
                 int lc = left->payload_count();
                 for (auto t = pos; t < lc; t++) left->_payloads[t] = nullptr;
                 for (auto t = pos - fix + 1; t <= lc; t++) left->_pointers[t] = nullptr;
@@ -570,7 +570,7 @@ namespace hicc::btree {
                     auto *vp = _payloads[i];
                     if (vp == nullptr) {
                         if (in_recursive) {
-                            hicc_verbose_debug("  -> put...move '%s' up to parent node.", elem_to_string(el).c_str());
+                            dbg_verbose_debug("  -> put...move '%s' up to parent node.", elem_to_string(el).c_str());
                             _payloads[i] = el;
                             _count++;
                             if (el_left_child) _pointers[i] = el_left_child->parent(this, true);
@@ -608,7 +608,7 @@ namespace hicc::btree {
                             _count++;
                             // if (!in_recursive) root->_size++;
                             if (el_left_child || el_right_child) {
-                                hicc_verbose_debug("  -> splitting...move '%s' up to parent node.", elem_to_string(el).c_str());
+                                dbg_verbose_debug("  -> splitting...move '%s' up to parent node.", elem_to_string(el).c_str());
                                 for (auto t = Degree; t >= i; t--) _pointers[t] = _pointers[t - 1];
                                 if (el_left_child) _pointers[i] = el_left_child->parent(this, true);
                                 if (el_right_child) _pointers[i + 1] = el_right_child->parent(this, true);
@@ -618,9 +618,9 @@ namespace hicc::btree {
 
 #ifdef _DEBUG
                         if (in_recursive)
-                            hicc_debug("    split this node again: %s + %s...", this->to_string().c_str(), elem_to_string(el).c_str());
+                            dbg_debug("    split this node again: %s + %s...", this->to_string().c_str(), elem_to_string(el).c_str());
                         else
-                            hicc_debug("  split this node: %s + %s...", this->to_string().c_str(), elem_to_string(el).c_str());
+                            dbg_debug("  split this node: %s + %s...", this->to_string().c_str(), elem_to_string(el).c_str());
 #endif
                         for (auto t = Degree - 1; t > i; t--) _payloads[t] = _payloads[t - 1];
                         if (_pointers[0])
@@ -641,7 +641,7 @@ namespace hicc::btree {
                     }
                 }
 
-                hicc_debug("  recursively: `%s` is greater than every one in node %s, create a new parent if necessary", elem_to_string(el).c_str(), to_string().c_str());
+                dbg_debug("  recursively: `%s` is greater than every one in node %s, create a new parent if necessary", elem_to_string(el).c_str(), to_string().c_str());
                 _payloads[Degree - 1] = el;
                 if (el_left_child) _pointers[Degree - 1] = el_left_child->parent(this, true);
                 if (el_right_child) _pointers[Degree - 1 + 1] = el_right_child->parent(this, true);
@@ -650,7 +650,7 @@ namespace hicc::btree {
 
             void _split_and_raise_up(node_ptr &root, int a_pos, node_ptr a_left, node_ptr a_right) {
                 auto *new_parent_data = _payloads[MID];
-                hicc_debug("    split and raise '%s' up.../ a_pos=%d / MID=%d, Degree=%d", elem_to_string(new_parent_data).c_str(), a_pos, MID, Degree);
+                dbg_debug("    split and raise '%s' up.../ a_pos=%d / MID=%d, Degree=%d", elem_to_string(new_parent_data).c_str(), a_pos, MID, Degree);
 
                 if (parent()) {
                     node_ptr left = this;
@@ -713,7 +713,7 @@ namespace hicc::btree {
                 std::ostringstream orig, elem;
                 orig << res.to_string();
                 elem << elem_to_string(removing);
-                hicc_debug("remove '%s' from %s (pos=%d) | MID=%d, M=%d, Degree=%d.", elem.str().c_str(), orig.str().c_str(), pos, MID, M, Degree);
+                dbg_debug("remove '%s' from %s (pos=%d) | MID=%d, M=%d, Degree=%d.", elem.str().c_str(), orig.str().c_str(), pos, MID, M, Degree);
 #endif
                 if (elem_ptr removed = this->_remove_from_root(bt, removing); removed) {
                     bt._size--;
@@ -745,7 +745,7 @@ namespace hicc::btree {
                 std::ostringstream orig, elem;
                 orig << to_string();
                 elem << elem_to_string(removing);
-                hicc_debug("remove '%s' from %s | MID=%d, M=%d, Degree=%d.", elem.str().c_str(), orig.str().c_str(), MID, M, Degree);
+                dbg_debug("remove '%s' from %s | MID=%d, M=%d, Degree=%d.", elem.str().c_str(), orig.str().c_str(), MID, M, Degree);
 #endif
                 if (elem_ptr removed = this->_remove_from_root(bt, removing); removed) {
                     bt._size--;
@@ -778,7 +778,7 @@ namespace hicc::btree {
                 if (bt._root->payload_count() == 0) {
                     if (!bt._root->is_leaf()) {
                         node_ptr tmp = bt._root;
-                        hicc_debug("remove old root %s, and reduce the tree height.", tmp->to_string().c_str());
+                        dbg_debug("remove old root %s, and reduce the tree height.", tmp->to_string().c_str());
                         bt._root = bt._root->child(0);
                         delete tmp;
                     }
@@ -2651,7 +2651,7 @@ void test_btree_b() {
     };
 
     for (auto n : numbers) {
-        hicc_debug("step %d: n = %d", ix, n);
+        dbg_debug("step %d: n = %d", ix, n);
         if (n > 0) {
             if (ix == 116 || ix == 29)
                 ix += 0;
